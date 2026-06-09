@@ -1,0 +1,26 @@
+version: '3'
+
+tasks:
+  default:
+    desc: "List all tasks"
+    silent: true
+    cmds:
+      - task --list
+
+  setup:
+    desc: "Install all dependencies and pre-commit hooks"
+    silent: true
+    cmds:
+      # Pre-commit setup
+      - uv tool install pre-commit --with pre-commit-uv
+      - pre-commit install
+      - pre-commit install --hook-type commit-msg
+
+      # Backend
+      - cd apps/backend && go mod download
+
+      # Frontend
+      - cd apps/frontend && npm install
+
+      # ML
+      - cd apps/ml && uv sync

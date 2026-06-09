@@ -1,0 +1,38 @@
+# IDEs
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Frontend
+node_modules/
+dist/
+build/
+.env*.local
+
+# Go
+bin/
+apps/backend/backend
+apps/backend/cpu.pprof
+apps/backend/mem.pprof
+
+# Python / ML
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+apps/ml/data/
+.ruff_cache/
+
+# Infra / Local env
+.env
+docker-compose.override.yml
