@@ -7,8 +7,8 @@ interface Props {
 }
 
 const SidebarButton = ({ children, type, to }: Props) => {
-  const iconColor = "#4B4BC3";
-  const selectedIconColor = "#4B1D95";
+  const iconColor = "#4B4BC3"; // primary-500
+  const selectedIconColor = "#4B1D95"; //accent-700
   const iconSize = 24;
   const selectedIconSize = 22;
 
@@ -91,9 +91,9 @@ const SidebarButton = ({ children, type, to }: Props) => {
   return (
     <NavLink
       to={to}
-      className={`flex gap-2 pt-3 pb-2 w-full items-stretch ${
+      className={`flex ${isActive ? "gap-3" : "gap-2"} pt-3 pb-2 items-stretch ${
         isActive
-          ? "text-accent-700 hover:text-accent-800 text-bold text-3xl border-r-4 border-r-accent-700"
+          ? "text-accent-700 hover:text-accent-800 text-bold text-3xl"
           : "text-primary-500 hover:text-primary-400 font-medium text-2xl "
       }`}
     >
