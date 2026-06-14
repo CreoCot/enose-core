@@ -29,4 +29,5 @@ tasks:
     desc: "Run server on localhost:8080"
     silent: true
     cmds:
+      - cd apps/backend && go mod tidy
       - go run ./apps/backend/cmd/api/main.go
