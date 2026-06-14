@@ -24,7 +24,7 @@ tasks:
 
       # ML
       - cd apps/ml && uv sync
-  run-frontend-dev:
+  frontend:run:
     desc: "Run the frontend application"
     silent: true
     cmds:
