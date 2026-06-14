@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Port        string
-	Env         string
-	FrontendURL string
+	Port           string
+	Env            string
+	AllowedOrigins []string
 }
 
 func getEnv(key, fallback string) string {
@@ -33,10 +34,16 @@ func NewConfig() (*Config, error) {
 		slog.Debug("CONFIG WARNING: .env file was not loaded successfully, default values are used")
 	}
 
+	originsStr := getEnv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
+	var origins []string
+	for _, o := range strings.Split(originsStr, ",") {
+		origins = append(origins, strings.TrimSpace(o))
+	}
+
 	cfg := &Config{
-		Port:        getEnv("PORT", "8080"),
-		Env:         getEnv("ENV", "development"),
-		FrontendURL: getEnv("FRONTEND_URL", "http://localhost:5173"),
+		Port:           getEnv("PORT", "8080"),
+		Env:            getEnv("ENV", "development"),
+		AllowedOrigins: origins,
 	}
 
 	slog.Info("Coonfiguration loaded", "env", cfg.Env, "port", cfg.Port)

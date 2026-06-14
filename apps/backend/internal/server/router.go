@@ -18,11 +18,12 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 
 	r.Use(middleware.StructuredLogger())
 	r.Use(gin.Recovery())
-	r.Use(middleware.CORSConfig([]string{cfg.FrontendURL, "http://localhost:5173"}))
+	r.Use(middleware.CORSConfig(cfg.AllowedOrigins))
 
 	v1 := r.Group("api/v1")
 	{
 		v1.GET("/health", handlers.Health)
+		v1.GET("/table", handlers.Table)
 	}
 
 	return r
