@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 tasks:
   default:
@@ -24,3 +24,8 @@ tasks:
 
       # ML
       - cd apps/ml && uv sync
+  frontend:run:
+    desc: "Run the frontend application"
+    silent: true
+    cmds:
+      - cd apps/frontend && npm run dev
