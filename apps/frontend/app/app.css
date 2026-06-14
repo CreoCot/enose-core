@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Nunito Sans Variable", system-ui, sans-serif;
+  --color-primary-100: hsl(230 83% 93%);
+  --color-primary-200: hsl(233, 74%, 88%);
+  --color-primary-300: hsl(235, 68%, 83%);
+  --color-primary-400: hsl(239, 55%, 68%);
+  --color-primary-500: hsl(240 50% 53%);
+  --color-primary-600: hsl(240, 53%, 42%);
+  --color-primary-700: hsl(240, 67%, 30%);
+  --color-primary-800: hsl(240, 73%, 24%);
+  --color-primary-900: hsl(240 84% 17%);
+
+  --color-accent-100: hsl(269, 88%, 90%);
+  --color-accent-200: hsl(268, 73%, 83%);
+  --color-accent-300: hsl(hsl(267, 66%, 75%));
+  --color-accent-400: hsl(266, 62%, 64%);
+  --color-accent-500: hsl(266, 60%, 52%);
+  --color-accent-600: hsl(265, 60%, 44%);
+  --color-accent-700: hsl(263, 67%, 35%);
+  --color-accent-800: hsl(262, 72%, 28%);
+  --color-accent-900: hsl(260, 80%, 22%);
+
+  --color-grey-100: hsl(220, 25%, 90%);
+  --color-grey-200: hsl(223, 20%, 83%);
+  --color-grey-300: hsl(222, 18%, 75%);
+  --color-grey-400: hsl(224, 16%, 68%);
+  --color-grey-500: hsl(225, 14%, 60%);
+  --color-grey-600: hsl(226, 12%, 49%);
+  --color-grey-700: hsl(226, 18%, 37%);
+  --color-grey-800: hsl(228, 23%, 26%);
+  --color-grey-900: hsl(230, 35%, 15%);
+
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 24px;
+  --spacing-6: 32px;
+  --spacing-7: 48px;
+  --spacing-8: 64px;
+  --spacing-9: 96px;
+  --spacing-10: 128px;
+  --spacing-11: 192px;
+  --spacing-12: 256px;
+  --spacing-13: 384px;
+  --spacing-14: 512px;
+  --spacing-15: 640px;
+  --spacing-16: 768px;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 19px;
+  --text-xl: 23px;
+  --text-2xl: 27px;
+  --text-3xl: 33px;
+  --text-4xl: 40px;
+  --text-5xl: 48px;
+  --text-6xl: 57px;
+  --text-7xl: 69px;
+}
+html,
+body {
+  @apply bg-white dark:bg-gray-950;
+
+  @media (prefers-color-scheme: dark) {
+    color-scheme: dark;
+  }
+}
