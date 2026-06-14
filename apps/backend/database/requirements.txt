@@ -1,0 +1,13 @@
+# Веб-фреймворк и сервер
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+pydantic==2.9.2
+
+# База данных
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.10
+
+# Парсеры файлов
+defusedxml==0.7.1
+openpyxl==3.1.5
