@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 tasks:
   default:
@@ -31,3 +31,9 @@ tasks:
     cmds:
       - cd apps/backend && go mod tidy
       - go run ./apps/backend/cmd/api/main.go
+      
+  frontend:run:
+    desc: "Run the frontend application"
+    silent: true
+    cmds:
+      - cd apps/frontend && npm run dev
