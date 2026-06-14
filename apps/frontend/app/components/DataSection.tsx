@@ -41,7 +41,7 @@ const DataSection = ({ children, name }: Props) => {
   );
   const [open, setOpen] = useState<boolean>(false);
   return (
-    <div className="flex flex-col">
+    <h2 className="flex flex-col">
       <button
         onClick={() => {
           setOpen(!open);
@@ -52,7 +52,7 @@ const DataSection = ({ children, name }: Props) => {
         {name}
       </button>
       {open && children}
-    </div>
+    </h2>
   );
 };
 
