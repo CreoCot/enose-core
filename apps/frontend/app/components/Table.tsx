@@ -20,7 +20,7 @@ const Table = ({ table, sensorSize, error }: Props) => {
   //   [1.008, 2936165, 6435427, 5280492, 6534750, 4000698, 5858299],
   //   [1.009, 5453762, 2945057, 4055304, 8547133, 5497026, 1229876],
   // ];
-  // let sensorSize= table[0].length - 1;
+  // let sensorSize = table[0].length - 1;
   const tableW = "w-10";
   const headRowClass = "bg-primary-300 h-7 text-primary-800 text-xl";
   const rowClass = "bg-primary-100 h-7 text-primary-700 font-light text-sm";

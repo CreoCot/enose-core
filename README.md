@@ -46,7 +46,7 @@ cp apps/backend/.env.example apps/backend/.env
 Минимальный локальный PostgreSQL через Docker:
 
 ```bash
-docker run --name enose-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=enose -p 5432:5432 -d postgres:16
+docker run --name enose-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=enose -p 5432:5432 -d postgres:17
 ```
 
 Запуск backend:
