@@ -12,8 +12,11 @@ import (
 
 var db *gorm.DB
 
-func Connect(cfg config.DatabaseConfig) error {
-	dsn := fmt.Sprintf(
+// dsn builds the PostgreSQL connection string shared by the GORM pool
+// and the dedicated migration connection. Keeping it in one place
+// guarantees both callers reach the same database.
+func dsn(cfg config.DatabaseConfig) string {
+	return fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Host,
 		cfg.Port,
@@ -22,8 +25,10 @@ func Connect(cfg config.DatabaseConfig) error {
 		cfg.Name,
 		cfg.SSLMode,
 	)
+}
 
-	conn, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+func Connect(cfg config.DatabaseConfig) error {
+	conn, err := gorm.Open(postgres.Open(dsn(cfg)), &gorm.Config{})
 	if err != nil {
 		return fmt.Errorf("open database connection: %w", err)
 	}
