@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/CreoCot/enose-core/backend/internal/config"
+	"github.com/CreoCot/enose-core/backend/internal/database"
 	"github.com/CreoCot/enose-core/backend/internal/server"
 )
 
@@ -19,6 +20,16 @@ func main() {
 		slog.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
 	}
+
+	if err := database.Connect(cfg.Database); err != nil {
+		slog.Error("Failed to connect to database", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := database.Close(); err != nil {
+			slog.Error("Failed to close database connection", "error", err)
+		}
+	}()
 
 	router := server.SetupRouter(cfg)
 

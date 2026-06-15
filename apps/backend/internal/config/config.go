@@ -14,6 +14,16 @@ type Config struct {
 	Port           string
 	Env            string
 	AllowedOrigins []string
+	Database       DatabaseConfig
+}
+
+type DatabaseConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Name     string
+	SSLMode  string
 }
 
 func getEnv(key, fallback string) string {
@@ -44,6 +54,14 @@ func NewConfig() (*Config, error) {
 		Port:           getEnv("PORT", "8080"),
 		Env:            getEnv("ENV", "development"),
 		AllowedOrigins: origins,
+		Database: DatabaseConfig{
+			Host:     getEnv("DATABASE_HOST", "localhost"),
+			Port:     getEnv("DATABASE_PORT", "5432"),
+			User:     getEnv("DATABASE_USER", "postgres"),
+			Password: getEnv("DATABASE_PASSWORD", "postgres"),
+			Name:     getEnv("DATABASE_NAME", "enose"),
+			SSLMode:  getEnv("DATABASE_SSLMODE", "disable"),
+		},
 	}
 
 	slog.Info("Coonfiguration loaded", "env", cfg.Env, "port", cfg.Port)

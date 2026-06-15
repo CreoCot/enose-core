@@ -21,6 +21,7 @@
 - Node.js (v20+) и npm
 - Python 3.13 и пакетный менеджер **[uv](https://docs.astral.sh/uv/)**
 - **[Task](https://taskfile.dev/)** (раннер для запуска команд)
+- PostgreSQL 14+
 
 ### 2. Клонирование и настройка
 
@@ -33,6 +34,34 @@ cd enose-core
 # Установка хуков и всех зависимостей (Go, Node, Python)
 task setup
 ```
+
+### 3. Backend: переменные окружения и база данных
+
+Скопируй пример окружения и заполни значения под локальную PostgreSQL:
+
+```bash
+cp apps/backend/.env.example apps/backend/.env
+```
+
+Минимальный локальный PostgreSQL через Docker:
+
+```bash
+docker run --name enose-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=enose -p 5432:5432 -d postgres:17
+```
+
+Запуск backend:
+
+```bash
+task backend:run
+```
+
+Проверка подключения к базе:
+
+```bash
+curl http://localhost:8080/api/v1/health
+```
+
+В ответе поле `database` должно быть `ok`. Для тестовой БД см. `apps/backend/.env.test.example`.
 
 ---
 

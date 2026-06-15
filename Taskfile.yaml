@@ -30,7 +30,25 @@ tasks:
     silent: true
     cmds:
       - cd apps/backend && go mod tidy
-      - go run ./apps/backend/cmd/api/main.go
+      - cd apps/backend && go run ./cmd/api/main.go
+
+  backend:db:init:
+    desc: "Apply pending database migrations (golang-migrate up)"
+    silent: true
+    cmds:
+      - cd apps/backend && go run ./cmd/migrate/main.go up
+
+  backend:db:down:
+    desc: "Roll back all database migrations (DESTRUCTIVE)"
+    silent: true
+    cmds:
+      - cd apps/backend && go run ./cmd/migrate/main.go down
+
+  backend:db:status:
+    desc: "Print the active database migration version"
+    silent: true
+    cmds:
+      - cd apps/backend && go run ./cmd/migrate/main.go status
       
   frontend:run:
     desc: "Run the frontend application"
