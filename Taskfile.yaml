@@ -30,7 +30,7 @@ tasks:
     silent: true
     cmds:
       - cd apps/backend && go mod tidy
-      - go run ./apps/backend/cmd/api/main.go
+      - cd apps/backend && go run ./cmd/api/main.go
       
   frontend:run:
     desc: "Run the frontend application"
