@@ -1,0 +1,30 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # Команда для сборки
+  cmd = "go build -o ./tmp/main ./cmd/api/main.go"
+  # Бинарник для запуска
+  bin = "./tmp/main"
+  # Задержка перед перезапуском (мс)
+  delay = 1000
+  # Расширения файлов для отслеживания
+  include_ext = ["go", "tpl", "tmpl", "html", "env"]
+  # Исключить директории
+  exclude_dir = ["tmp", "vendor", "node_modules", "bin"]
+  # Исключить файлы
+  exclude_file = []
+  # Исключить regex паттерны
+  exclude_regex = ["_test\\.go"]
+  # Игнорировать файлы
+  ignore = ["tmp/*"]
+
+[log]
+  # Показывать время в логах
+  time = false
+  # Только основные логи (без деталей сборки)
+  main_only = false
+
+[misc]
+  # Очистить tmp_dir при выходе
+  clean_on_exit = false

@@ -1,0 +1,14 @@
+bin/
+tmp/
+*.exe
+*.dll
+*.so
+*.dylib
+.env
+.env.*
+!.env.example
+docs/
+coverage.*
+.git
+.gitignore
+README.md

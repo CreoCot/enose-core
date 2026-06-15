@@ -1,0 +1,18 @@
+FROM golang:1.26-alpine
+
+WORKDIR /app
+
+# Зависимости
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Исходники
+COPY . .
+
+# Собираем бинарник миграций отдельно (быстрее и надёжнее, чем go run)
+RUN go build -o /app/migrate ./cmd/migrate/main.go
+
+EXPOSE 8080
+
+# Скрипт запуска: сначала миграции, потом API
+CMD ["sh", "-c", "/app/migrate up && go run ./cmd/api/main.go"]
