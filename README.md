@@ -4,14 +4,70 @@
 
 ## Стек
 
-- **Backend:** Go 1.26.3 (Go Workspaces)
+- **Backend:** Go 1.26.2 (Go Workspaces)
 - **Frontend:** React 19 (Vite, TS, ESLint)
 - **ML:** Python 3.13 (управление через `uv`)
 - **Автоматизация:** Taskfile, pre-commit
 
 ---
 
-## Быстрый старт
+## Start using Docker:
+
+### 1. System requirements
+
+- docker compose (>5.0.0)
+
+### 2. Preparation
+
+Copy all `.env.example` to `.env` files (Change some fields if needed)
+Copy `.env.docker.example` to `.env.docker`
+Install `task` to run services easily
+
+### 3. Run
+
+- To run all the services at once run:
+
+```
+task all:run
+```
+
+- Or use:
+
+```
+docker compose up --build
+```
+
+### 4. Testing
+
+#### Backend
+
+- Check heartbeat of backend api service:
+
+```
+curl http://localhost:8080/api/v1/health | jq
+```
+
+- Check table generation:
+
+```
+curl http://localhost:8080/api/v1/table | jq
+```
+
+#### Frontend
+
+- Visit `localhost:5173`
+
+#### Postgres
+
+To check that migrations applied run:
+
+```
+docker exec -i enose-postgres psql -U postgres -d enose -c '\d'
+```
+
+Or visit PgAdmin4 on `localhost:5050`
+
+## Старт без Docker
 
 ### 1. Системные требования
 
