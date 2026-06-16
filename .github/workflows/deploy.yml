@@ -11,7 +11,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Download code from repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Start Docker Compose build
         run: |
