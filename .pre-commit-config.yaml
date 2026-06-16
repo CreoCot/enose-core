@@ -33,7 +33,7 @@ repos:
     hooks:
       - id: go-fmt
         name: Format Go (go fmt)
-        entry: go fmt
+        entry: gofmt -w
         language: system
         types: [go]
 
