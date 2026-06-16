@@ -70,9 +70,11 @@ func Health(c *gin.Context) {
 func Table(c *gin.Context) {
 	table := tools.MakeData()
 
+	num_of_sensors := len(table[0]) - 1
+
 	c.JSON(http.StatusOK, TableResponse{
 		Table:  table,
-		Length: len(table), // ← было захардкожено 8, теперь динамически
+		Length: num_of_sensors,
 	})
 }
 
