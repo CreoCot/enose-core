@@ -45,7 +45,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <div className="flex w-screen h-screen">
+    <div className="flex w-full h-full min-h-screen">
       <Sidebar />
       <Outlet />
     </div>
