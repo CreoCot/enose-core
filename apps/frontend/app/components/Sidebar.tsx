@@ -26,7 +26,9 @@ const Sidebar = () => {
       </div>
 
       <div
-        className={`flex justify-center items-baseline ${isDataActive ? activeClass : "items-baseline"}`}
+        className={`flex justify-center items-baseline ${
+          isDataActive ? activeClass : "items-baseline"
+        }`}
       >
         <SidebarButton to="/data" type="data">
           Данные

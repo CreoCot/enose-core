@@ -1,0 +1,141 @@
+{
+  "schemes": ["http"],
+  "swagger": "2.0",
+  "info": {
+    "description": "API for e-nose system",
+    "title": "Enose Core API",
+    "termsOfService": "http://swagger.io/terms/",
+    "contact": {
+      "name": "Enose Core Team",
+      "email": "dev@enose-core.local"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "http://swagger.io/licenses/"
+    },
+    "version": "1.0.0"
+  },
+  "host": "localhost:8080",
+  "basePath": "/api/v1",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "description": "Возвращает статус сервиса, версию, время работы и состояние БД.\nИспользуется для liveness/readiness probes и мониторинга.",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Heartbeat"],
+        "summary": "Проверка работоспособности бэкенда",
+        "responses": {
+          "200": {
+            "description": "Сервер работает",
+            "schema": {
+              "$ref": "#/definitions/handlers.HealthResponse"
+            }
+          },
+          "500": {
+            "description": "Внутренняя ошибка",
+            "schema": {
+              "$ref": "#/definitions/handlers.HealthResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/table": {
+      "get": {
+        "description": "Возвращает матрицу временных рядов от пьезосенсоров для визуализации.\nКаждая строка матрицы — данные одного сенсора.",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Data"],
+        "summary": "Получить демо-таблицу данных сенсоров",
+        "responses": {
+          "200": {
+            "description": "Пример ответа",
+            "schema": {
+              "$ref": "#/definitions/handlers.TableResponse"
+            }
+          },
+          "500": {
+            "description": "Ошибка генерации данных",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "handlers.ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "example": "internal_error"
+        },
+        "message": {
+          "type": "string",
+          "example": "Something went wrong"
+        }
+      }
+    },
+    "handlers.HealthResponse": {
+      "type": "object",
+      "properties": {
+        "database": {
+          "description": "Статус подключения к БД",
+          "type": "string",
+          "example": "ok"
+        },
+        "status": {
+          "description": "Общий статус приложения",
+          "type": "string",
+          "example": "OK"
+        },
+        "timestamp": {
+          "description": "Время генерации ответа",
+          "type": "string",
+          "example": "Sun, 14 Jun 2026 16:25:56 UTC"
+        },
+        "uptime": {
+          "description": "Время работы с момента запуска",
+          "type": "string",
+          "example": "55.332075718s"
+        },
+        "version": {
+          "description": "Версия сборки",
+          "type": "string",
+          "example": "1.0.0-mvp"
+        }
+      }
+    },
+    "handlers.TableResponse": {
+      "type": "object",
+      "properties": {
+        "length": {
+          "description": "Массив временных рядов (каждая строка — один сенсор)",
+          "type": "integer",
+          "example": 2
+        },
+        "table": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "float64"
+            }
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "BearerAuth": {
+      "description": "JWT-token (TBA)",
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  }
+}

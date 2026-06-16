@@ -1,0 +1,112 @@
+basePath: /api/v1
+definitions:
+  handlers.ErrorResponse:
+    properties:
+      error:
+        example: internal_error
+        type: string
+      message:
+        example: Something went wrong
+        type: string
+    type: object
+  handlers.HealthResponse:
+    properties:
+      database:
+        description: Статус подключения к БД
+        example: ok
+        type: string
+      status:
+        description: Общий статус приложения
+        example: OK
+        type: string
+      timestamp:
+        description: Время генерации ответа
+        example: Sun, 14 Jun 2026 16:25:56 UTC
+        type: string
+      uptime:
+        description: Время работы с момента запуска
+        example: 55.332075718s
+        type: string
+      version:
+        description: Версия сборки
+        example: 1.0.0-mvp
+        type: string
+    type: object
+  handlers.TableResponse:
+    properties:
+      length:
+        description: Массив временных рядов (каждая строка — один сенсор)
+        example: 2
+        type: integer
+      table:
+        items:
+          items:
+            format: float64
+            type: number
+          type: array
+        type: array
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: dev@enose-core.local
+    name: Enose Core Team
+  description: API for e-nose system
+  license:
+    name: Proprietary
+    url: http://swagger.io/licenses/
+  termsOfService: http://swagger.io/terms/
+  title: Enose Core API
+  version: 1.0.0
+paths:
+  /api/v1/health:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Возвращает статус сервиса, версию, время работы и состояние БД.
+        Используется для liveness/readiness probes и мониторинга.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сервер работает
+          schema:
+            $ref: '#/definitions/handlers.HealthResponse'
+        "500":
+          description: Внутренняя ошибка
+          schema:
+            $ref: '#/definitions/handlers.HealthResponse'
+      summary: Проверка работоспособности бэкенда
+      tags:
+      - Heartbeat
+  /api/v1/table:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Возвращает матрицу временных рядов от пьезосенсоров для визуализации.
+        Каждая строка матрицы — данные одного сенсора.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пример ответа
+          schema:
+            $ref: '#/definitions/handlers.TableResponse'
+        "500":
+          description: Ошибка генерации данных
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Получить демо-таблицу данных сенсоров
+      tags:
+      - Data
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    description: JWT-token (TBA)
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -31,7 +31,7 @@ func getEnv(key, fallback string) string {
 		return val
 	}
 
-	fmt.Printf("CONFIG WARNING: default value used for %s", key)
+	slog.Warn("CONFIG: default value used for", "key", key, "fallback", fallback)
 	return fallback
 }
 
