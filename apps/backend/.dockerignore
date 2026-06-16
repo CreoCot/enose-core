@@ -7,7 +7,6 @@ tmp/
 .env
 .env.*
 !.env.example
-docs/
 coverage.*
 .git
 .gitignore
