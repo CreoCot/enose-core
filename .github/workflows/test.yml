@@ -29,8 +29,15 @@ jobs:
       - name: Run Typecheck (TypeScript validation)
         run: npm run typecheck
 
-      - name: Run frontend tests
-        run: npm test
+      - name: Run frontend tests with coverage
+        run: npm test -- --coverage
+
+      - name: Upload Frontend Coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: apps/frontend/coverage/clover.xml
+          flags: frontend
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   test-backend:
     runs-on: ubuntu-latest
@@ -52,7 +59,14 @@ jobs:
         run: go mod download
 
       - name: Run backend tests
-        run: go test -v ./...
+        run: go test -v -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload Backend Coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: apps/backend/coverage.out
+          flags: backend
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   test-ml:
     runs-on: ubuntu-latest
@@ -78,4 +92,11 @@ jobs:
         run: uv sync --locked --dev
 
       - name: Run ML tests
-        run: uv run pytest
+        run: uv run pytest --cov=src --cov-report=xml
+
+      - name: Upload ML Coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: apps/ml/coverage.xml
+          flags: ml
+          token: ${{ secrets.CODECOV_TOKEN }}

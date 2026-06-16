@@ -38,3 +38,7 @@ apps/ml/data/
 .env
 docker-compose.override.yml
 .env.docker
+
+# Code Coverage
+.coverage
+htmlcov
