@@ -2,13 +2,11 @@ services:
   # PostgreSQL
   postgres:
     image: postgres:15-alpine
-    container_name: enose-postgres
+    container_name: enose-postgres-prod
     environment:
       POSTGRES_USER: ${DATABASE_USER:-postgres}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
       POSTGRES_DB: ${DATABASE_NAME:-enose}
-    ports:
-      - "${DATABASE_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,27 +14,15 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  # pgAdmin
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: enose-pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
-    ports:
-      - "${PGADMIN_PORT:-5050}:80"
-    depends_on:
-      postgres:
-        condition: service_healthy
+    restart: always
 
   # Go Backend
   migrate:
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
-      target: development
-    container_name: enose-migrate
+      target: production
+    container_name: enose-migrate-prod
     environment:
       DATABASE_HOST: postgres
       DATABASE_PORT: "5432"
@@ -47,20 +33,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: [ "go", "run", "./cmd/migrate/main.go", "up" ]
+    command: [ "/app/migrate", "up" ]
 
   backend:
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
-      target: development
-    container_name: enose-backend
-    volumes:
-      - ./apps/backend:/app
-      - /app/tmp
+      target: production
+    container_name: enose-backend-prod
     environment:
       PORT: "8080"
-      ENV: development
+      ENV: production
       DATABASE_HOST: postgres
       DATABASE_PORT: "5432"
       DATABASE_USER: ${DATABASE_USER:-postgres}
@@ -73,21 +56,20 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: always
 
   # React Frontend
   frontend:
     build:
       context: ./apps/frontend
       dockerfile: Dockerfile
-      target: development
-    container_name: enose-frontend
-    volumes:
-      - ./apps/frontend:/app
-      - /app/node_modules
+    container_name: enose-frontend-prod
     environment:
-      VITE_API_URL: http://localhost:8080
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
     ports:
-      - "${FRONTEND_PORT:-5173}:5173"
+      - "${FRONTEND_PORT:-5173}:8080"
     depends_on:
       - backend
 

@@ -1,38 +1,50 @@
-# FROM node:20-alpine AS development-dependencies-env
-# COPY . /app
-# WORKDIR /app
-# RUN npm ci
-
-# FROM node:20-alpine AS production-dependencies-env
-# COPY ./package.json package-lock.json /app/
-# WORKDIR /app
-# RUN npm ci --omit=dev
-
-# FROM node:20-alpine AS build-env
-# COPY . /app/
-# COPY --from=development-dependencies-env /app/node_modules /app/node_modules
-# WORKDIR /app
-# RUN npm run build
-
-# FROM node:20-alpine
-# COPY ./package.json package-lock.json /app/
-# COPY --from=production-dependencies-env /app/node_modules /app/node_modules
-# COPY --from=build-env /app/build /app/build
-# WORKDIR /app
-# CMD ["npm", "run", "start"]
-
-FROM node:20-alpine
-
+FROM node:20-alpine AS base
 WORKDIR /app
+RUN chown -R node:node /app
 
-# Копируем package.json для кеша зависимостей
-COPY package.json package-lock.json* ./
-RUN npm install
 
-# Копируем исходники
-COPY . .
+FROM base AS development
+USER node
+
+COPY --chown=node:node package.json package-lock.json* ./
+
+RUN npm ci --no-audit --no-fund
+COPY --chown=node:node . .
 
 EXPOSE 5173
-
-# Vite dev server, слушает на всех интерфейсах
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+
+
+FROM development AS builder
+
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
+ENV NODE_ENV=production
+
+RUN npm run build
+
+
+
+FROM node:20-alpine AS production
+
+
+WORKDIR /app
+RUN chown -R node:node /app
+
+USER node
+
+COPY --chown=node:node package.json package-lock.json* ./
+RUN npm ci --omit=dev --no-audit --no-fund
+
+COPY --chown=node:node --from=builder /app/build ./build
+
+ENV NODE_ENV=production
+ENV PORT=8080
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost:8080/ || exit 1
+
+CMD ["npm", "run", "start"]

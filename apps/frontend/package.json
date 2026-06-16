@@ -6,7 +6,8 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc"
+    "typecheck": "react-router typegen && tsc",
+    "test": "echo 'No tests configured yet' && exit 0"
   },
   "dependencies": {
     "@fontsource-variable/nunito-sans": "^5.2.7",
