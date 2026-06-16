@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 tasks:
   default:
@@ -24,3 +24,34 @@ tasks:
 
       # ML
       - cd apps/ml && uv sync
+
+  backend:run:
+    desc: "Run server on localhost:8080"
+    silent: true
+    cmds:
+      - cd apps/backend && go mod tidy
+      - cd apps/backend && go run ./cmd/api/main.go
+
+  backend:db:init:
+    desc: "Apply pending database migrations (golang-migrate up)"
+    silent: true
+    cmds:
+      - cd apps/backend && go run ./cmd/migrate/main.go up
+
+  backend:db:down:
+    desc: "Roll back all database migrations (DESTRUCTIVE)"
+    silent: true
+    cmds:
+      - cd apps/backend && go run ./cmd/migrate/main.go down
+
+  backend:db:status:
+    desc: "Print the active database migration version"
+    silent: true
+    cmds:
+      - cd apps/backend && go run ./cmd/migrate/main.go status
+      
+  frontend:run:
+    desc: "Run the frontend application"
+    silent: true
+    cmds:
+      - cd apps/frontend && npm run dev

@@ -29,16 +29,16 @@ print(df.head())
 
 The returned DataFrame has one row per (sensor, point):
 
-| column       | type  | meaning                                         |
-| ------------ | ----- | ----------------------------------------------- |
-| `timestamp`  | float | seconds from measurement start (−1 = baseline)  |
-| `sensor_id`  | str   | sensor identifier, e.g. `SID0001`               |
-| `frequency`  | float | raw sensor frequency in Hz (~10 MHz)            |
-| `delta`      | float | `frequency − initial` in Hz — the useful signal |
-| `name`       | str   | measured object name                            |
-| `start`      | str   | measurement start datetime                      |
-| `length`     | int   | declared measurement length in seconds          |
-| `ismeasured` | bool  | device quality flag                             |
+| column      | type  | meaning                                            |
+|-------------|-------|----------------------------------------------------|
+| `timestamp` | float | seconds from measurement start (−1 = baseline)     |
+| `sensor_id` | str   | sensor identifier, e.g. `SID0001`                  |
+| `frequency` | float | raw sensor frequency in Hz (~10 MHz)               |
+| `delta`     | float | `frequency − initial` in Hz — the useful signal    |
+| `name`      | str   | measured object name                               |
+| `start`     | str   | measurement start datetime                         |
+| `length`    | int   | declared measurement length in seconds             |
+| `ismeasured`| bool  | device quality flag                                |
 
 ### Why `delta`?
 
@@ -48,9 +48,9 @@ so `delta = frequency − initial` isolates the actual sensor response.
 
 ### Format notes
 
-- Files are UTF-8 **with a BOM** (handled automatically).
-- The decimal separator is a **comma** (`"1,00"`), converted on load.
-- The first point per sensor is usually `time = -1` (a pre-measurement
+* Files are UTF-8 **with a BOM** (handled automatically).
+* The decimal separator is a **comma** (`"1,00"`), converted on load.
+* The first point per sensor is usually `time = -1` (a pre-measurement
   baseline). Filter `df[df.timestamp >= 0]` if you want only the measured run.
 
 ## Plotting sensor curves
@@ -89,20 +89,3 @@ uv run pytest tests/
 
 The `pythonpath = ["src"]` setting in `pyproject.toml` lets the tests import
 `data_loader` directly.
-
-## Docker
-
-> **Note:**
-> This `Dockerfile` is committed as groundwork so the ML workspace is ready to
-> be containerized. For day-to-day work, the local `uv` setup above is sufficient.
-
-```bash
-# from apps/ml — build the image
-docker build -t enose-ml .
-
-# run the test suite
-docker run --rm enose-ml
-```
-
-The image is based on the official `uv` Python 3.13 image and installs
-dependencies from `uv.lock` for a reproducible build.
