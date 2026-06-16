@@ -64,7 +64,7 @@ services:
       context: ./apps/frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=/api
+        - VITE_API_URL=http://10.93.27.29
     container_name: enose-frontend-prod
     depends_on:
       - backend
