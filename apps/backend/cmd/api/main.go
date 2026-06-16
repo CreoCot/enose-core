@@ -1,3 +1,22 @@
+// @title Enose Core API
+// @version 1.0.0
+// @description API for e-nose system
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name Enose Core Team
+// @contact.email dev@enose-core.local
+
+// @license.name Proprietary
+// @license.url http://swagger.io/licenses/
+
+// @host localhost:8080
+// @BasePath /api/v1
+// @schemes http
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description JWT-token (TBA)
 package main
 
 import (
