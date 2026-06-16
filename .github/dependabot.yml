@@ -14,15 +14,6 @@ updates:
     directory: "/apps/backend"
     schedule:
       interval: "weekly"
-    groups:
-      backend-dependencies:
-        patterns:
-          - "*"
-
-  - package-ecosystem: "gomod"
-    directory: "/apps/backend"
-    schedule:
-      interval: "weekly"
       day: "monday"
     groups:
       backend-deps:
