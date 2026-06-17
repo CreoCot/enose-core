@@ -14,8 +14,6 @@ interface Props {
 }
 
 const Plot = ({ id, timestamps, sensorData }: PlotProps) => {
-  console.log(timestamps);
-  console.log(sensorData);
   const plotColor = "#7B3BCE"; // accent-500
   return (
     <div className="flex flex-col gap-3 w-full h-full">
