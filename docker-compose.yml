@@ -84,6 +84,7 @@ services:
     volumes:
       - ./apps/frontend:/app
       - /app/node_modules
+      - /app/.react-router
     environment:
       VITE_API_URL: http://localhost:8080
     ports:
