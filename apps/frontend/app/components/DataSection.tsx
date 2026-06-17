@@ -3,10 +3,11 @@ import { AnimatePresence, motion } from "motion/react";
 
 interface Props {
   children?: ReactNode;
+  initialOpen?: boolean;
   name: string;
 }
 
-const DataSection = ({ children, name }: Props) => {
+const DataSection = ({ children, initialOpen = false, name }: Props) => {
   const color = "#070750"; // primary-900
   const icon = (
     <svg
@@ -24,7 +25,7 @@ const DataSection = ({ children, name }: Props) => {
       />
     </svg>
   );
-  const [open, setOpen] = useState<boolean>(false);
+  const [open, setOpen] = useState<boolean>(initialOpen);
   return (
     <div className="flex flex-col">
       <button
