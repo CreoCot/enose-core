@@ -13,12 +13,12 @@ const Table = ({ table, sensorSize, error }: Props) => {
   const rowClass = "bg-primary-100 h-7 text-primary-700 font-light text-sm";
   return (
     <>
-      {sensorSize === 0 && (
-        <div className="text-primary-700 font-bold text-3xl mx-8 my-4mx-8 my-4">
-          {error.length === 0 ? "Получаем таблицу..." : error}
+      {(sensorSize === 0 || error.length !== 0) && (
+        <div className="text-primary-700 font-bold text-3xl mx-8 my-4">
+          {error.length === 0 ? "Получаем данные..." : error}
         </div>
       )}
-      {sensorSize !== 0 && (
+      {sensorSize !== 0 && error.length === 0 && (
         <div className="mx-8 my-4 inline-block overflow-hidden rounded-[10px] shadow-md shadow-primary-300 border border-primary-300 overflow-x-auto overscroll-x-none">
           <table className="w-full border-collapse">
             <thead>

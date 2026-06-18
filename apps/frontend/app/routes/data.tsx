@@ -19,11 +19,19 @@ const data = () => {
   async function getTable() {
     try {
       const response = await axios.get("/api/v1/table");
+      if (!response.data.data || !response.data.size) {
+        setTableError("Ошибка API");
+        return;
+      }
       setTable(response.data.data || []);
-      setSensorSize(response.data.size);
+      if (sensorSize === 0) setSensorSize(response.data.size);
     } catch (error) {
       if (isAxiosError(error) && error.response) {
-        setTableError(error.response.data.error);
+        if (error.response.data.error) {
+          setTableError(error.response.data.error);
+        } else {
+          setTableError(error.response.data);
+        }
       } else if (error instanceof Error) {
         setTableError(error.message);
       } else {
@@ -35,12 +43,24 @@ const data = () => {
   async function getPlots() {
     try {
       const response = await axios.get("/api/v1/plots");
+      if (
+        !response.data.data ||
+        !response.data.size ||
+        !response.data.timestamps
+      ) {
+        setPlotError("Ошибка API");
+        return;
+      }
       setPlotTimestamps(response.data.timestamps);
       setPlots(response.data.data);
-      setSensorSize(response.data.size);
+      if (sensorSize === 0) setSensorSize(response.data.size);
     } catch (error) {
       if (isAxiosError(error) && error.response) {
-        setPlotError(error.response.data.error);
+        if (error.response.data.error) {
+          setPlotError(error.response.data.error);
+        } else {
+          setPlotError(error.response.data);
+        }
       } else if (error instanceof Error) {
         setPlotError(error.message);
       } else {
