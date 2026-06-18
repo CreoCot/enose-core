@@ -38,6 +38,7 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 	{
 		v1.GET("/health", handlers.Health)
 		v1.GET("/table", handlers.Table)
+		v1.GET("/plots", handlers.Plots)
 	}
 
 	return r
