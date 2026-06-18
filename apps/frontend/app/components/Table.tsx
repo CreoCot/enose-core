@@ -19,8 +19,8 @@ const Table = ({ table, sensorSize, error }: Props) => {
         </div>
       )}
       {sensorSize !== 0 && error.length === 0 && (
-        <div className="mx-8 my-4 inline-block overflow-hidden rounded-[10px] shadow-md shadow-primary-300 border border-primary-300 overflow-x-auto overscroll-x-none">
-          <table className="w-full border-collapse">
+        <div className="min-w-0 mx-8 my-4 rounded-[10px] shadow-md shadow-primary-300 border border-primary-300 overflow-x-auto overscroll-x-none">
+          <table className="min-w-full table-auto border-collapse">
             <thead>
               <tr className={headRowClass}>
                 <th

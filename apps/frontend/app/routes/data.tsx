@@ -77,7 +77,7 @@ const data = () => {
   }, []);
 
   return (
-    <div className="w-full bg-grey-100 pb-5">
+    <div className="w-full overflow-hidden bg-grey-100 pb-5">
       <Head>Данные с сенсоров</Head>
       <DataSection initialOpen={true} name="Графики">
         <Plots
