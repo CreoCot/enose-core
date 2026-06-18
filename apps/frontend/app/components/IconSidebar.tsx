@@ -14,15 +14,13 @@ const Sidebar = () => {
     "relative after:absolute after:right-0 after:top-0 after:bottom-0 after:w-1 after:bg-accent-700";
 
   return (
-    <div className="flex flex-col bg-grey-200 border-r border-r-grey-300 w-11 lg:w-12">
+    <div className="flex flex-col bg-grey-200 border-r border-r-grey-300 w-8">
       <div
         className={`flex h-8 border-b border-grey-300 justify-center items-center ${
           isHomeActive ? activeClass : ""
         }`}
       >
-        <SidebarButton to="/" type="home">
-          Главная
-        </SidebarButton>
+        <SidebarButton to="/" type="home" />
       </div>
 
       <div
@@ -30,9 +28,7 @@ const Sidebar = () => {
           isDataActive ? activeClass : ""
         }`}
       >
-        <SidebarButton to="/data" type="data">
-          Данные
-        </SidebarButton>
+        <SidebarButton to="/data" type="data" />
       </div>
     </div>
   );

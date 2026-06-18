@@ -1,23 +1,17 @@
 import { NavLink, useMatch, useResolvedPath } from "react-router";
 
 interface Props {
-  children: string;
+  children?: string;
   to: string;
   type: "home" | "data";
 }
 
 const SidebarButton = ({ children, type, to }: Props) => {
-  const iconColor = "#4B4BC3"; // primary-500
-  const selectedIconColor = "#4B1D95"; //accent-700
   const iconSize = 24;
   const selectedIconSize = 22;
 
   const resolvedPath = useResolvedPath(to);
   const isActive = !!useMatch({ path: resolvedPath.pathname, end: true });
-
-  var color;
-  if (isActive) color = selectedIconColor;
-  else color = iconColor;
 
   var size;
   if (isActive) size = selectedIconSize;
@@ -29,7 +23,7 @@ const SidebarButton = ({ children, type, to }: Props) => {
       viewBox={`0 0 ${size} ${size}`}
       strokeWidth={1.5}
       stroke="currentColor"
-      className="size-6"
+      className="size-5 lg:size-6"
     >
       <path
         strokeLinecap="round"
@@ -43,7 +37,7 @@ const SidebarButton = ({ children, type, to }: Props) => {
       xmlns="http://www.w3.org/2000/svg"
       viewBox={`0 0 ${size} ${size}`}
       fill="currentColor"
-      className="size-6"
+      className="size-5 lg:size-6"
     >
       <path d="M11.47 3.841a.75.75 0 0 1 1.06 0l8.69 8.69a.75.75 0 1 0 1.06-1.061l-8.689-8.69a2.25 2.25 0 0 0-3.182 0l-8.69 8.69a.75.75 0 1 0 1.061 1.06l8.69-8.689Z" />
       <path d="m12 5.432 8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 0 1-.75-.75v-4.5a.75.75 0 0 0-.75-.75h-3a.75.75 0 0 0-.75.75V21a.75.75 0 0 1-.75.75H5.625a1.875 1.875 0 0 1-1.875-1.875v-6.198a2.29 2.29 0 0 0 .091-.086L12 5.432Z" />
@@ -56,7 +50,7 @@ const SidebarButton = ({ children, type, to }: Props) => {
       viewBox={`0 0 ${size} ${size}`}
       strokeWidth={1.5}
       stroke="currentColor"
-      className="size-6"
+      className="size-5 lg:size-6"
     >
       <path
         strokeLinecap="round"
@@ -70,7 +64,7 @@ const SidebarButton = ({ children, type, to }: Props) => {
       xmlns="http://www.w3.org/2000/svg"
       viewBox={`0 0 ${size} ${size}`}
       fill="currentColor"
-      className="size-6"
+      className="size-5 lg:size-6"
     >
       <path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.036-.84-1.875-1.875-1.875h-.75ZM9.75 8.625c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v11.25c0 1.035-.84 1.875-1.875 1.875h-.75a1.875 1.875 0 0 1-1.875-1.875V8.625ZM3 13.125c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v6.75c0 1.035-.84 1.875-1.875 1.875h-.75A1.875 1.875 0 0 1 3 19.875v-6.75Z" />
     </svg>
@@ -87,16 +81,15 @@ const SidebarButton = ({ children, type, to }: Props) => {
       return selectedDataIcon;
     }
   }
-
   return (
     <NavLink
       to={to}
       className={`flex ${
         isActive ? "gap-3" : "gap-2"
-      } pt-3 pb-2 items-stretch transition-colors duration-200 ${
+      } pt-3 pb-2 transition-colors duration-200 p-4 text-xl lg:text-2xl ${
         isActive
-          ? "text-accent-700 hover:text-accent-800 text-bold text-3xl"
-          : "text-primary-500 hover:text-primary-400 font-medium text-2xl "
+          ? "text-accent-700 hover:text-accent-800 font-extrabold items-baseline"
+          : "text-primary-500 hover:text-primary-400 font-medium"
       }`}
     >
       {getIcon(type, isActive)}
