@@ -10,13 +10,15 @@ interface Props {
 const Plots = ({ sensorSize, timestamps, data, error }: Props) => {
   return (
     <>
-      {(sensorSize === 0 || error.length !== 0) && (
+      {(timestamps.length === 0 ||
+        data.length === 0 ||
+        sensorSize === 0 ||
+        error.length !== 0) && (
         <div className="text-primary-700 font-bold text-2xl lg:text-3xl mx-8 my-4">
           {error.length === 0 ? "Получаем данные..." : error}
         </div>
       )}
-      {sensorSize &&
-        timestamps.length !== 0 &&
+      {timestamps.length !== 0 &&
         data.length !== 0 &&
         sensorSize !== 0 &&
         error.length === 0 && (
