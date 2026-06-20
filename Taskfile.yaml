@@ -1,5 +1,7 @@
 version: "3"
-
+env:
+  PROJECT_ROOT: "{{.USER_WORKING_DIR}}"
+  
 tasks:
   default:
     desc: "List all tasks"
@@ -32,23 +34,39 @@ tasks:
       - cd apps/backend && go mod tidy
       - cd apps/backend && go run ./cmd/api/main.go
 
-  backend:db:init:
-    desc: "Apply pending database migrations (golang-migrate up)"
-    silent: true
+  db:migrate-create:
+    desc: "Создать новый файл миграции. Пример: task db:migrate-create seq=init"
     cmds:
-      - cd apps/backend && go run ./cmd/migrate/main.go up
+      - |
+        if [ -z "{{.seq}}" ]; then
+          echo "Ошибка: Отсутствует параметр 'seq'. Пример: task db:migrate-create seq=name_of_migration"
+          exit 1
+        fi
+      - >
+        docker compose run --rm 
+        migrate 
+        create -ext sql -dir //migrations -seq "{{.seq}}"
 
-  backend:db:down:
-    desc: "Roll back all database migrations (DESTRUCTIVE)"
-    silent: true
+  db:migrate-up:
+    desc: "Накатить все незавершенные миграции (up)"
     cmds:
-      - cd apps/backend && go run ./cmd/migrate/main.go down
+      - >
+        docker compose run --rm 
+        migrate 
+        -path /migrations 
+        -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable 
+        up
 
-  backend:db:status:
-    desc: "Print the active database migration version"
-    silent: true
+  db:migrate-down:
+    desc: "Откатить последнюю или все миграции (down)"
     cmds:
-      - cd apps/backend && go run ./cmd/migrate/main.go status
+      - >
+        docker compose run --rm 
+        migrate 
+        -path /migrations 
+        -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable 
+        down 1
+
 
   frontend:run:
     desc: "Run the frontend application"

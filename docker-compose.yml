@@ -32,11 +32,8 @@ services:
 
   # Go Backend
   migrate:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
-      target: development
-    container_name: enose-migrate
+    container_name: enose-migrate-prod
+    image: migrate/migrate:v4.19.1
     environment:
       DATABASE_HOST: postgres
       DATABASE_PORT: "5432"
@@ -44,10 +41,16 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
       DATABASE_NAME: ${DATABASE_NAME:-enose}
       DATABASE_SSLMODE: disable
+    volumes:
+      - ${PROJECT_ROOT}/apps/backend/database/migrations:/migrations
     depends_on:
       postgres:
         condition: service_healthy
-    command: [ "go", "run", "./cmd/migrate/main.go", "up" ]
+    
+    command: 
+      - -path=/migrations 
+      - -database=postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable 
+      - up
 
   backend:
     build:
