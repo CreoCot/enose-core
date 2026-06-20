@@ -14,22 +14,13 @@ const Table = ({ table, sensorSize, error }: Props) => {
   return (
     <>
       {(sensorSize === 0 || error.length !== 0) && (
-<<<<<<< HEAD
         <div className="text-primary-700 font-bold text-2xl lg:text-3xl mx-8 my-4">
-=======
-        <div className="text-primary-700 font-bold text-3xl mx-8 my-4">
->>>>>>> f77d34e (feat(frontend): plot visualization and table appearance )
           {error.length === 0 ? "Получаем данные..." : error}
         </div>
       )}
       {sensorSize !== 0 && error.length === 0 && (
-<<<<<<< HEAD
         <div className="min-w-0 mx-8 my-4 rounded-[10px] shadow-md shadow-primary-300 border border-primary-300 overflow-x-auto overscroll-x-none">
           <table className="min-w-full table-auto border-collapse">
-=======
-        <div className="mx-8 my-4 inline-block overflow-hidden rounded-[10px] shadow-md shadow-primary-300 border border-primary-300 overflow-x-auto overscroll-x-none">
-          <table className="w-full border-collapse">
->>>>>>> f77d34e (feat(frontend): plot visualization and table appearance )
             <thead>
               <tr className={headRowClass}>
                 <th
