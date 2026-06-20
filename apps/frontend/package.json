@@ -10,7 +10,11 @@
     "test": "echo 'No tests configured yet' && exit 0"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@fontsource-variable/nunito-sans": "^5.2.7",
+    "@mui/material": "^9.1.1",
+    "@mui/x-charts": "^9.5.0",
     "@react-router/node": "7.18.0",
     "@react-router/serve": "7.18.0",
     "axios": "^1.18.0",
