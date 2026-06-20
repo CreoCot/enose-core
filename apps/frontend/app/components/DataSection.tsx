@@ -32,7 +32,7 @@ const DataSection = ({ children, initialOpen = false, name }: Props) => {
         onClick={() => {
           setOpen(!open);
         }}
-        className={`flex gap-1 text-3xl text-primary-900 font-bold pt-5 pl-6 cursor-pointer ${
+        className={`flex gap-1 text-2xl lg:text-3xl text-primary-900 font-bold pt-5 pl-6 cursor-pointer ${
           open ? "pb-2" : "pb-1"
         } items-stretch`}
       >
