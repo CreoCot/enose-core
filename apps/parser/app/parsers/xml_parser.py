@@ -1,11 +1,10 @@
 from __future__ import annotations
-
 from datetime import datetime
-
 from defusedxml import ElementTree as DET
 
-from apps.backend.database.services.importer.parsers.common import finalize
-from shared.schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
+# ИЗМЕНЕНО: Локальные импорты
+from apps.parser.app.parsers.common import finalize
+from apps.parser.app.schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
 
 
 def _text(node, tag: str) -> str | None:
@@ -16,7 +15,6 @@ def _text(node, tag: str) -> str | None:
 
 
 def parse_xml(content: bytes) -> ParsedMeasurement:
-
     text_content = content.decode("utf-8-sig", errors="ignore")
     measure_idx = text_content.find("<measure>")
     if measure_idx != -1:
@@ -44,12 +42,10 @@ def parse_xml(content: bytes) -> ParsedMeasurement:
     except ValueError as e:
         raise ValueError(f"Некорректный формат времени <start>: {start_str}") from e
 
-
     device_serial = "MAG8-LEGACY"
     device_type_code = "MAG8"
     interval_ms = 1000
     default_unit = "Hz"
-
 
     sensors: list[ParsedSensor] = []
     data_points: list[ParsedDataPoint] = []
@@ -57,7 +53,6 @@ def parse_xml(content: bytes) -> ParsedMeasurement:
     sensor_nodes = root.findall("sensor")
     if not sensor_nodes:
         raise ValueError("В XML отсутствует блок <sensor>")
-
 
     for position, sensor_el in enumerate(sensor_nodes, start=1):
         label = sensor_el.attrib.get("sid", f"S{position}")

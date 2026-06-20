@@ -1,42 +1,12 @@
-"""
-Парсер CSV.
-
-Ожидаемый формат файла (UTF-8):
-
-    # device_serial: MAG8-0007
-    # device_type: MAG8
-    # name: Проба воздуха #14
-    # object: Образец A
-    # start_time: 2026-06-01T12:00:00
-    # interval_ms: 1000
-    # description: тестовый прогон
-    time_s,S1,S2,S3,S4,S5,S6,S7,S8
-    0.0,29999801,30001120,...
-    1.0,29999795,30001118,...
-    ...
-
-Правила:
-  - строки, начинающиеся с "#", — это метаданные "# ключ: значение"
-    (регистр ключей не важен);
-  - обязательные ключи: device_serial, device_type, name, start_time,
-    interval_ms;
-  - первая не-комментированная строка — заголовок: первая колонка —
-    время в секундах от начала измерения (имя колонки не важно),
-    остальные колонки — по одному сенсору каждая, имя колонки
-    становится label сенсора, порядок колонок — его position
-    (начиная с 1);
-  - единица измерения всех сенсоров по умолчанию "Hz" (как FreqValue
-    в legacy-схеме); чтобы задать другую — добавьте метаданные
-    "# unit: <ед.изм.>".
-"""
 from __future__ import annotations
 
 import csv
 import io
 from datetime import datetime
 
-from apps.backend.database.services.importer.parsers.common import finalize
-from shared.schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
+# ИЗМЕНЕНО: Локальные импорты
+from apps.parser.app.parsers.common import finalize
+from apps.parser.app.schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
 
 REQUIRED_META = ("device_serial", "device_type", "name", "start_time", "interval_ms")
 
@@ -84,6 +54,7 @@ def parse_csv(content: bytes) -> ParsedMeasurement:
             continue
         if len(row) != len(header):
             raise ValueError(f"Строка {row_num}: ожидалось {len(header)} колонок, получено {len(row)}")
+        
         time_offset_s = float(row[0])
         for i, raw_value in enumerate(row[1:]):
             data_points.append(
@@ -106,3 +77,4 @@ def parse_csv(content: bytes) -> ParsedMeasurement:
         data_points=data_points,
     )
     return finalize(parsed)
+

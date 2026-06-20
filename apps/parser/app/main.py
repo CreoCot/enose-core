@@ -1,13 +1,10 @@
 import pathlib
 from fastapi import FastAPI, HTTPException, UploadFile, File
 
-# Импортируем изолированные парсеры
-from parsers.csv_parser import parse_csv
-from parsers.xml_parser import parse_xml
-from parsers.xlsx_parser import parse_xlsx
-
-# Импортируем общую схему контракта данных
-from shared.schemas import ParsedMeasurement
+from apps.parser.app.parsers.csv_parser import parse_csv
+from apps.parser.app.parsers.xml_parser import parse_xml
+from apps.parser.app.parsers.xlsx_parser import parse_xlsx
+from apps.parser.app.schemas import ParsedMeasurement
 
 app = FastAPI(
     title="E-Nose Parser Service",
@@ -23,7 +20,6 @@ async def parse_measurement_file(file: UploadFile = File(...)) -> ParsedMeasurem
     """
     Принимает файл, определяет его тип по расширению, 
     парсит и возвращает стандартизированный JSON (ParsedMeasurement).
-    
     Не имеет побочных эффектов, ничего не сохраняет в БД.
     """
     content = await file.read()
@@ -42,8 +38,6 @@ async def parse_measurement_file(file: UploadFile = File(...)) -> ParsedMeasurem
         return parsed
 
     except ValueError as exc:
-        # Сюда попадают ошибки валидации бизнес-логики парсеров (например, пропущенные метаданные)
         raise HTTPException(422, f"Ошибка разбора структуры файла: {exc}")
     except Exception as exc:
-        # Критические ошибки (например, битый zip в xlsx или unhandled xml-error)
         raise HTTPException(500, f"Внутренняя ошибка при чтении файла: {exc}")

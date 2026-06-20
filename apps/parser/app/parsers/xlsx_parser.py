@@ -1,40 +1,12 @@
-"""
-Парсер XLSX.
-
-Ожидаемый формат книги Excel:
-
-  Лист "Meta" — пары key/value (с заголовком или без, первая строка с
-  ключом "key" игнорируется как заголовок):
-
-      key             | value
-      device_serial   | MAG8-0007
-      device_type     | MAG8
-      name            | Проба воздуха #14
-      object          | Образец A
-      start_time      | 2026-06-01T12:00:00
-      interval_ms     | 1000
-      description     | тестовый прогон
-
-  Лист "Data" — первая строка: время + по одной колонке на сенсор
-  (имя колонки = label сенсора, порядок = position, начиная с 1),
-  далее строки данных:
-
-      time_s | S1       | S2       | ...
-      0.0    | 29999801 | 30001120 | ...
-      1.0    | 29999795 | 30001118 | ...
-
-  Единица измерения по умолчанию "Hz"; переопределяется ключом
-  "unit" на листе Meta.
-"""
 from __future__ import annotations
 
 import io
 from datetime import datetime
-
 import openpyxl
 
-from apps.backend.database.services.importer.parsers.common import finalize
-from shared.schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
+# ИЗМЕНЕНО: Локальные импорты
+from apps.parser.app.parsers.common import finalize
+from apps.parser.app.schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
 
 REQUIRED_META = ("device_serial", "device_type", "name", "start_time", "interval_ms")
 
@@ -45,7 +17,7 @@ def _read_meta(ws) -> dict[str, str]:
         if not row or row[0] is None:
             continue
         key = str(row[0]).strip().lower()
-        if key == "key":  # заголовок таблицы
+        if key == "key":
             continue
         value = row[1] if len(row) > 1 else None
         if value is None:
@@ -57,7 +29,7 @@ def _read_meta(ws) -> dict[str, str]:
 def parse_xlsx(content: bytes) -> ParsedMeasurement:
     try:
         wb = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise ValueError(f"Некорректный XLSX: {exc}") from exc
 
     if "Meta" not in wb.sheetnames:
@@ -71,8 +43,8 @@ def parse_xlsx(content: bytes) -> ParsedMeasurement:
         raise ValueError(f"На листе 'Meta' отсутствуют обязательные поля: {', '.join(missing)}")
 
     unit = meta.get("unit", "Hz")
-
     data_ws = wb["Data"]
+    
     rows = data_ws.iter_rows(values_only=True)
     try:
         header = next(rows)
