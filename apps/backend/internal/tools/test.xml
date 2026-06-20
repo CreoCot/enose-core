@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<measure>
+  <name>масло лимона</name>
+  <description />
+  <length>300</length>
+  <ismeasured>True</ismeasured>
+  <mask>255</mask>
+  <start>15.06.2026 14:30:00</start>
+  <sensor sid="SID0001" initial="9965895,00">
+    <point time="1,00" value="1,00" />
+    <point time="1,00" value="1,00" />
+  </sensor>
+  <sensor sid="SID0002" initial="9991955,00">
+    <point time="1,0" value="2,00" />
+    <point time="1,00" value="1,00" />
+
+  </sensor>
+  <sensor sid="SID0003" initial="10001234,00">
+    <point time="1,00" value="3,00" />
+    <point time="1,00" value="1,00" />
+
+  </sensor>
+  <sensor sid="SID0004" initial="9978500,00">
+    <point time="1,00" value="4,00" />
+    <point time="1,00" value="1,00" />
+
+  </sensor>
+  <sensor sid="SID0005" initial="10012000,00">
+    <point time="1,00" value="5,00" />
+    <point time="1,00" value="1,00" />
+
+  </sensor>
+  <sensor sid="SID0006" initial="9985300,00">
+    <point time="1,00" value="6,00" />
+    <point time="1,00" value="1,00" />
+  </sensor>
+  <sensor sid="SID0007" initial="9999100,00">
+    <point time="1,00" value="7,00" />
+    <point time="1,00" value="1,00" />
+
+  </sensor>
+  <sensor sid="SID0008" initial="9970450,00">
+    <point time="1,00" value="8,00" />
+    <point time="1,00" value="1,00" />
+  </sensor>
+</measure>
