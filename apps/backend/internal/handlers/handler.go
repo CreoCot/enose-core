@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -21,9 +22,15 @@ type HealthResponse struct {
 
 // For Table endpoint
 type TableResponse struct {
-	Table [][]float64 `json:"table"`
+	Table [][]float64 `json:"data"`
 	// Массив временных рядов (каждая строка — один сенсор)
-	Length int `json:"length" example:"2"` // Количество сенсоров (строк в таблице)
+	Size int `json:"size" example:"2"` // Количество сенсоров (строк в таблице)
+}
+
+type PlotResponse struct {
+	Data       [][]float64 `json:"data"`
+	Timestamps []float64   `json:"timestamps"`
+	Size       int         `json:"size"`
 }
 
 var startTime = time.Now()
@@ -68,13 +75,37 @@ func Health(c *gin.Context) {
 // @Example        "length": 2
 // @Example      }
 func Table(c *gin.Context) {
-	table := tools.MakeData()
+	data, size, err := tools.GetDataForTable()
 
-	num_of_sensors := len(table[0]) - 1
+	if err != nil {
+		c.JSON(500, ErrorResponse{
+			Error:   fmt.Sprintf("%v", err),
+			Message: "Something went wrong on server side",
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, TableResponse{
-		Table:  table,
-		Length: num_of_sensors,
+		Table: data,
+		Size:  size,
+	})
+}
+
+func Plots(c *gin.Context) {
+	data, timestamps, size, err := tools.GetDataForPlots()
+
+	if err != nil {
+		c.JSON(500, ErrorResponse{
+			Error:   fmt.Sprintf("%v", err),
+			Message: "Something went wrong on server side",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, PlotResponse{
+		Data:       data,
+		Timestamps: timestamps,
+		Size:       size,
 	})
 }
 
