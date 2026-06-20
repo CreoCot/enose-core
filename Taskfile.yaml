@@ -1,64 +1,73 @@
 version: "3"
 
+includes:
+  backend:
+    taskfile: ./apps/backend/Taskfile.yaml
+    dir: ./apps/backend
+    aliases: [b]
+  frontend:
+    taskfile: ./apps/frontend/Taskfile.yaml
+    dir: ./apps/frontend
+    aliases: [f]
+  ml:
+    taskfile: ./apps/ml/Taskfile.yaml
+    dir: ./apps/ml
+    aliases: [m]
+
 tasks:
   default:
-    desc: "List all tasks"
     silent: true
     cmds:
+      - >
+        printf "\033[1;34m💡 Tip:\033[0m Filter tasks by namespace:
+        \033[1;36mtask b\033[0m (backend),
+        \033[1;33mtask f\033[0m (frontend),
+        \033[1;32mtask m\033[0m (ml)\n\n"
       - task --list
 
   setup:
     desc: "Install all dependencies and pre-commit hooks"
     silent: true
     cmds:
-      # Pre-commit setup
       - uv tool install pre-commit --with pre-commit-uv
       - pre-commit install
       - pre-commit install --hook-type commit-msg
+      - task: backend:setup
+      - task: frontend:setup
+      - task: ml:setup
 
-      # Backend
-      - cd apps/backend && go mod download
+  start:
+    desc: "Runs all services via Docker"
+    summary: |
+      Runs all microservices locally using Docker Compose.
 
-      # Frontend
-      - cd apps/frontend && npm install
-
-      # ML
-      - cd apps/ml && uv sync
-
-  backend:run:
-    desc: "Run server on localhost:8080"
-    silent: true
-    cmds:
-      - cd apps/backend && go mod tidy
-      - cd apps/backend && go run ./cmd/api/main.go
-
-  backend:db:init:
-    desc: "Apply pending database migrations (golang-migrate up)"
-    silent: true
-    cmds:
-      - cd apps/backend && go run ./cmd/migrate/main.go up
-
-  backend:db:down:
-    desc: "Roll back all database migrations (DESTRUCTIVE)"
-    silent: true
-    cmds:
-      - cd apps/backend && go run ./cmd/migrate/main.go down
-
-  backend:db:status:
-    desc: "Print the active database migration version"
-    silent: true
-    cmds:
-      - cd apps/backend && go run ./cmd/migrate/main.go status
-
-  frontend:run:
-    desc: "Run the frontend application"
-    silent: true
-    cmds:
-      - cd apps/frontend && npm run dev
-
-  dev:run:
-    desc: "Runs services: frontend, backend, postgres, migrate, pgadmin in docker containers.
-      Before runnning ensure that all .env*.example copied to .env* (For developement) "
+      ⚠️ IMPORTANT:
+      Before running this, ensure you have copied all `.env.example`
+      files to `.env` in their respective directories.
+    preconditions:
+      - sh: "docker info"
+        msg: "Docker daemon is not running. Please start Docker Desktop or your local runtime."
+      - sh: "test -f apps/backend/.env"
+        msg: "Missing backend .env file. Please run: cp apps/backend/.env.example apps/backend/.env"
     silent: true
     cmds:
       - docker compose up
+
+  stop:
+    desc: "Stops all Docker services"
+    silent: true
+    cmds:
+      - docker compose down
+
+  test:
+    desc: "Run tests and show coverage for all services"
+    silent: true
+    cmds:
+      - "{{.TASK_EXE}} test:parallel -o group"
+
+  test:parallel:
+    silent: true
+    deps:
+      - task: backend:test
+      - task: ml:test
+      - task: frontend:test
