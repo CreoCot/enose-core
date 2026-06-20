@@ -10,7 +10,6 @@ import {
 import "@fontsource-variable/nunito-sans/index.css";
 import type { Route } from "./+types/root";
 import "./app.css";
-import Sidebar from "./components/Sidebar";
 
 // export const links: Route.LinksFunction = () => [
 //   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -45,8 +44,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <div className="flex w-full h-full min-h-screen">
-      <Sidebar />
+    <div className="bg-grey-200">
+      {/* DEBUG */}
+      {/* <div className="hidden sm:flex md:hidden text-primary-500">SM</div>
+      <div className="hidden md:flex lg:hidden text-primary-500">MD</div>
+      <div className="hidden lg:flex xl:hidden text-primary-500">LG</div>
+      <div className="hidden xl:flex 2xl:hidden text-primary-500">XL</div>
+      <div className="hidden 2xl:flex 3xl:hidden text-primary-500">2XL</div>
+      <div className="hidden 3xl:flex 4xl:hidden text-primary-500">3XL</div> */}
+      {/* END OF DEBUG */}
       <Outlet />
     </div>
   );
