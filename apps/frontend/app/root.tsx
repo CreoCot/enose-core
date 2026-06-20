@@ -10,7 +10,6 @@ import {
 import "@fontsource-variable/nunito-sans/index.css";
 import type { Route } from "./+types/root";
 import "./app.css";
-import ResponsiveSidebar from "./components/ResponsiveSidebar";
 
 // export const links: Route.LinksFunction = () => [
 //   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -54,10 +53,7 @@ export default function App() {
       <div className="hidden 2xl:flex 3xl:hidden text-primary-500">2XL</div>
       <div className="hidden 3xl:flex 4xl:hidden text-primary-500">3XL</div> */}
       {/* END OF DEBUG */}
-      <div className="flex w-full h-full min-h-screen">
-        <ResponsiveSidebar />
-        <Outlet />
-      </div>
+      <Outlet />
     </div>
   );
 }
