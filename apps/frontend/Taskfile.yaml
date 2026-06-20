@@ -1,0 +1,31 @@
+version: "3"
+
+tasks:
+  default:
+    silent: true
+    cmds:
+      - task --list
+
+  setup:
+    silent: true
+    sources:
+      - package.json
+      - package-lock.json
+    generates:
+      - node_modules/.package-lock.json
+    cmds:
+      - npm ci
+
+  run:
+    desc: "Run the frontend application"
+    silent: true
+    cmds:
+      - npm run dev
+
+  test:
+    desc: "Run frontend tests with terminal reporter"
+    silent: true
+    cmds:
+      - |
+        printf "\n\033[1;97;45m TS \033[0m \033[1;35mFrontend Suite\033[0m\n\n"
+        npm run test -- --coverage --coverageReporters="text"
