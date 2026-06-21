@@ -97,11 +97,11 @@ tasks:
         down 1
 
 
-  frontend:run:
-    desc: "Run the frontend application"
+  test:
+    desc: "Run tests and show coverage for all services"
     silent: true
     cmds:
-      - cd apps/frontend && npm run dev
+      - "{{.TASK_EXE}} test:parallel -o group"
 
   start:
     desc: "Runs services: frontend, backend, postgres, migrate, pgadmin in docker containers.
