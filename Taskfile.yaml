@@ -3,20 +3,6 @@ env:
   PROJECT_ROOT: "{{.USER_WORKING_DIR}}"
 
 
-includes:
-  backend:
-    taskfile: ./apps/backend/Taskfile.yaml
-    dir: ./apps/backend
-    aliases: [b]
-  frontend:
-    taskfile: ./apps/frontend/Taskfile.yaml
-    dir: ./apps/frontend
-    aliases: [f]
-  ml:
-    taskfile: ./apps/ml/Taskfile.yaml
-    dir: ./apps/ml
-    aliases: [m]
-
 tasks:
   default:
     silent: true
@@ -39,11 +25,73 @@ tasks:
       - task: frontend:setup
       - task: ml:setup
 
-  start:
-    desc: "Runs all services via Docker"
+  dev:run:
+    desc: "Runs all services"
     summary: |
-      Runs all microservices locally using Docker Compose.
+      Runs all microservices locally 
 
+      # Frontend
+      - cd apps/frontend && npm install
+
+      # ML
+      - cd apps/ml && uv sync
+
+  backend:run:
+    desc: "Run server on localhost:8080"
+    silent: true
+    cmds:
+      - cd apps/backend && go mod tidy
+      - cd apps/backend && go run ./cmd/api/main.go
+  
+  db:up:
+    desc: "Запустить только базу данных PostgreSQL для прогона тестов"
+    cmds:
+      - docker compose up -d postgres
+
+
+  db:migrate-create:
+    desc: "Создать новый файл миграции. Пример: task db:migrate-create seq=init"
+    cmds:
+      - |
+        if [ -z "{{.seq}}" ]; then
+          echo "Ошибка: Отсутствует параметр 'seq'. Пример: task db:migrate-create seq=name_of_migration"
+          exit 1
+          fi
+      - >
+        docker compose run --rm 
+        migrate 
+        create -ext sql -dir //migrations -seq "{{.seq}}"
+
+  db:migrate-up:
+    desc: "Накатить все незавершенные миграции (up)"
+    cmds:
+      - >
+        docker compose run --rm 
+        migrate 
+        -path /migrations 
+        -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable 
+        up
+
+  db:migrate-down:
+    desc: "Откатить последнюю или все миграции (down)"
+    cmds:
+      - >
+        docker compose run --rm 
+        migrate 
+        -path /migrations 
+        -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable 
+        down 1
+
+
+  test:
+    desc: "Run tests and show coverage for all services"
+    silent: true
+    cmds:
+      - "{{.TASK_EXE}} test:parallel -o group"
+
+  start:
+    desc: "Runs services: frontend, backend, postgres, migrate, pgadmin in docker containers.
+      Before runnning ensure that all .env*.example copied to .env* (For developement) "
       ⚠️ IMPORTANT:
       Before running this, ensure you have copied all `.env.example`
       files to `.env` in their respective directories.
