@@ -30,7 +30,9 @@ def parse_csv(content: bytes) -> ParsedMeasurement:
 
     missing = [k for k in REQUIRED_META if k not in meta]
     if missing:
-        raise ValueError(f"В CSV отсутствуют обязательные метаданные: {', '.join(missing)}")
+        raise ValueError(
+            f"В CSV отсутствуют обязательные метаданные: {', '.join(missing)}"
+        )
 
     if not data_lines:
         raise ValueError("В CSV нет строк с данными")
@@ -53,8 +55,10 @@ def parse_csv(content: bytes) -> ParsedMeasurement:
         if not row or all(not c.strip() for c in row):
             continue
         if len(row) != len(header):
-            raise ValueError(f"Строка {row_num}: ожидалось {len(header)} колонок, получено {len(row)}")
-        
+            raise ValueError(
+                f"Строка {row_num}: ожидалось {len(header)} колонок, получено {len(row)}"
+            )
+
         time_offset_s = float(row[0])
         for i, raw_value in enumerate(row[1:]):
             data_points.append(
@@ -77,4 +81,3 @@ def parse_csv(content: bytes) -> ParsedMeasurement:
         data_points=data_points,
     )
     return finalize(parsed)
-

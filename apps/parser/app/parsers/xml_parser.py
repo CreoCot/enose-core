@@ -19,7 +19,7 @@ def parse_xml(content: bytes) -> ParsedMeasurement:
     measure_idx = text_content.find("<measure>")
     if measure_idx != -1:
         text_content = text_content[measure_idx:]
-    
+
     clean_content = text_content.encode("utf-8")
 
     try:
@@ -36,7 +36,7 @@ def parse_xml(content: bytes) -> ParsedMeasurement:
     start_str = _text(root, "start")
     if not start_str:
         raise ValueError("В XML отсутствует тег <start>")
-    
+
     try:
         start_time = datetime.strptime(start_str, "%d.%m.%Y %H:%M:%S")
     except ValueError as e:
@@ -61,7 +61,7 @@ def parse_xml(content: bytes) -> ParsedMeasurement:
         for point_el in sensor_el.findall("point"):
             time_str = point_el.attrib.get("time")
             val_str = point_el.attrib.get("value")
-            
+
             if time_str is None or val_str is None:
                 continue
 
@@ -90,5 +90,5 @@ def parse_xml(content: bytes) -> ParsedMeasurement:
         sensors=sensors,
         data_points=data_points,
     )
-    
+
     return finalize(parsed)
