@@ -5,6 +5,7 @@
 ### Как использовать в Сервисах / Хендлерах
 
 #### 1. Инициализация в `main.go`
+
 Для удобства все репозитории объединены в единый контейнер `Registry`. Вы можете инициализировать весь слой одной командой сразу после подключения к БД:
 
 ```go
@@ -28,8 +29,8 @@ err := repos.Measurements.CreateFullMeasurement(ctx, &measurement, paramsArray, 
 
 #### 3. Чтение данных для API и графиков фротенда
 
-* `repos.Measurements.GetAll(ctx)` — возвращает список всех измерений с предзагруженными связями (`Device`, `MeasurementObject`, `User`) для заполнения главной таблицы.
-* `repos.Measurements.GetSensorDataPoints(ctx, measID, sensorID)` — возвращает отсортированный хронологически (`time_offset_s ASC`) массив точек конкретного датчика для отрисовки графиков кривых.
+- `repos.Measurements.GetAll(ctx)` — возвращает список всех измерений с предзагруженными связями (`Device`, `MeasurementObject`, `User`) для заполнения главной таблицы.
+- `repos.Measurements.GetSensorDataPoints(ctx, measID, sensorID)` — возвращает отсортированный хронологически (`time_offset_s ASC`) массив точек конкретного датчика для отрисовки графиков кривых.
 
 #### 4. Работа со справочниками и датчиками (Парсер / Lookups)
 
