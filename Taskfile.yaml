@@ -1,21 +1,7 @@
 version: "3"
 env:
   PROJECT_ROOT: "{{.USER_WORKING_DIR}}"
-  
 
-includes:
-  backend:
-    taskfile: ./apps/backend/Taskfile.yaml
-    dir: ./apps/backend
-    aliases: [b]
-  frontend:
-    taskfile: ./apps/frontend/Taskfile.yaml
-    dir: ./apps/frontend
-    aliases: [f]
-  ml:
-    taskfile: ./apps/ml/Taskfile.yaml
-    dir: ./apps/ml
-    aliases: [m]
 
 tasks:
   default:
@@ -42,7 +28,7 @@ tasks:
   dev:run:
     desc: "Runs all services"
     summary: |
-      Runs all microservices locally 
+      Runs all microservices locally
 
       # Frontend
       - cd apps/frontend && npm install
@@ -56,7 +42,7 @@ tasks:
     cmds:
       - cd apps/backend && go mod tidy
       - cd apps/backend && go run ./cmd/api/main.go
-  
+
   db:up:
     desc: "Запустить только базу данных PostgreSQL для прогона тестов"
     cmds:
@@ -72,28 +58,28 @@ tasks:
           exit 1
           fi
       - >
-        docker compose run --rm 
-        migrate 
+        docker compose run --rm
+        migrate
         create -ext sql -dir //migrations -seq "{{.seq}}"
 
   db:migrate-up:
     desc: "Накатить все незавершенные миграции (up)"
     cmds:
       - >
-        docker compose run --rm 
-        migrate 
-        -path /migrations 
-        -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable 
+        docker compose run --rm
+        migrate
+        -path /migrations
+        -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable
         up
 
   db:migrate-down:
     desc: "Откатить последнюю или все миграции (down)"
     cmds:
       - >
-        docker compose run --rm 
-        migrate 
-        -path /migrations 
-        -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable 
+        docker compose run --rm
+        migrate
+        -path /migrations
+        -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable
         down 1
 
 
@@ -104,8 +90,10 @@ tasks:
       - "{{.TASK_EXE}} test:parallel -o group"
 
   start:
-    desc: "Runs services: frontend, backend, postgres, migrate, pgadmin in docker containers.
-      Before runnning ensure that all .env*.example copied to .env* (For developement) "
+    desc: |
+      Runs services: frontend, backend, postgres, migrate, pgadmin in docker containers.
+      Before running ensure that all .env*.example copied to .env* (For development)
+
       ⚠️ IMPORTANT:
       Before running this, ensure you have copied all `.env.example`
       files to `.env` in their respective directories.
@@ -123,12 +111,6 @@ tasks:
     silent: true
     cmds:
       - docker compose down
-
-  test:
-    desc: "Run tests and show coverage for all services"
-    silent: true
-    cmds:
-      - "{{.TASK_EXE}} test:parallel -o group"
 
   test:parallel:
     silent: true

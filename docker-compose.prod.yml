@@ -32,9 +32,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: 
-      - -path /migrations 
-      - -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable 
+    command:
+      - -path /migrations
+      - -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable
       - up
 
   backend:

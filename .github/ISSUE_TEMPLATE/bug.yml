@@ -1,0 +1,34 @@
+name: 🐛 Bug Report
+description: Report a system defect
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Provide a short, clear summary of the bug.
+      placeholder: "EXAMPLE: When a user with a 'Guest' role tries to view the analytics dashboard, the app crashes and throws a 500 error..."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can another developer trigger this bug?
+      value: |
+        1.
+        2.
+        3.
+      placeholder: "EXAMPLE:\n1. Log in as a Guest user\n2. Navigate to dashboard/analytics\n3. Click 'Export Data'\n4. Observe crash"
+    validations:
+      required: true
+  - type: textarea
+    id: expected_actual
+    attributes:
+      label: Expected vs Actual Behavior
+      value: |
+        - **Expected:**
+        - **Actual:**
+    validations:
+      required: true

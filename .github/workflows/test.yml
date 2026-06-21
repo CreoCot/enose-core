@@ -6,8 +6,41 @@ on:
       - main
       - dev
 
+env:
+  ACT: false
+
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      ml: ${{ steps.filter.outputs.ml }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          base: ${{ github.event.pull_request.base.ref || 'HEAD' }}
+          filters: |
+            frontend:
+              - 'apps/frontend/**'
+              - '.github/workflows/test.yml'
+            backend:
+              - 'apps/backend/**'
+              - 'apps/parser/**'
+              - 'go.work'
+              - '.github/workflows/test.yml'
+            ml:
+              - 'apps/ml/**'
+              - '.github/workflows/test.yml'
+
   test-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,6 +66,7 @@ jobs:
         run: npm test -- --coverage
 
       - name: Upload Frontend Coverage to Codecov
+        if: ${{ !env.ACT }}
         uses: codecov/codecov-action@v5
         with:
           files: apps/frontend/coverage/clover.xml
@@ -40,6 +74,8 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   test-backend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,6 +98,7 @@ jobs:
         run: go test -v -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Upload Backend Coverage to Codecov
+        if: ${{ !env.ACT }}
         uses: codecov/codecov-action@v5
         with:
           files: apps/backend/coverage.out
@@ -69,6 +106,8 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   test-ml:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ml == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -95,6 +134,7 @@ jobs:
         run: uv run pytest --cov=src --cov-report=xml
 
       - name: Upload ML Coverage to Codecov
+        if: ${{ !env.ACT }}
         uses: codecov/codecov-action@v5
         with:
           files: apps/ml/coverage.xml

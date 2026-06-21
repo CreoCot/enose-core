@@ -2,15 +2,18 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
 
+
 class ParsedSensor(BaseModel):
     position: int
     label: str
     unit: str = "Hz"
 
+
 class ParsedDataPoint(BaseModel):
     time_offset_s: float
     sensor_position: int
     value: float
+
 
 class ParsedMeasurement(BaseModel):
     device_serial: str

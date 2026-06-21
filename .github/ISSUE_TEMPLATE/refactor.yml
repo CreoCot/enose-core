@@ -1,0 +1,31 @@
+name: ♻️ Refactor / Tech Debt
+description: Propose structural code changes or maintenance
+title: "refactor: "
+labels: ["tech-debt"]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why are we doing this?
+      placeholder: "EXAMPLE: The UserProfile component has grown to over 1,000 lines and is managing too much state..."
+    validations:
+      required: true
+  - type: textarea
+    id: changes
+    attributes:
+      label: Proposed Changes
+      description: What structural changes need to be made?
+      value: |
+        - [ ]
+      placeholder: "EXAMPLE:\n- [ ] Extract avatar uploading logic into a `useAvatarUpload` hook\n- [ ] Move billing settings into isolated component"
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: How do we prove this refactor didn't break anything?
+      placeholder: "EXAMPLE: Ensure all Cypress end-to-end tests for the profile page still pass without modification."
+    validations:
+      required: true
