@@ -1,4 +1,21 @@
 version: "3"
+env:
+  PROJECT_ROOT: "{{.USER_WORKING_DIR}}"
+  
+
+includes:
+  backend:
+    taskfile: ./apps/backend/Taskfile.yaml
+    dir: ./apps/backend
+    aliases: [b]
+  frontend:
+    taskfile: ./apps/frontend/Taskfile.yaml
+    dir: ./apps/frontend
+    aliases: [f]
+  ml:
+    taskfile: ./apps/ml/Taskfile.yaml
+    dir: ./apps/ml
+    aliases: [m]
 
 includes:
   backend:

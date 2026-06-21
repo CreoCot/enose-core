@@ -94,7 +94,7 @@ docker run --name enose-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=
 Apply database migrations:
 
 ```bash
-task backend:db:init
+task db:migrate-up
 ```
 
 Start the backend:
@@ -276,11 +276,10 @@ enose-core/
 ├── apps/
 │   ├── backend/          # Go API server
 │   │   ├── cmd/
-│   │   │   ├── api/      # Main API entry point
-│   │   │   └── migrate/  # Migration CLI tool
+│   │   │   └── api/      # Main API entry point
 │   │   ├── internal/
 │   │   │   ├── config/   # Configuration management
-│   │   │   ├── database/ # Database connection and migrations
+│   │   │   ├── database/ # Database connection
 │   │   │   ├── handlers/ # HTTP handlers
 │   │   │   ├── middleware/ # Gin middleware
 │   │   │   └── server/   # Router setup
