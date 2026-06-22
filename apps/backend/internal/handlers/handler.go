@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/CreoCot/enose-core/backend/internal/database"
-	"github.com/CreoCot/enose-core/backend/internal/tools"
+	tools "github.com/CreoCot/enose-core/backend/internal/tools"
 	"github.com/gin-gonic/gin"
 )
 

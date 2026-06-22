@@ -1,10 +1,9 @@
-package main
+package tools
 
 import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"log/slog"
 	"math"
 	"math/rand/v2"
 	"os"
@@ -162,19 +161,19 @@ func GetDataForPlots() ([][]float64, []float64, int, error) {
 
 }
 
-func main() {
-	cfg, err := conf.NewConfig()
-	if err != nil {
-		slog.Error("Failed to load configuration", "error", err)
-		os.Exit(1)
-	}
+// func main() {
+// 	cfg, err := conf.NewConfig()
+// 	if err != nil {
+// 		slog.Error("Failed to load configuration", "error", err)
+// 		os.Exit(1)
+// 	}
 
-	meas, err := ProvideParsedMeasurement(cfg)
-	if err != nil {
-		slog.Error("Failed to provide parsed measurement", "error", err)
-		os.Exit(1)
-	}
+// 	meas, err := ProvideParsedMeasurement(cfg)
+// 	if err != nil {
+// 		slog.Error("Failed to provide parsed measurement", "error", err)
+// 		os.Exit(1)
+// 	}
 
-	fmt.Println(meas)
+// 	fmt.Println(meas)
 
-}
+// }
