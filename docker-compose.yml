@@ -46,10 +46,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    
-    command: 
-      - -path=/migrations 
-      - -database=postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable 
+
+    command:
+      - -path=/migrations
+      - -database=postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable
       - up
 
   backend:
@@ -94,6 +94,22 @@ services:
       - "${FRONTEND_PORT:-5173}:5173"
     depends_on:
       - backend
+
+  parser:
+    build:
+      context: ./apps/parser
+      dockerfile: Dockerfile
+    container_name: enose-parser
+    restart: unless-stopped
+    ports:
+      - "${PARSER_PORT:-8001}:8001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - enose-network
 
 volumes:
   postgres_data:

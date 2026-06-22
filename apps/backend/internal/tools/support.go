@@ -1,13 +1,21 @@
-package tools
+package main
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/rand/v2"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
+
+	par "github.com/CreoCot/enose-core/backend/internal/services"
+
+	conf "github.com/CreoCot/enose-core/backend/internal/config"
 )
 
 type CommaFloat float64
@@ -63,6 +71,33 @@ func MakeData() [][]float64 {
 	}
 
 	return result
+}
+
+func ProvideParsedMeasurement(cfg *conf.Config) (*par.ParsedMeasurement, error) {
+	c := par.NewParserClient(cfg.ParserURL, cfg.ParserAPI)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	err := c.Health(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	cwd, _ := os.Getwd()
+
+	path := filepath.Join(cwd, "internal", "tools", "sample_lemon.XML")
+	xmlData, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("get absolute path (tried to get: %s ): %w", path, err)
+	}
+
+	result, err := c.ParseFile(ctx, "sample_lemon.XML", xmlData)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func ProvideMeasurements() (Measure, error) {
@@ -124,5 +159,22 @@ func GetDataForPlots() ([][]float64, []float64, int, error) {
 	}
 
 	return data, timestamp, length, nil
+
+}
+
+func main() {
+	cfg, err := conf.NewConfig()
+	if err != nil {
+		slog.Error("Failed to load configuration", "error", err)
+		os.Exit(1)
+	}
+
+	meas, err := ProvideParsedMeasurement(cfg)
+	if err != nil {
+		slog.Error("Failed to provide parsed measurement", "error", err)
+		os.Exit(1)
+	}
+
+	fmt.Println(meas)
 
 }

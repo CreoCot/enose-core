@@ -14,6 +14,8 @@ type Config struct {
 	Port           string
 	Env            string
 	AllowedOrigins []string
+	ParserURL      string
+	ParserAPI      string
 	Database       DatabaseConfig
 }
 
@@ -54,6 +56,8 @@ func NewConfig() (*Config, error) {
 		Port:           getEnv("PORT", "8080"),
 		Env:            getEnv("ENV", "development"),
 		AllowedOrigins: origins,
+		ParserURL:      getEnv("PARSER_URL", "http://localhost:8001"),
+		ParserAPI:      getEnv("PARSER_API", "nothing"),
 		Database: DatabaseConfig{
 			Host:     getEnv("DATABASE_HOST", "localhost"),
 			Port:     getEnv("DATABASE_PORT", "5432"),

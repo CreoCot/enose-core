@@ -5,8 +5,8 @@ from datetime import datetime
 import openpyxl
 
 # ИЗМЕНЕНО: Локальные импорты
-from apps.parser.app.parsers.common import finalize
-from apps.parser.app.schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
+from .common import finalize
+from ..schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
 
 REQUIRED_META = ("device_serial", "device_type", "name", "start_time", "interval_ms")
 
@@ -40,11 +40,13 @@ def parse_xlsx(content: bytes) -> ParsedMeasurement:
     meta = _read_meta(wb["Meta"])
     missing = [k for k in REQUIRED_META if k not in meta]
     if missing:
-        raise ValueError(f"На листе 'Meta' отсутствуют обязательные поля: {', '.join(missing)}")
+        raise ValueError(
+            f"На листе 'Meta' отсутствуют обязательные поля: {', '.join(missing)}"
+        )
 
     unit = meta.get("unit", "Hz")
     data_ws = wb["Data"]
-    
+
     rows = data_ws.iter_rows(values_only=True)
     try:
         header = next(rows)
@@ -52,7 +54,9 @@ def parse_xlsx(content: bytes) -> ParsedMeasurement:
         raise ValueError("Лист 'Data' пуст")
 
     if header[0] is None:
-        raise ValueError("Первая колонка листа 'Data' должна быть временем (заголовок не пуст)")
+        raise ValueError(
+            "Первая колонка листа 'Data' должна быть временем (заголовок не пуст)"
+        )
 
     sensor_labels = [str(h).strip() for h in header[1:] if h is not None]
     if not sensor_labels:
@@ -70,7 +74,9 @@ def parse_xlsx(content: bytes) -> ParsedMeasurement:
         time_offset_s = float(row[0])
         for i, raw_value in enumerate(row[1 : 1 + len(sensor_labels)]):
             if raw_value is None:
-                raise ValueError(f"Строка {row_num}: пустое значение в колонке сенсора {i + 1}")
+                raise ValueError(
+                    f"Строка {row_num}: пустое значение в колонке сенсора {i + 1}"
+                )
             data_points.append(
                 ParsedDataPoint(
                     time_offset_s=time_offset_s,
