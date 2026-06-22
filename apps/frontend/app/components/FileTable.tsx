@@ -52,7 +52,7 @@ export default function FileTable() {
         header: "Действия",
         cell: ({ row }) => (
           <div
-            className="rounded-full w-11 p-0.5 text-red-900 bg-red-200 border lg:mr-7 border-red-400 text-center cursor-pointer hover:bg-red-300 transition-colors" // here too damn
+            className="rounded-full w-11 p-0.5 text-red-900 bg-red-200 border lg:mr-7 border-red-400 text-center cursor-pointer hover:bg-red-300 transition-colors"
             onClick={() => {}}
           >
             Удалить
@@ -91,7 +91,7 @@ export default function FileTable() {
                     header.id === "name" ? "w-[40%] px-5" : ""
                   } ${header.id === "date" ? "w-full" : ""} ${
                     header.id === "actions"
-                      ? "w-[30%] lg:px-7 text-center lg:text-left" // here damn
+                      ? "w-[30%] lg:px-7 text-center lg:text-left"
                       : ""
                   }`}
                 >
