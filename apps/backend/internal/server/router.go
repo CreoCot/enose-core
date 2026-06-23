@@ -9,9 +9,11 @@ import (
 	"github.com/CreoCot/enose-core/backend/internal/config"
 	"github.com/CreoCot/enose-core/backend/internal/handlers"
 	"github.com/CreoCot/enose-core/backend/internal/middleware"
+	"github.com/CreoCot/enose-core/backend/internal/repository"
+	"github.com/CreoCot/enose-core/backend/internal/services"
 )
 
-func SetupRouter(cfg *config.Config) *gin.Engine {
+func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.ParserClient) *gin.Engine {
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
@@ -34,11 +36,16 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 		r.GET("/swagger/*any", ginSwagger.CustomWrapHandler(&swaggerConfig, swaggerFiles.Handler))
 	}
 
+	uploadHandler := handlers.NewUploadHandler(parser, reg)
+	measurementsHandler := handlers.NewMeasurementsHandler(reg)
+
 	v1 := r.Group("api/v1")
 	{
 		v1.GET("/health", handlers.Health)
 		v1.GET("/table", handlers.Table)
 		v1.GET("/plots", handlers.Plots)
+		v1.POST("/upload", uploadHandler.Upload)
+		v1.GET("/entries", measurementsHandler.GetAll)
 	}
 
 	return r

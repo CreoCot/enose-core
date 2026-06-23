@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/CreoCot/enose-core/backend/internal/database"
-	tools "github.com/CreoCot/enose-core/backend/internal/tools"
+	"github.com/CreoCot/enose-core/backend/internal/tools"
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,6 +31,12 @@ type PlotResponse struct {
 	Data       [][]float64 `json:"data"`
 	Timestamps []float64   `json:"timestamps"`
 	Size       int         `json:"size"`
+}
+
+// ErrorResponse — стандартная структура ошибки
+type ErrorResponse struct {
+	Error   string `json:"error" example:"internal_error"`
+	Message string `json:"message" example:"Something went wrong"`
 }
 
 var startTime = time.Now()
@@ -107,10 +113,4 @@ func Plots(c *gin.Context) {
 		Timestamps: timestamps,
 		Size:       size,
 	})
-}
-
-// ErrorResponse — стандартная структура ошибки
-type ErrorResponse struct {
-	Error   string `json:"error" example:"internal_error"`
-	Message string `json:"message" example:"Something went wrong"`
 }

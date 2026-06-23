@@ -8,8 +8,76 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
 	"time"
 )
+
+// FlexibleTime — кастомный тип времени, который парсит разные ISO-8601 форматы
+type FlexibleTime struct {
+	time.Time
+}
+
+// Поддерживаемые форматы (от наиболее строгого к наиболее свободному)
+var timeFormats = []string{
+	time.RFC3339Nano,                // 2006-01-02T15:04:05.999999999Z07:00
+	time.RFC3339,                    // 2006-01-02T15:04:05Z07:00
+	"2006-01-02T15:04:05.999999999", // ISO с наносекундами, без TZ
+	"2006-01-02T15:04:05.999999",    // ISO с микросекундами, без TZ
+	"2006-01-02T15:04:05",           // ISO без TZ (самый частый от Python)
+	"2006-01-02 15:04:05",           // SQL-формат
+	"02.01.2006 15:04:05",           // Формат из XML-парсера
+}
+
+// UnmarshalJSON реализует интерфейс json.Unmarshaler
+func (t *FlexibleTime) UnmarshalJSON(data []byte) error {
+	// Убираем кавычки
+	s := strings.Trim(string(data), `"`)
+	if s == "null" || s == "" {
+		return nil
+	}
+
+	// Пытаемся распарсить каждый формат по очереди
+	for _, format := range timeFormats {
+		if parsed, err := time.Parse(format, s); err == nil {
+			t.Time = parsed
+			return nil
+		}
+	}
+
+	return fmt.Errorf("cannot parse time: %q (tried %d formats)", s, len(timeFormats))
+}
+
+// MarshalJSON реализует интерфейс json.Marshaler
+func (t FlexibleTime) MarshalJSON() ([]byte, error) {
+	if t.Time.IsZero() {
+		return []byte("null"), nil
+	}
+	return []byte(`"` + t.Time.Format(time.RFC3339) + `"`), nil
+}
+
+// Value для GORM (сохранение в БД)
+func (t FlexibleTime) Value() interface{} {
+	return t.Time
+}
+
+// Scan для GORM (чтение из БД)
+func (t *FlexibleTime) Scan(value interface{}) error {
+	if value == nil {
+		t.Time = time.Time{}
+		return nil
+	}
+	switch v := value.(type) {
+	case time.Time:
+		t.Time = v
+	case string:
+		return t.UnmarshalJSON([]byte(`"` + v + `"`))
+	case []byte:
+		return t.UnmarshalJSON(v)
+	default:
+		return fmt.Errorf("cannot scan %T into FlexibleTime", value)
+	}
+	return nil
+}
 
 // Data types for measurements
 
@@ -30,7 +98,7 @@ type ParsedMeasurement struct {
 	DeviceTypeCode    string            `json:"device_type_code"`
 	MeasurementName   string            `json:"measurement_name"`
 	MeasurementObject *string           `json:"measurement_object"`
-	StartTime         string            `json:"start_time"`
+	StartTime         FlexibleTime      `json:"start_time"`
 	IntervalMs        int               `json:"interval_ms"`
 	Description       *string           `json:"description"`
 	Sensors           []ParsedSensor    `json:"sensors"`
