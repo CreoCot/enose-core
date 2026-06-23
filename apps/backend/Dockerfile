@@ -18,7 +18,6 @@ FROM base AS builder
 COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/api ./cmd/api/main.go
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/migrate ./cmd/migrate/main.go
 
 
 
@@ -28,7 +27,6 @@ WORKDIR /app
 RUN apk --no-cache add ca-certificates tzdata
 
 COPY --from=builder /app/api /app/api
-COPY --from=builder /app/migrate /app/migrate
 
 EXPOSE 8080
 CMD ["/app/api"]
