@@ -43,3 +43,4 @@ docker-compose.override.yml
 # Code Coverage
 .coverage
 htmlcov
+apps/ml/*.png

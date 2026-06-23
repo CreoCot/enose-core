@@ -8,6 +8,7 @@ import {
 } from "react-router";
 
 import "@fontsource-variable/nunito-sans/index.css";
+import "@fontsource-variable/victor-mono/index.css";
 import type { Route } from "./+types/root";
 import "./app.css";
 

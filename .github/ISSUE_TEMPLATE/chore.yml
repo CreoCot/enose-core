@@ -1,0 +1,23 @@
+name: 🧹 Chore / Maintenance
+description: Routine tasks, tooling, or dependency updates
+title: "chore: "
+labels: ["chore"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Briefly describe the routine task.
+      placeholder: "EXAMPLE: Upgrade Tailwind CSS from v3 to v4. We need this to resolve a known dependency warning in our build pipeline..."
+    validations:
+      required: true
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checklist
+      description: What exact steps are required to complete this task?
+      value: |
+        - [ ]
+      placeholder: "EXAMPLE:\n- [ ] Run official migration script\n- [ ] Verify local build completes without warnings"
+    validations:
+      required: true
