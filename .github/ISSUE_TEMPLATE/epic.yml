@@ -1,0 +1,24 @@
+name: 👑 Epic
+description: Create a large initiative that spans multiple sprints.
+title: "epic: "
+labels: ["epic"]
+body:
+  - type: markdown
+    attributes:
+      value: "### 🛑 STOP: Is this an Epic?\nEpics are massive tasks that take multiple Sprints. Do NOT estimate Epics. Once created, use the 'Add sub-issue' button to break this into smaller Sprint Tasks."
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why are we building this? What user problem does it solve?
+      placeholder: "EXAMPLE: We need automated, reproducible infrastructure..."
+    validations:
+      required: true
+  - type: textarea
+    id: goals
+    attributes:
+      label: Goals (Definition of Done for the Epic)
+      description: What are the high-level goals that mark this Epic as complete?
+      placeholder: "EXAMPLE:\n- Infrastructure can be spun up via `terraform apply`\n- Server configuration is handled idempotently via Ansible"
+    validations:
+      required: true

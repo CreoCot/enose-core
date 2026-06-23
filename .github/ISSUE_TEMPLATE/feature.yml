@@ -1,0 +1,32 @@
+name: ✨ Feature / Story
+description: Standard template for new features or user stories (1-3 days work)
+title: "feat: "
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: "⚠️ **Reminder:** This issue should be small enough to complete in a single Sprint. If it's too big, create an Epic instead."
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why are we building this? What user problem does it solve?
+      placeholder: "EXAMPLE: Currently, users have to manually refresh the page to see new messages. We need to implement WebSocket connection so messages appear in real-time."
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance Criteria
+      description: What exact conditions must be met to mark this as done?
+      value: |
+        - [ ]
+      placeholder: "EXAMPLE:\n- [ ] WebSocket connection is established on login\n- [ ] New messages appear automatically"
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out Of Scope
+      description: What related work are we explicitly NOT doing in this ticket?
+      placeholder: "EXAMPLE: We are NOT adding 'read receipts' in this ticket. That will be a separate task."

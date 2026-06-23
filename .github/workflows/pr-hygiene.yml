@@ -1,0 +1,44 @@
+name: PR Hygiene Guard
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+    branches:
+      - main
+      - dev
+
+jobs:
+  pr-metadata-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify PR Title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            bug
+            chore
+            refactor
+            ci
+          requireScope: false
+
+      - name: Verify Linked Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prBody = context.payload.pull_request.body;
+            const issueRegex = /(closes|fixes|resolves|closed|fixed|resolved)\s+#\d+/i;
+
+            if (!prBody || !issueRegex.test(prBody)) {
+              core.setFailed(
+                "❌ PR Hygiene Alert: You must link a tracking issue in the PR description.\n" +
+                "Please edit the description and add: 'Closes #X' (where X is the issue number)."
+              );
+            } else {
+              console.log("✅ Tracking issue successfully linked in PR body.");
+            }
