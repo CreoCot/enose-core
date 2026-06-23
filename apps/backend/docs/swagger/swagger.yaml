@@ -32,19 +32,76 @@ definitions:
         example: 1.0.0-mvp
         type: string
     type: object
+  handlers.MeasurementsItem:
+    properties:
+      date:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
   handlers.TableResponse:
     properties:
-      length:
-        description: Массив временных рядов (каждая строка — один сенсор)
-        example: 2
-        type: integer
-      table:
+      data:
         items:
           items:
             format: float64
             type: number
           type: array
         type: array
+      size:
+        description: Массив временных рядов (каждая строка — один сенсор)
+        example: 2
+        type: integer
+    type: object
+  services.FlexibleTime:
+    properties:
+      time.Time:
+        type: string
+    type: object
+  services.ParsedDataPoint:
+    properties:
+      sensor_position:
+        type: integer
+      time_offset_s:
+        type: number
+      value:
+        type: number
+    type: object
+  services.ParsedMeasurement:
+    properties:
+      data_points:
+        items:
+          $ref: '#/definitions/services.ParsedDataPoint'
+        type: array
+      description:
+        type: string
+      device_serial:
+        type: string
+      device_type_code:
+        type: string
+      interval_ms:
+        type: integer
+      measurement_name:
+        type: string
+      measurement_object:
+        type: string
+      sensors:
+        items:
+          $ref: '#/definitions/services.ParsedSensor'
+        type: array
+      start_time:
+        $ref: '#/definitions/services.FlexibleTime'
+    type: object
+  services.ParsedSensor:
+    properties:
+      label:
+        type: string
+      position:
+        type: integer
+      unit:
+        type: string
     type: object
 host: localhost:8080
 info:
@@ -80,6 +137,59 @@ paths:
       summary: Проверка работоспособности бэкенда
       tags:
       - Heartbeat
+  /api/v1/measurements:
+    get:
+      description: Возвращает массив {id, name, start_time}
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.MeasurementsItem'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Список измерений
+      tags:
+      - Measurements
+  /api/v1/measurements/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Принимает файл (CSV, XML, XLSX), отправляет в parser-сервис и возвращает
+        распарсенные данные
+      parameters:
+      - description: Файл измерения (CSV, XML или XLSX)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.ParsedMeasurement'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Загрузить файл измерения
+      tags:
+      - Measurements
   /api/v1/table:
     get:
       consumes:

@@ -26,7 +26,7 @@ type MeasurementsItem struct {
 // @Description  Возвращает массив {id, name, start_time}
 // @Tags         Measurements
 // @Produce      json
-// @Success      200 {array} MeasurementItem
+// @Success      200 {array} MeasurementsItem
 // @Failure      500 {object} ErrorResponse
 // @Router       /api/v1/measurements [get]
 func (h *MeasurementsHandler) GetAll(c *gin.Context) {
