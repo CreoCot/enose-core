@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand/v2"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -83,13 +81,15 @@ func ProvideParsedMeasurement(cfg *conf.Config) (*par.ParsedMeasurement, error) 
 		return nil, err
 	}
 
-	cwd, _ := os.Getwd()
+	xmlData := sampleXMLData
 
-	path := filepath.Join(cwd, "internal", "tools", "sample_lemon.XML")
-	xmlData, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("get absolute path (tried to get: %s ): %w", path, err)
+	if len(xmlData) == 0 {
+		return nil, fmt.Errorf("embedded XML file is empty")
 	}
+
+	// if err != nil {
+	// 	return nil, fmt.Errorf("get absolute path (tried to get: %s ): %w", path, err)
+	// }
 
 	result, err := c.ParseFile(ctx, "sample_lemon.XML", xmlData)
 	if err != nil {
@@ -100,13 +100,16 @@ func ProvideParsedMeasurement(cfg *conf.Config) (*par.ParsedMeasurement, error) 
 }
 
 func ProvideMeasurements() (Measure, error) {
-	xmlData, err := os.ReadFile("sample_lemon.XML")
-	if err != nil {
-		return Measure{}, fmt.Errorf("File not found, err: %w", err)
+	xmlData := sampleXMLData
+	if len(xmlData) == 0 {
+		return Measure{}, fmt.Errorf("embedded XML file is empty")
 	}
+	// if err != nil {
+	// 	return Measure{}, fmt.Errorf("File not found, err: %w", err)
+	// }
 
 	var m Measure
-	err = xml.Unmarshal(xmlData, &m)
+	err := xml.Unmarshal(xmlData, &m)
 	if err != nil {
 		return Measure{}, fmt.Errorf("Failed to unmarchal xml data, error: %w", err)
 	}
