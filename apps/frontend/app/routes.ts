@@ -8,7 +8,7 @@ import {
 export default [
   layout("routes/sidebarpages.tsx", [
     index("routes/home.tsx"),
-    route("/file", "routes/file.tsx"),
-    route("/data", "routes/data.tsx"),
+    route("entry/:fileId", "routes/file.tsx"),
+    route("data", "routes/data.tsx"),
   ]),
 ] satisfies RouteConfig;

@@ -5,10 +5,11 @@ import Table from "../components/Table";
 import Plots from "../components/Plots";
 import axios from "../axios";
 import { isAxiosError } from "axios";
-import type { Route } from "./+types/data";
+import type { Route } from "./+types/file";
 import { motion, type Variants } from "motion/react";
 
-export async function clientLoader() {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const fileId = params.fileId;
   let sensorSize = 0;
 
   let table: number[][] = [],
@@ -37,7 +38,7 @@ export async function clientLoader() {
     plotTimestamps: number[] = [],
     plotError: string = "";
   try {
-    const plotResponse = await axios.get("/api/v1/plots");
+    const plotResponse = await axios.get("/api/v1/plots/");
     if (
       !plotResponse.data.data ||
       !plotResponse.data.size ||

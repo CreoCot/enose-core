@@ -15,53 +15,61 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
+import type { Entry } from "../routes/data";
+import { setEntryCacheNull } from "../routes/data";
 
-type FileItem = {
-  name: string;
-  date: string;
-};
+const columns: ColumnDef<Entry>[] = [
+  {
+    accessorKey: "name",
+    header: "Имя записи",
+    cell: ({ row }) => (
+      <NavLink
+        to={`/entry/${row.id}`}
+        className="hover:underline cursor-pointer"
+      >
+        {row.getValue("name")}
+      </NavLink>
+    ),
+  },
+  {
+    accessorKey: "date",
+    header: "Дата",
+  },
+  {
+    id: "actions",
+    header: "Действия",
+    cell: ({ row }) => (
+      <div
+        className="rounded-full w-11 p-0.5 text-red-900 bg-red-200 border lg:mr-7 border-red-400 text-center cursor-pointer hover:bg-red-300 transition-colors"
+        onClick={() => {
+          setEntryCacheNull();
+        }}
+      >
+        Удалить
+      </div>
+    ),
+  },
+];
 
-export default function FileTable() {
-  const files = useMemo<FileItem[]>(
+interface Props {
+  entries: Entry[];
+  error: string;
+}
+
+export default function FileTable({ entries, error }: Props) {
+  // const files = useMemo<Entry[]>(() => {
+  //   return entries;
+  // }, []);
+  const files = useMemo<Entry[]>(
     () =>
       Array.from({ length: 23 }, (_, i) => ({
+        id: i,
         name: `${i + 1}.txt`,
         date: `${(i % 28) + 1}.12.26`,
       })),
     [],
   );
   // const files = useMemo(() => [], []);
-
-  const columns = useMemo<ColumnDef<FileItem>[]>(
-    () => [
-      {
-        accessorKey: "name",
-        header: "Имя записи",
-        cell: ({ row }) => (
-          <NavLink to={`/file`} className="hover:underline">
-            {row.getValue("name")}
-          </NavLink>
-        ),
-      },
-      {
-        accessorKey: "date",
-        header: "Дата",
-      },
-      {
-        id: "actions",
-        header: "Действия",
-        cell: ({ row }) => (
-          <div
-            className="rounded-full w-11 p-0.5 text-red-900 bg-red-200 border lg:mr-7 border-red-400 text-center cursor-pointer hover:bg-red-300 transition-colors"
-            onClick={() => {}}
-          >
-            Удалить
-          </div>
-        ),
-      },
-    ],
-    [],
-  );
 
   const table = useReactTable({
     data: files,
@@ -133,7 +141,7 @@ export default function FileTable() {
                 colSpan={columns.length}
                 className="h-10 text-primary-900 text-2xl font-semibold text-center"
               >
-                Нет записей.
+                {error.length !== 0 ? `${error}` : "Нет записей."}
               </TableCell>
             </TableRow>
           )}
