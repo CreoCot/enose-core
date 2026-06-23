@@ -2,6 +2,7 @@
 
 @theme {
   --font-sans: "Nunito Sans Variable", system-ui, sans-serif;
+  --font-mono: "Victor Mono Variable", ui-monospace, monospace;
   --color-primary-100: hsl(230 83% 93%);
   --color-primary-200: hsl(233, 74%, 88%);
   --color-primary-300: hsl(235, 68%, 83%);
@@ -48,7 +49,7 @@
   --spacing-14: 512px;
   --spacing-15: 640px;
   --spacing-16: 768px;
-
+  --spacing-17: 1000px;
   --text-xs: 12px;
   --text-sm: 14px;
   --text-base: 16px;
@@ -75,4 +76,8 @@ body {
   body {
     @apply overscroll-none;
   }
+}
+
+@utility font-mono {
+  font-optical-sizing: auto;
 }

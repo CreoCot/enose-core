@@ -6,8 +6,6 @@ import {
 } from "@react-router/dev/routes";
 
 export default [
-  layout("routes/sidebarpages.tsx", [
-    index("routes/home.tsx"),
-    route("/data", "routes/data.tsx"),
-  ]),
+  index("routes/home.tsx"),
+  layout("routes/sidebarpages.tsx", [route("/data", "routes/data.tsx")]),
 ] satisfies RouteConfig;
