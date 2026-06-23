@@ -1,142 +1,99 @@
-import { useEffect, useState } from "react";
-import DataSection from "../components/DataSection";
 import Head from "../components/Head";
-import Table from "../components/Table";
-import Plots from "../components/Plots";
+import FileTable from "../components/FileTable";
+import type { Route } from "./+types/data";
 import axios from "../axios";
 import { isAxiosError } from "axios";
-import type { Route } from "./+types/data";
-import { motion, type Variants } from "motion/react";
+import { useFetcher, type ClientActionFunctionArgs } from "react-router";
+
+export type Entry = {
+  id: number;
+  name: string;
+  date: string;
+};
+
+let entryCache: Entry[] | null = null;
+
+export function setEntryCacheNull() {
+  entryCache = null;
+  clientLoader();
+}
 
 export async function clientLoader() {
-  let sensorSize = 0;
-
-  let table: number[][] = [],
-    tableError: string = "";
+  const cache = entryCache;
+  if (cache !== null) {
+    return { entries: cache, entryError: "" };
+  }
+  let entries: Entry[] = [],
+    entryError: string = "";
   try {
-    const tableResponse = await axios.get("/api/v1/table");
-    if (!tableResponse.data.data || !tableResponse.data.size) {
-      tableError = "Ошибка API";
-    }
-    table = tableResponse.data.data || [];
-    if (sensorSize === 0) sensorSize = tableResponse.data.size;
+    const response = await axios.get("/api/v1/entries/");
+    console.log(response);
+    if (!response.data.entries) entryError = "Ошибка API";
+    entries = response.data.entries;
   } catch (error) {
     if (isAxiosError(error) && error.response) {
       if (error.response.data.error) {
-        tableError = error.response.data.error;
+        entryError = error.response.data.error;
       } else {
-        tableError = error.response.data;
+        entryError = error.response.data;
       }
     } else if (error instanceof Error) {
-      tableError = error.message;
+      entryError = error.message;
     } else {
-      tableError = "Что-то пошло не так";
+      entryError = "Что-то пошло не так";
     }
   }
-  let plots: number[][] = [],
-    plotTimestamps: number[] = [],
-    plotError: string = "";
-  try {
-    const plotResponse = await axios.get("/api/v1/plots");
-    if (
-      !plotResponse.data.data ||
-      !plotResponse.data.size ||
-      !plotResponse.data.timestamps
-    ) {
-      plotError = "Ошибка API";
-      return;
-    }
-    plotTimestamps = plotResponse.data.timestamps;
-    plots = plotResponse.data.data;
-    if (sensorSize === 0) sensorSize = plotResponse.data.size;
-  } catch (error) {
-    if (isAxiosError(error) && error.response) {
-      if (error.response.data.error) {
-        plotError = error.response.data.error;
-      } else {
-        plotError = error.response.data;
-      }
-    } else if (error instanceof Error) {
-      plotError = error.message;
-    } else {
-      plotError = "Что-то пошло не так";
-    }
-  }
-  return { sensorSize, table, tableError, plots, plotTimestamps, plotError };
+  return { entries, entryError };
 }
-const HydrationText = () => {
-  const containerVariants = {
-    initial: { opacity: 1 },
-    animate: {
-      transition: {
-        staggerChildren: 0.2,
-      },
-    },
-  };
 
-  const dotVariants: Variants = {
-    initial: { opacity: 0 },
-    animate: {
-      opacity: 1,
-      transition: {
-        duration: 0.7,
-        repeat: Infinity,
-        repeatType: "reverse",
-        ease: "easeInOut",
-      },
-    },
-  };
-  return (
-    <motion.div
-      className="text-primary-700 font-bold text-2xl lg:text-3xl mx-8 my-4"
-      variants={containerVariants}
-      initial="initial"
-      animate="animate"
-    >
-      Получаем данные
-      <motion.span variants={dotVariants}>.</motion.span>
-      <motion.span variants={dotVariants}>.</motion.span>
-      <motion.span variants={dotVariants}>.</motion.span>
-    </motion.div>
-  );
+export const clientAction = async ({ request }: ClientActionFunctionArgs) => {
+  const formData = await request.formData();
+  const file = formData.get("file") as File | null;
+
+  if (!file || file.size === 0) {
+    return { error: "No file provided" };
+  }
+
+  const uploadData = new FormData();
+  uploadData.append("file", file);
+  console.log(formData);
+  try {
+    const response = await axios.post("/api/v1/upload", uploadData);
+    return { success: true, url: response.data.url };
+  } catch (error) {
+    return { error: "Upload failed" };
+  }
 };
+
 export function HydrateFallback() {
-  return (
-    <div className="w-full overflow-hidden bg-grey-100 pb-5">
-      <Head>Данные с сенсоров</Head>
-      <DataSection initialOpen={true} name="Графики">
-        <HydrationText />
-      </DataSection>
-      <DataSection name="Таблица">
-        <HydrationText />
-      </DataSection>
-    </div>
-  );
+  <div className="flex justify-center">
+    <FileTable entries={[]} error={""} />
+  </div>;
 }
 
 const data = ({ loaderData }: Route.ComponentProps) => {
-  const {
-    sensorSize = 0,
-    table = [],
-    tableError = "",
-    plots = [],
-    plotTimestamps = [],
-    plotError = "",
-  } = loaderData || {};
+  const { entries = [], entryError = "" } = loaderData || {};
+  const fetcher = useFetcher();
   return (
     <div className="w-full overflow-hidden bg-grey-100 pb-5">
-      <Head>Данные с сенсоров</Head>
-      <DataSection initialOpen={true} name="Графики">
-        <Plots
-          data={plots}
-          timestamps={plotTimestamps}
-          sensorSize={sensorSize}
-          error={plotError}
-        />
-      </DataSection>
-      <DataSection name="Таблица">
-        <Table table={table} sensorSize={sensorSize} error={tableError} />
-      </DataSection>
+      <Head>Ваши записи</Head>
+      <div className="flex justify-center">
+        <FileTable entries={entries} error={entryError} />
+      </div>
+      <div className="flex flex-col gap-1 mx-8">
+        <fetcher.Form method="post" encType="multipart/form-data">
+          <input type="file" name="file" required />
+          <button type="submit" disabled={fetcher.state !== "idle"}>
+            {fetcher.state === "idle" ? "Upload" : "Uploading..."}
+          </button>
+        </fetcher.Form>
+        {fetcher.data?.error && (
+          <p className="text-red-500">{fetcher.data.error}</p>
+        )}
+        {fetcher.data?.success && (
+          <p className="text-green-500">Uploaded! URL: {fetcher.data.url}</p>
+        )}
+      </div>
     </div>
   );
 };
