@@ -42,7 +42,7 @@ services:
       DATABASE_NAME: ${DATABASE_NAME:-enose}
       DATABASE_SSLMODE: disable
     volumes:
-      - ${PROJECT_ROOT}/apps/backend/database/migrations:/migrations
+      - ./apps/backend/database/migrations:/migrations
     depends_on:
       postgres:
         condition: service_healthy
