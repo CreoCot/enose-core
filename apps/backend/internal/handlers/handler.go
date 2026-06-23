@@ -33,6 +33,12 @@ type PlotResponse struct {
 	Size       int         `json:"size"`
 }
 
+// ErrorResponse — стандартная структура ошибки
+type ErrorResponse struct {
+	Error   string `json:"error" example:"internal_error"`
+	Message string `json:"message" example:"Something went wrong"`
+}
+
 var startTime = time.Now()
 
 // Health godoc
@@ -107,10 +113,4 @@ func Plots(c *gin.Context) {
 		Timestamps: timestamps,
 		Size:       size,
 	})
-}
-
-// ErrorResponse — стандартная структура ошибки
-type ErrorResponse struct {
-	Error   string `json:"error" example:"internal_error"`
-	Message string `json:"message" example:"Something went wrong"`
 }

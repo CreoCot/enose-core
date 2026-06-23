@@ -30,7 +30,9 @@ import (
 
 	"github.com/CreoCot/enose-core/backend/internal/config"
 	"github.com/CreoCot/enose-core/backend/internal/database"
+	"github.com/CreoCot/enose-core/backend/internal/repository"
 	"github.com/CreoCot/enose-core/backend/internal/server"
+	"github.com/CreoCot/enose-core/backend/internal/services"
 )
 
 func main() {
@@ -50,7 +52,9 @@ func main() {
 		}
 	}()
 
-	router := server.SetupRouter(cfg)
+	reg := repository.NewRegistry(database.DB())
+	parser := services.NewParserClient(cfg.ParserURL, cfg.ParserAPI)
+	router := server.SetupRouter(cfg, reg, parser)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

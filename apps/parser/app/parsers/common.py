@@ -4,7 +4,7 @@ import hashlib
 import json
 
 # ИЗМЕНЕНО: Локальный импорт
-from apps.parser.app.schemas import ParsedMeasurement
+from ..schemas import ParsedMeasurement
 
 
 def compute_group_key(

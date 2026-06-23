@@ -11,6 +11,7 @@ type LookupRepository interface {
 	// Devices
 	GetDeviceByCode(ctx context.Context, code string) (*models.Device, error)
 	GetAllDevices(ctx context.Context) ([]models.Device, error)
+	GetOrCreateDevice(ctx context.Context, serial, deviceTypeCode, name string) (*models.Device, error)
 
 	// Measurement Objects (то, что исследуем)
 	GetOrCreateObject(ctx context.Context, name string) (*models.MeasurementObject, error)
@@ -42,6 +43,40 @@ func (r *lookupRepository) GetAllDevices(ctx context.Context) ([]models.Device, 
 	var devices []models.Device
 	err := r.db.WithContext(ctx).Preload("DeviceType").Find(&devices).Error
 	return devices, err
+}
+
+func (r *lookupRepository) GetOrCreateDevice(ctx context.Context, serial, deviceTypeCode, name string) (*models.Device, error) {
+	var dev models.Device
+	err := r.db.WithContext(ctx).Where("serial_number = ?", serial).First(&dev).Error
+	if err == nil {
+		return &dev, nil
+	}
+	if err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+
+	// Создаём тип устройства
+	var devType models.DeviceType
+	err = r.db.WithContext(ctx).Where("code = ?", deviceTypeCode).First(&devType).Error
+	if err == gorm.ErrRecordNotFound {
+		devType = models.DeviceType{Code: deviceTypeCode, Name: deviceTypeCode}
+		if err := r.db.WithContext(ctx).Create(&devType).Error; err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
+	}
+
+	dev = models.Device{
+		SerialNumber: serial,
+		DeviceTypeID: devType.ID,
+		Name:         name,
+	}
+	if err := r.db.WithContext(ctx).Create(&dev).Error; err != nil {
+		return nil, err
+	}
+
+	return &dev, nil
 }
 
 // GetOrCreateObject возвращает объект исследования, а если такого еще нет в базе — создает его

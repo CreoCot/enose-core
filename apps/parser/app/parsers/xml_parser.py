@@ -3,8 +3,8 @@ from datetime import datetime
 from defusedxml import ElementTree as DET
 
 # ИЗМЕНЕНО: Локальные импорты
-from apps.parser.app.parsers.common import finalize
-from apps.parser.app.schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
+from .common import finalize
+from ..schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
 
 
 def _text(node, tag: str) -> str | None:

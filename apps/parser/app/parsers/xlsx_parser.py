@@ -5,8 +5,8 @@ from datetime import datetime
 import openpyxl
 
 # ИЗМЕНЕНО: Локальные импорты
-from apps.parser.app.parsers.common import finalize
-from apps.parser.app.schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
+from .common import finalize
+from ..schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
 
 REQUIRED_META = ("device_serial", "device_type", "name", "start_time", "interval_ms")
 

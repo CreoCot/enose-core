@@ -1,15 +1,26 @@
+import os
 import pathlib
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from typing import Optional
+from fastapi import FastAPI, HTTPException, UploadFile, File, Header, Depends
 
-from apps.parser.app.parsers.csv_parser import parse_csv
-from apps.parser.app.parsers.xml_parser import parse_xml
-from apps.parser.app.parsers.xlsx_parser import parse_xlsx
-from apps.parser.app.schemas import ParsedMeasurement
+from .parsers.csv_parser import parse_csv
+from .parsers.xml_parser import parse_xml
+from .parsers.xlsx_parser import parse_xlsx
+from .schemas import ParsedMeasurement
 
 app = FastAPI(
     title="E-Nose Parser Service",
     description="Stateless сервис для конвертации файлов (CSV, XML, XLSX) в единый формат JSON",
 )
+
+PARSER_API_KEY = os.getenv("PARSER_API_KEY", "nothing")
+
+
+async def verify_api_key(x_api_key: Optional[str] = Header(None)):
+    """Middleware для проверки API ключа"""
+    if x_api_key != PARSER_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    return True
 
 
 @app.get("/health")
@@ -18,7 +29,9 @@ def health() -> dict:
 
 
 @app.post("/measurements/parse", response_model=ParsedMeasurement, status_code=200)
-async def parse_measurement_file(file: UploadFile = File(...)) -> ParsedMeasurement:
+async def parse_measurement_file(
+    file: UploadFile = File(...), _: bool = Depends(verify_api_key)
+) -> ParsedMeasurement:
     """
     Принимает файл, определяет его тип по расширению,
     парсит и возвращает стандартизированный JSON (ParsedMeasurement).

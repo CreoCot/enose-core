@@ -28,13 +28,13 @@ services:
       DATABASE_NAME: ${DATABASE_NAME:-enose}
       DATABASE_SSLMODE: disable
     volumes:
-      - ${PROJECT_ROOT}/apps/backend/migrations:/migrations
+      - ./apps/backend/database/migrations:/migrations
     depends_on:
       postgres:
         condition: service_healthy
     command:
-      - -path /migrations
-      - -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable
+      - -path=/migrations
+      - -database=postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable
       - up
 
   backend:

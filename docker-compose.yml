@@ -95,5 +95,19 @@ services:
     depends_on:
       - backend
 
+  parser:
+    build:
+      context: ./apps/parser
+      dockerfile: Dockerfile
+    container_name: enose-parser
+    restart: unless-stopped
+    ports:
+      - "${PARSER_PORT:-8001}:8001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 volumes:
   postgres_data:

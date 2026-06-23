@@ -85,7 +85,7 @@ func (r *measurementRepository) GetAll(ctx context.Context) ([]models.Measuremen
 		Preload("Device").
 		Preload("MeasurementObject").
 		Preload("User").
-		Order("measured_at DESC").
+		Order("created_at DESC").
 		Find(&list).Error
 
 	return list, err

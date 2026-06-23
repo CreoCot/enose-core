@@ -52,6 +52,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/measurements": {
+            "get": {
+                "description": "Возвращает массив {id, name, start_time}",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Measurements"
+                ],
+                "summary": "Список измерений",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.MeasurementsItem"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/measurements/upload": {
+            "post": {
+                "description": "Принимает файл (CSV, XML, XLSX), отправляет в parser-сервис и возвращает распарсенные данные",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Measurements"
+                ],
+                "summary": "Загрузить файл измерения",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Файл измерения (CSV, XML или XLSX)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.ParsedMeasurement"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/table": {
             "get": {
                 "description": "Возвращает матрицу временных рядов от пьезосенсоров для визуализации.\nКаждая строка матрицы — данные одного сенсора.",
@@ -126,15 +205,24 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.MeasurementsItem": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.TableResponse": {
             "type": "object",
             "properties": {
-                "length": {
-                    "description": "Массив временных рядов (каждая строка — один сенсор)",
-                    "type": "integer",
-                    "example": 2
-                },
-                "table": {
+                "data": {
                     "type": "array",
                     "items": {
                         "type": "array",
@@ -143,6 +231,85 @@ const docTemplate = `{
                             "format": "float64"
                         }
                     }
+                },
+                "size": {
+                    "description": "Массив временных рядов (каждая строка — один сенсор)",
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "services.FlexibleTime": {
+            "type": "object",
+            "properties": {
+                "time.Time": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.ParsedDataPoint": {
+            "type": "object",
+            "properties": {
+                "sensor_position": {
+                    "type": "integer"
+                },
+                "time_offset_s": {
+                    "type": "number"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "services.ParsedMeasurement": {
+            "type": "object",
+            "properties": {
+                "data_points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.ParsedDataPoint"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "device_serial": {
+                    "type": "string"
+                },
+                "device_type_code": {
+                    "type": "string"
+                },
+                "interval_ms": {
+                    "type": "integer"
+                },
+                "measurement_name": {
+                    "type": "string"
+                },
+                "measurement_object": {
+                    "type": "string"
+                },
+                "sensors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.ParsedSensor"
+                    }
+                },
+                "start_time": {
+                    "$ref": "#/definitions/services.FlexibleTime"
+                }
+            }
+        },
+        "services.ParsedSensor": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
                 }
             }
         }
