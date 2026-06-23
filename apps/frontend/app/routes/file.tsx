@@ -38,7 +38,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     plotTimestamps: number[] = [],
     plotError: string = "";
   try {
-    const plotResponse = await axios.get("/api/v1/plots/");
+    const plotResponse = await axios.get("/api/v1/plots");
     if (
       !plotResponse.data.data ||
       !plotResponse.data.size ||
