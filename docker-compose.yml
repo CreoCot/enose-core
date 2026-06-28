@@ -70,6 +70,7 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
       DATABASE_NAME: ${DATABASE_NAME:-enose}
       DATABASE_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:-fhu578djt4jdm%3+}
       ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
     ports:
       - "${BACKEND_PORT:-8080}:8080"

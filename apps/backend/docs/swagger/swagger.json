@@ -18,6 +18,110 @@
   "host": "localhost:8080",
   "basePath": "/api/v1",
   "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Auth"],
+        "summary": "Вход в систему",
+        "parameters": [
+          {
+            "description": "Логин и пароль",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/handlers.loginRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/handlers.tokenResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "produces": ["application/json"],
+        "tags": ["Auth"],
+        "summary": "Информация о текущем пользователе",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/handlers.userResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Auth"],
+        "summary": "Регистрация нового пользователя",
+        "parameters": [
+          {
+            "description": "Данные пользователя",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/handlers.registerRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/handlers.userResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
     "/api/v1/health": {
       "get": {
         "description": "Возвращает статус сервиса, версию, время работы и состояние БД.\nИспользуется для liveness/readiness probes и мониторинга.",
@@ -209,6 +313,70 @@
           "description": "Массив временных рядов (каждая строка — один сенсор)",
           "type": "integer",
           "example": 2
+        }
+      }
+    },
+    "handlers.loginRequest": {
+      "type": "object",
+      "required": ["password", "username"],
+      "properties": {
+        "password": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      }
+    },
+    "handlers.registerRequest": {
+      "type": "object",
+      "required": ["password", "username"],
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "full_name": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string",
+          "minLength": 8
+        },
+        "role": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 3
+        }
+      }
+    },
+    "handlers.tokenResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        }
+      }
+    },
+    "handlers.userResponse": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "full_name": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "role": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
         }
       }
     },

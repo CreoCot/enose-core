@@ -16,6 +16,7 @@ type Config struct {
 	AllowedOrigins []string
 	ParserURL      string
 	ParserAPI      string
+	JWTSecret      string
 	Database       DatabaseConfig
 }
 
@@ -58,6 +59,7 @@ func NewConfig() (*Config, error) {
 		AllowedOrigins: origins,
 		ParserURL:      getEnv("PARSER_URL", "http://localhost:8001"),
 		ParserAPI:      getEnv("PARSER_API", "nothing"),
+		JWTSecret:      getEnv("JWT_SECRET", "change-me-in-production"),
 		Database: DatabaseConfig{
 			Host:     getEnv("DATABASE_HOST", "localhost"),
 			Port:     getEnv("DATABASE_PORT", "5432"),

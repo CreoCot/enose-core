@@ -95,12 +95,13 @@ func (Coating) TableName() string {
 }
 
 type User struct {
-	ID        int       `gorm:"column:id;type:integer;primaryKey;autoIncrement"`
-	Username  string    `gorm:"column:username;type:varchar(64);not null;unique"`
-	FullName  *string   `gorm:"column:full_name;type:varchar(255)"`
-	Email     *string   `gorm:"column:email;type:varchar(255);unique"`
-	Role      string    `gorm:"column:role;type:varchar(32);not null;default:operator"`
-	CreatedAt time.Time `gorm:"column:created_at;type:timestamptz;not null;default:now()"`
+	ID           int       `gorm:"column:id;type:integer;primaryKey;autoIncrement"`
+	Username     string    `gorm:"column:username;type:varchar(64);not null;unique"`
+	FullName     *string   `gorm:"column:full_name;type:varchar(255)"`
+	Email        *string   `gorm:"column:email;type:varchar(255);unique"`
+	Role         string    `gorm:"column:role;type:varchar(32);not null;default:operator"`
+	PasswordHash *string   `gorm:"column:password_hash;type:varchar(255)" json:"-"`
+	CreatedAt    time.Time `gorm:"column:created_at;type:timestamptz;not null;default:now()"`
 
 	MeasurementObjects []MeasurementObject `gorm:"foreignKey:CreatedBy"`
 	Measurements       []Measurement       `gorm:"foreignKey:UserID"`
