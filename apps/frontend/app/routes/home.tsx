@@ -85,10 +85,10 @@ export default function Home() {
           className="relative flex items-center justify-center w-11 h-7 sm:w-12 sm:h-8 rounded-[10px] shadow-md border border-primary-100/40 border-b-primary-900/40 border-r-primary-900/20 backdrop-blur-lg text-primary-200 text-xl sm:text-2xl font-semibold bg-linear-359 from-93% to-primary-100 after:absolute after:inset-0 after:rounded-[10px] after:bg-linear-179 after:from-93% after:to-primary-900/40"
         >
           <NavLink
-            to="/data"
+            to="/login"
             className="z-10 cursor-pointer absolute inset-0"
           />
-          Регистрация
+          Вход
           {clicked && (
             <motion.div variants={dotContainerVariants}>
               <motion.span variants={dotVariants}>.</motion.span>
