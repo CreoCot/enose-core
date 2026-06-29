@@ -8,12 +8,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const cookieName = "jwt"
+
 type AuthHandler struct {
-	auth services.AuthService
+	auth         services.AuthService
+	secureCookie bool
 }
 
-func NewAuthHandler(auth services.AuthService) *AuthHandler {
-	return &AuthHandler{auth: auth}
+func NewAuthHandler(auth services.AuthService, secureCookie bool) *AuthHandler {
+	return &AuthHandler{auth: auth, secureCookie: secureCookie}
 }
 
 type registerRequest struct {
@@ -27,10 +30,6 @@ type registerRequest struct {
 type loginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
-}
-
-type tokenResponse struct {
-	Token string `json:"token"`
 }
 
 type userResponse struct {
@@ -108,7 +107,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, tokenResponse{Token: token})
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(cookieName, token, 86400, "/", "", h.secureCookie, true)
+	c.JSON(http.StatusOK, gin.H{"message": "ok"})
+}
+
+// Logout godoc
+// @Summary      Выход из системы
+// @Tags         Auth
+// @Success      200
+// @Router       /api/v1/auth/logout [post]
+func (h *AuthHandler) Logout(c *gin.Context) {
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(cookieName, "", -1, "/", "", h.secureCookie, true)
+	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
 
 // Me godoc

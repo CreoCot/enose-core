@@ -39,7 +39,7 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 
 	uploadHandler := handlers.NewUploadHandler(parser, reg)
 	measurementsHandler := handlers.NewMeasurementsHandler(reg)
-	authHandler := handlers.NewAuthHandler(authSvc)
+	authHandler := handlers.NewAuthHandler(authSvc, cfg.Env == "production")
 
 	v1 := r.Group("api/v1")
 	{
@@ -50,6 +50,7 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 		{
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/logout", authHandler.Logout)
 		}
 
 		// Requires valid JWT

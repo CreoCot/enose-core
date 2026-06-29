@@ -8,19 +8,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware validates the Bearer JWT and sets "claims" in the context.
+// AuthMiddleware validates JWT from httpOnly cookie, falling back to Authorization header.
 func AuthMiddleware(authSvc services.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		header := c.GetHeader("Authorization")
-		if !strings.HasPrefix(header, "Bearer ") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "missing or malformed Authorization header",
-			})
-			return
+		tokenStr, err := c.Cookie("jwt")
+		if err != nil {
+			// fallback: Authorization: Bearer <token>  (удобно для curl/Swagger)
+			header := c.GetHeader("Authorization")
+			if !strings.HasPrefix(header, "Bearer ") {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error":   "unauthorized",
+					"message": "missing or malformed credentials",
+				})
+				return
+			}
+			tokenStr = strings.TrimPrefix(header, "Bearer ")
 		}
 
-		tokenStr := strings.TrimPrefix(header, "Bearer ")
 		claims, err := authSvc.ValidateToken(tokenStr)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{

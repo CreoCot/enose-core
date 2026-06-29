@@ -118,3 +118,89 @@ tasks:
       - task: backend:test
       - task: ml:test
       - task: frontend:test
+
+  # ---------------------------------------------------------------------------
+  # dev:auth:* — ручное тестирование auth-эндпоинтов во время разработки
+  # Требует запущенного бэкенда: task backend:run
+  # Куки сохраняются в /tmp/enose-cookies.txt
+  # ---------------------------------------------------------------------------
+
+  dev:auth:register:
+    desc: "Зарегистрировать тестового admin-пользователя"
+    cmds:
+      - >
+        curl -s -X POST http://localhost:8080/api/v1/auth/register
+        -H "Content-Type: application/json"
+        -d '{"username":"admin","password":"password123","role":"admin"}'
+        | jq
+
+  dev:auth:register-user:
+    desc: "Зарегистрировать тестового operator-пользователя"
+    cmds:
+      - >
+        curl -s -X POST http://localhost:8080/api/v1/auth/register
+        -H "Content-Type: application/json"
+        -d '{"username":"operator","password":"password123","role":"operator"}'
+        | jq
+
+  dev:auth:login:
+    desc: "Войти как admin и сохранить куку в /tmp/enose-cookies.txt"
+    cmds:
+      - >
+        curl -s -c /tmp/enose-cookies.txt
+        -X POST http://localhost:8080/api/v1/auth/login
+        -H "Content-Type: application/json"
+        -d '{"username":"admin","password":"password123"}'
+        | jq
+      - echo "Cookie saved to /tmp/enose-cookies.txt"
+
+  dev:auth:login-user:
+    desc: "Войти как operator и сохранить куку в /tmp/enose-cookies-user.txt"
+    cmds:
+      - >
+        curl -s -c /tmp/enose-cookies-user.txt
+        -X POST http://localhost:8080/api/v1/auth/login
+        -H "Content-Type: application/json"
+        -d '{"username":"operator","password":"password123"}'
+        | jq
+      - echo "Cookie saved to /tmp/enose-cookies-user.txt"
+
+  dev:auth:me:
+    desc: "Получить информацию о текущем пользователе (admin)"
+    cmds:
+      - >
+        curl -s -b /tmp/enose-cookies.txt
+        http://localhost:8080/api/v1/auth/me
+        | jq
+
+  dev:auth:logout:
+    desc: "Выйти (удалить куку)"
+    cmds:
+      - >
+        curl -s -b /tmp/enose-cookies.txt -c /tmp/enose-cookies.txt
+        -X POST http://localhost:8080/api/v1/auth/logout
+        | jq
+      - rm -f /tmp/enose-cookies.txt
+      - echo "Logged out"
+
+  dev:auth:entries-admin:
+    desc: "Получить все записи как admin (все измерения)"
+    cmds:
+      - >
+        curl -s -b /tmp/enose-cookies.txt
+        http://localhost:8080/api/v1/entries
+        | jq
+
+  dev:auth:entries-user:
+    desc: "Получить записи как operator (только свои измерения)"
+    cmds:
+      - >
+        curl -s -b /tmp/enose-cookies-user.txt
+        http://localhost:8080/api/v1/entries
+        | jq
+
+  dev:auth:no-cookie:
+    desc: "Проверить, что без куки приходит 401"
+    cmds:
+      - >
+        curl -s http://localhost:8080/api/v1/entries | jq

@@ -161,28 +161,10 @@ migrate create -ext sql -dir database/migrations -seq your_migration_name
 
 ### Backend
 
-Check backend health endpoint:
+Check backend health (public endpoint, no auth required):
 
 ```bash
 curl http://localhost:8080/api/v1/health | jq
-```
-
-Expected response:
-
-```json
-{
-  "status": "OK",
-  "timestamp": "Sun, 14 Jun 2026 16:25:56 UTC",
-  "version": "1.0.0-mvp",
-  "uptime": "55.332075718s",
-  "database": "ok"
-}
-```
-
-Check table generation endpoint:
-
-```bash
-curl http://localhost:8080/api/v1/table | jq
 ```
 
 Run backend unit tests:
@@ -191,6 +173,68 @@ Run backend unit tests:
 cd apps/backend
 go test ./... -v
 ```
+
+### Auth endpoints (via Taskfile)
+
+Requires running backend (`task backend:run`) and `jq` installed.
+
+```bash
+# 1. Зарегистрировать admin и operator
+task dev:auth:register
+task dev:auth:register-user
+
+# 2. Войти — кука сохранится в /tmp/enose-cookies.txt
+task dev:auth:login        # admin
+task dev:auth:login-user   # operator
+
+# 3. Проверить текущего пользователя
+task dev:auth:me
+
+# 4. Проверить разграничение доступа к данным
+task dev:auth:entries-admin  # видит все измерения
+task dev:auth:entries-user   # видит только свои
+
+# 5. Проверить, что без куки приходит 401
+task dev:auth:no-cookie
+
+# 6. Выйти
+task dev:auth:logout
+```
+
+### Auth endpoints (вручную через curl)
+
+Токен хранится в httpOnly cookie — `Secure` включается автоматически только в production, в dev работает по HTTP.
+
+```bash
+# Регистрация admin
+curl -s -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password123","role":"admin"}' | jq
+
+# Вход — сохраняем куку в файл
+curl -s -c /tmp/enose-cookies.txt \
+  -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password123"}' | jq
+
+# Получить текущего пользователя
+curl -s -b /tmp/enose-cookies.txt \
+  http://localhost:8080/api/v1/auth/me | jq
+
+# Список измерений (admin видит все, operator — только свои)
+curl -s -b /tmp/enose-cookies.txt \
+  http://localhost:8080/api/v1/entries | jq
+
+# Без куки → 401
+curl -s http://localhost:8080/api/v1/entries | jq
+
+# Выйти
+curl -s -b /tmp/enose-cookies.txt -c /tmp/enose-cookies.txt \
+  -X POST http://localhost:8080/api/v1/auth/logout | jq
+```
+
+Альтернатива — через Swagger UI (поддерживает `Authorization: Bearer <token>`):
+http://localhost:8080/swagger/index.html
 
 ### Frontend
 
