@@ -47,12 +47,29 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
       DATABASE_NAME: ${DATABASE_NAME:-enose}
       DATABASE_SSLMODE: disable
-      ALLOWED_ORIGINS: http://localhost,http://10.93.27.29
+      JWT_SECRET: enose-jwt-prod-secret-2025
+      ALLOWED_ORIGINS: http://10.93.27.29
+      PARSER_URL: http://parser:8001
+      PARSER_API_KEY: enose-parser-secret
     depends_on:
       postgres:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      parser:
+        condition: service_healthy
+    restart: always
+
+  parser:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/enose-core-parser:latest
+    container_name: enose-parser-prod
+    environment:
+      PARSER_API_KEY: enose-parser-secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     restart: always
 
   frontend:
