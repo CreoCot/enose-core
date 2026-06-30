@@ -5,6 +5,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "apps/**"
+      - "infra/**"
+      - "docker-compose.prod.yml"
+      - ".github/workflows/**"
 
 permissions:
   contents: read
@@ -65,7 +70,7 @@ jobs:
 
       - name: Pull and Run
         run: |
-          export GITHUB_REPOSITORY_OWNER=${{ github.repository_owner }}
+          export GITHUB_REPOSITORY_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
           docker compose -f docker-compose.prod.yml pull
 
