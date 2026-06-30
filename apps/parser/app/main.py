@@ -7,6 +7,7 @@ from .parsers.csv_parser import parse_csv
 from .parsers.xml_parser import parse_xml
 from .parsers.xlsx_parser import parse_xlsx
 from .schemas import ParsedMeasurement
+from .feature_service import extract_features
 
 app = FastAPI(
     title="E-Nose Parser Service",
@@ -50,6 +51,7 @@ async def parse_measurement_file(
         else:
             raise HTTPException(400, f"Неподдерживаемый формат файла: {ext}")
 
+        parsed.features = extract_features(parsed)
         return parsed
 
     except ValueError as exc:

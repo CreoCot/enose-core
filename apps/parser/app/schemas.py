@@ -15,6 +15,18 @@ class ParsedDataPoint(BaseModel):
     value: float
 
 
+class SensorFeatures(BaseModel):
+    sensor_position: int
+    max_abs: float
+    max_signed: float
+    time_to_max: float
+    end_value: float
+    auc: float
+    slope_init: float
+    drop_from_max: float
+    noise_std: float
+
+
 class ParsedMeasurement(BaseModel):
     device_serial: str
     device_type_code: str
@@ -25,3 +37,4 @@ class ParsedMeasurement(BaseModel):
     description: Optional[str] = None
     sensors: list[ParsedSensor]
     data_points: list[ParsedDataPoint]
+    features: list[SensorFeatures] = []
