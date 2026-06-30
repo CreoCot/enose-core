@@ -10,7 +10,7 @@
 // @license.url http://swagger.io/licenses/
 
 // @host localhost:8080
-// @BasePath /api/v1
+// @BasePath /
 // @schemes http
 
 // @securityDefinitions.apikey BearerAuth
@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -41,6 +42,7 @@ func main() {
 		slog.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
 	}
+	slog.Info(fmt.Sprintf("%+v", cfg))
 
 	if err := database.Connect(cfg.Database); err != nil {
 		slog.Error("Failed to connect to database", "error", err)

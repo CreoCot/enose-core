@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { NavLink } from "react-router";
+import { Link } from "react-router";
 import {
   useReactTable,
   getCoreRowModel,
@@ -23,12 +23,12 @@ const columns: ColumnDef<Entry>[] = [
     accessorKey: "name",
     header: "Имя записи",
     cell: ({ row }) => (
-      <NavLink
-        to={`/entry/${row.id}`}
+      <Link
+        to={`/entry/${row.original.id}`}
         className="hover:underline cursor-pointer"
       >
         {row.getValue("name")}
-      </NavLink>
+      </Link>
     ),
   },
   {
@@ -39,14 +39,15 @@ const columns: ColumnDef<Entry>[] = [
     id: "actions",
     header: "Действия",
     cell: ({ row }) => (
-      <div
-        className="rounded-full w-11 p-0.5 text-red-900 bg-red-200 border lg:mr-7 border-red-400 text-center cursor-pointer hover:bg-red-300 transition-colors"
+      <button
+        className="rounded-full w-11 p-0.5 text-red-900 bg-red-200 border lg:mr-7 border-red-400 text-center disabled:cursor-not-allowed cursor-pointer disabled:bg-red-100 disabled:border-red-200 enabled:hover:bg-red-300 transition-colors"
         onClick={() => {
           setEntryCacheNull();
         }}
+        disabled
       >
-        Удалить
-      </div>
+        Удалить &lt;not done&gt;
+      </button>
     ),
   },
 ];
@@ -57,18 +58,20 @@ interface Props {
 }
 
 export default function FileTable({ entries, error }: Props) {
-  // const files = useMemo<Entry[]>(() => {
-  //   return entries;
-  // }, []);
-  const files = useMemo<Entry[]>(
-    () =>
-      Array.from({ length: 23 }, (_, i) => ({
-        id: i,
-        name: `${i + 1}.txt`,
-        date: `${(i % 28) + 1}.12.26`,
-      })),
-    [],
-  );
+  const files = useMemo<Entry[]>(() => {
+    return entries;
+  }, []);
+
+  // const files = useMemo<Entry[]>(
+  //   () =>
+  //     Array.from({ length: 23 }, (_, i) => ({
+  //       id: i,
+  //       name: `${i + 1}.txt`,
+  //       date: `${(i % 28) + 1}.12.26`,
+  //     })),
+  //   [],
+  // );
+
   // const files = useMemo(() => [], []);
 
   const table = useReactTable({
@@ -82,7 +85,6 @@ export default function FileTable({ entries, error }: Props) {
       },
     },
   });
-
   return (
     <div className="overflow-hidden rounded-[8px] shadow-md mx-8 my-6 w-full">
       <Table className="w-full table-auto border-collapse">
@@ -90,12 +92,12 @@ export default function FileTable({ entries, error }: Props) {
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow
               key={headerGroup.id}
-              className="bg-primary-300 font-semibold text-xl lg:text-2xl text-primary-600"
+              className="bg-grey-200 font-semibold text-xl lg:text-2xl"
             >
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className={`text-primary-900 h-7 font-semibold py-2 ${
+                  className={`text-grey-800 h-7 font-semibold py-2 ${
                     header.id === "name" ? "w-[40%] px-5" : ""
                   } ${header.id === "date" ? "w-full" : ""} ${
                     header.id === "actions"
@@ -119,7 +121,7 @@ export default function FileTable({ entries, error }: Props) {
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
-                className="bg-primary-200 hover:bg-primary-200/50"
+                className="bg-grey-50 hover:bg-grey-200/50 transition-colors"
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell
@@ -148,13 +150,13 @@ export default function FileTable({ entries, error }: Props) {
         </TableBody>
       </Table>
 
-      <div className="flex items-center justify-between px-4 md:py-1 lg:py-3 mt-px bg-primary-300 overflow-x-auto overscroll-x-none">
+      <div className="flex items-center justify-between px-4 md:py-1 lg:py-3 mt-px overflow-x-auto text-grey-800 overscroll-x-none">
         <div className="flex items-center gap-2">
           <span>Записей на странице:</span>
           <select
             value={table.getState().pagination.pageSize}
             onChange={(e) => table.setPageSize(Number(e.target.value))}
-            className="border border-primary-400 text-primary-700 rounded px-2 py-1 cursor-pointer"
+            className="border border-grey-400 text-grey-700 rounded px-2 py-1 cursor-pointer"
           >
             {[5, 10, 20, 30, 50].map((pageSize) => (
               <option key={pageSize} value={pageSize}>
@@ -173,7 +175,7 @@ export default function FileTable({ entries, error }: Props) {
           <button
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="w-10 h-6 border rounded-[10px] border-primary-400 disabled:bg-primary-100 disabled:cursor-auto bg-primary-300 hover:bg-primary-200 text-primary-900 cursor-pointer transition-colors"
+            className="w-10 h-6 rounded-[10px] disabled:bg-primary-100 disabled:cursor-not-allowed bg-primary-300 hover:bg-primary-200 text-primary-900 font-medium cursor-pointer transition-colors"
           >
             Назад
           </button>
@@ -181,7 +183,7 @@ export default function FileTable({ entries, error }: Props) {
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="w-10 h-6 border rounded-[10px] border-accent-400 disabled:bg-accent-100 disabled:cursor-auto bg-accent-300 hover:bg-accent-200 text-accent-900 cursor-pointer transition-colors"
+            className="w-10 h-6 rounded-[10px] disabled:bg-primary-100 disabled:cursor-not-allowed bg-primary-300 hover:bg-primary-200 text-accent-900 font-medium cursor-pointer transition-colors"
           >
             Вперед
           </button>

@@ -4,6 +4,8 @@ import type { Route } from "./+types/data";
 import axios from "../axios";
 import { isAxiosError } from "axios";
 import { useFetcher, type ClientActionFunctionArgs } from "react-router";
+import { motion } from "motion/react";
+import { useState, type ChangeEvent } from "react";
 
 export type Entry = {
   id: number;
@@ -26,10 +28,10 @@ export async function clientLoader() {
   let entries: Entry[] = [],
     entryError: string = "";
   try {
-    const response = await axios.get("/api/v1/entries/");
-    console.log(response);
-    if (!response.data.entries) entryError = "Ошибка API";
-    entries = response.data.entries;
+    const response = await axios.get("/api/v1/entries");
+    if (!response.data) entryError = "Ошибка API";
+    entries = response.data;
+    return { entries, entryError };
   } catch (error) {
     if (isAxiosError(error) && error.response) {
       if (error.response.data.error) {
@@ -42,21 +44,19 @@ export async function clientLoader() {
     } else {
       entryError = "Что-то пошло не так";
     }
+    return { entries: [], entryError };
   }
-  return { entries, entryError };
 }
 
 export const clientAction = async ({ request }: ClientActionFunctionArgs) => {
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
-
   if (!file || file.size === 0) {
     return { error: "No file provided" };
   }
 
   const uploadData = new FormData();
   uploadData.append("file", file);
-  console.log(formData);
   try {
     const response = await axios.post("/api/v1/upload", uploadData);
     return { success: true, url: response.data.url };
@@ -74,25 +74,89 @@ export function HydrateFallback() {
 const data = ({ loaderData }: Route.ComponentProps) => {
   const { entries = [], entryError = "" } = loaderData || {};
   const fetcher = useFetcher();
+  const [formData, setFormData] = useState({
+    file: "",
+  });
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+  const isFileEmpty = formData.file === "";
   return (
-    <div className="w-full overflow-hidden bg-grey-100 pb-5">
+    <div className="w-full overflow-hidden bg-grey-50 pb-5">
       <Head>Ваши записи</Head>
       <div className="flex justify-center">
         <FileTable entries={entries} error={entryError} />
       </div>
       <div className="flex flex-col gap-1 mx-8">
-        <fetcher.Form method="post" encType="multipart/form-data">
-          <input type="file" name="file" required />
-          <button type="submit" disabled={fetcher.state !== "idle"}>
-            {fetcher.state === "idle" ? "Upload" : "Uploading..."}
-          </button>
+        <fetcher.Form
+          className="w-full"
+          method="post"
+          encType="multipart/form-data"
+        >
+          <div className="flex items-center justify-center w-full">
+            <label
+              htmlFor="dropzone-file"
+              className="flex flex-col items-center justify-center w-full h-64 border-primary-400 bg-neutral-secondary-medium border-dashed border-2 rounded-[20px] cursor-pointer hover:bg-neutral-tertiary-medium"
+            >
+              <div className="flex flex-col items-center justify-center text-primary-700 pt-5 pb-6">
+                <svg
+                  className="w-8 h-8 mb-4"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M15 17h3a3 3 0 0 0 0-6h-.025a5.56 5.56 0 0 0 .025-.5A5.5 5.5 0 0 0 7.207 9.021C7.137 9.017 7.071 9 7 9a4 4 0 1 0 0 8h2.167M12 19v-9m0 0-2 2m2-2 2 2"
+                  />
+                </svg>
+                <p
+                  className={`mb-2 text-base ${
+                    fetcher.data?.error ? "text-red-700" : ""
+                  }`}
+                >
+                  {fetcher.data?.error || (
+                    <>
+                      <span className="font-semibold">Нажмите</span>, чтобы
+                      загрузить файл или перетяните его в окно
+                    </>
+                  )}
+                </p>
+                <p className="text-xs">XML, CSV или XLSX</p>
+                <motion.button
+                  whileHover={{ y: -1 }}
+                  whileTap={{ y: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 10 }}
+                  className={`${
+                    isFileEmpty ? "hidden" : ""
+                  } mt-4 text-center py-2 px-6 text-lg text-primary-100 bg-primary-600 hover:bg-primary-600 transition-colors duration-100 rounded-[15px] cursor-pointer`}
+                  type="submit"
+                  onClick={() => setFormData({ file: "" })}
+                  disabled={fetcher.state === "submitting"}
+                >
+                  {fetcher.state === "submitting"
+                    ? "Загружаем..."
+                    : "Загрузить"}
+                </motion.button>
+              </div>
+              <input
+                id="dropzone-file"
+                type="file"
+                name="file"
+                className="hidden"
+                onChange={handleChange}
+                accept=".xml,.csv,.xlsx,application/xml,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              />
+            </label>
+          </div>
         </fetcher.Form>
-        {fetcher.data?.error && (
-          <p className="text-red-500">{fetcher.data.error}</p>
-        )}
-        {fetcher.data?.success && (
-          <p className="text-green-500">Uploaded! URL: {fetcher.data.url}</p>
-        )}
       </div>
     </div>
   );

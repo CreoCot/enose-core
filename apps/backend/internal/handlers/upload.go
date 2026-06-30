@@ -26,6 +26,7 @@ func NewUploadHandler(pc *services.ParserClient, r *repository.Registry) *Upload
 // @Summary      Загрузить файл измерения
 // @Description  Принимает файл (CSV, XML, XLSX), отправляет в parser-сервис и возвращает распарсенные данные
 // @Tags         Measurements
+// @Security     BearerAuth
 // @Accept       multipart/form-data
 // @Produce      json
 // @Param        file formData file true "Файл измерения (CSV, XML или XLSX)"
@@ -33,7 +34,7 @@ func NewUploadHandler(pc *services.ParserClient, r *repository.Registry) *Upload
 // @Failure      400 {object} ErrorResponse
 // @Failure      422 {object} ErrorResponse
 // @Failure      500 {object} ErrorResponse
-// @Router       /api/v1/measurements/upload [post]
+// @Router       /api/v1/upload [post]
 func (h *UploadHandler) Upload(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
@@ -73,7 +74,13 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	measurementID, err := h.saveToDB(c.Request.Context(), parsed)
+	var userID *int
+	if claims, ok := c.Get("claims"); ok {
+		id := claims.(*services.Claims).UserID
+		userID = &id
+	}
+
+	measurementID, err := h.saveToDB(c.Request.Context(), parsed, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "save_error",
@@ -90,7 +97,7 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 
 }
 
-func (h *UploadHandler) saveToDB(ctx context.Context, parsed *services.ParsedMeasurement) (int, error) {
+func (h *UploadHandler) saveToDB(ctx context.Context, parsed *services.ParsedMeasurement, userID *int) (int, error) {
 
 	device, err := h.Registry.Lookups.GetOrCreateDevice(ctx, parsed.DeviceSerial, parsed.DeviceTypeCode, parsed.MeasurementName)
 	if err != nil {
@@ -147,6 +154,7 @@ func (h *UploadHandler) saveToDB(ctx context.Context, parsed *services.ParsedMea
 	measurement := &models.Measurement{
 		Name:       parsed.MeasurementName,
 		DeviceID:   device.ID,
+		UserID:     userID,
 		StartTime:  parsed.StartTime.Time,
 		IntervalMS: parsed.IntervalMs,
 		Status:     "completed",

@@ -1,7 +1,24 @@
-import { Outlet } from "react-router";
+import { Outlet, redirect } from "react-router";
 import ResponsiveSidebar from "../components/ResponsiveSidebar";
+import api from "../axios";
+import type { LoaderFunctionArgs } from "react-router";
 
-const sidebarpages = () => {
+export async function clientLoader() {
+  try {
+    await api.get("/api/v1/auth/me");
+  } catch (error) {
+    throw redirect("/login");
+  }
+}
+export function HydrateFallback() {
+  return (
+    <div className="flex w-full h-full min-h-screen">
+      <ResponsiveSidebar />
+      <div className="w-full overflow-hidden bg-grey-100 pb-5" />
+    </div>
+  );
+}
+export const sidebarpages = () => {
   return (
     <div className="flex w-full h-full min-h-screen">
       <ResponsiveSidebar />

@@ -1,4 +1,4 @@
-basePath: /api/v1
+basePath: /
 definitions:
   handlers.ErrorResponse:
     properties:
@@ -41,6 +41,22 @@ definitions:
       name:
         type: string
     type: object
+  handlers.PlotResponse:
+    properties:
+      data:
+        items:
+          items:
+            format: float64
+            type: number
+          type: array
+        type: array
+      size:
+        type: integer
+      timestamps:
+        items:
+          type: number
+        type: array
+    type: object
   handlers.TableResponse:
     properties:
       data:
@@ -54,6 +70,53 @@ definitions:
         description: Массив временных рядов (каждая строка — один сенсор)
         example: 2
         type: integer
+    type: object
+  handlers.loginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handlers.messageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  handlers.registerRequest:
+    properties:
+      email:
+        type: string
+      full_name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      role:
+        type: string
+      username:
+        maxLength: 64
+        minLength: 3
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handlers.userResponse:
+    properties:
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: integer
+      role:
+        type: string
+      username:
+        type: string
     type: object
   services.FlexibleTime:
     properties:
@@ -116,6 +179,115 @@ info:
   title: Enose Core API
   version: 1.0.0
 paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Логин и пароль
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Вход в систему
+      tags:
+      - Auth
+  /api/v1/auth/logout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.messageResponse'
+      summary: Выход из системы
+      tags:
+      - Auth
+  /api/v1/auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.userResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Информация о текущем пользователе
+      tags:
+      - Auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Данные пользователя
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.registerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.userResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Регистрация нового пользователя
+      tags:
+      - Auth
+  /api/v1/entries:
+    get:
+      description: Возвращает массив {id, name, start_time}
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.MeasurementsItem'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список измерений
+      tags:
+      - Measurements
   /api/v1/health:
     get:
       consumes:
@@ -137,26 +309,106 @@ paths:
       summary: Проверка работоспособности бэкенда
       tags:
       - Heartbeat
-  /api/v1/measurements:
+  /api/v1/plots/{id}:
     get:
-      description: Возвращает массив {id, name, start_time}
+      description: Возвращает временные ряды каждого сенсора измерения для построения
+        графиков
+      parameters:
+      - description: ID измерения
+        in: path
+        name: id
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/handlers.MeasurementsItem'
-            type: array
+            $ref: '#/definitions/handlers.PlotResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Список измерений
+      security:
+      - BearerAuth: []
+      summary: Графики данных измерения
       tags:
       - Measurements
-  /api/v1/measurements/upload:
+  /api/v1/table:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Возвращает матрицу временных рядов от пьезосенсоров для визуализации.
+        Каждая строка матрицы — данные одного сенсора.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пример ответа
+          schema:
+            $ref: '#/definitions/handlers.TableResponse'
+        "500":
+          description: Ошибка генерации данных
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Получить демо-таблицу данных сенсоров
+      tags:
+      - Data
+  /api/v1/table/{id}:
+    get:
+      description: 'Возвращает данные сенсоров измерения в табличном виде: каждая
+        строка — момент времени, первый столбец — время, остальные — значения сенсоров'
+      parameters:
+      - description: ID измерения
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TableResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Таблица данных измерения
+      tags:
+      - Measurements
+  /api/v1/upload:
     post:
       consumes:
       - multipart/form-data
@@ -187,30 +439,11 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Загрузить файл измерения
       tags:
       - Measurements
-  /api/v1/table:
-    get:
-      consumes:
-      - application/json
-      description: |-
-        Возвращает матрицу временных рядов от пьезосенсоров для визуализации.
-        Каждая строка матрицы — данные одного сенсора.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Пример ответа
-          schema:
-            $ref: '#/definitions/handlers.TableResponse'
-        "500":
-          description: Ошибка генерации данных
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Получить демо-таблицу данных сенсоров
-      tags:
-      - Data
 schemes:
 - http
 securityDefinitions:

@@ -71,6 +71,7 @@ func Health(c *gin.Context) {
 // @Description  Возвращает матрицу временных рядов от пьезосенсоров для визуализации.
 // @Description  Каждая строка матрицы — данные одного сенсора.
 // @Tags         Data
+// @Security     BearerAuth
 // @Accept       json
 // @Produce      json
 // @Success      200 {object} TableResponse "Пример ответа"

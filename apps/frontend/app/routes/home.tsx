@@ -1,7 +1,8 @@
 import { motion, type Variants } from "motion/react";
 import type { Route } from "./+types/home";
-import { NavLink } from "react-router";
+import { Link, NavLink } from "react-router";
 import { useState } from "react";
+import api from "../axios";
 export function meta({}: Route.MetaArgs) {
   return [
     { title: "New React Router App" },
@@ -9,7 +10,23 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-export default function Home() {
+export async function clientLoader() {
+  let logged = false;
+  try {
+    await api.get("/api/v1/auth/me");
+    logged = true;
+  } catch (error) {}
+  return { logged };
+}
+export function HydrateFallback() {
+  return (
+    <div className="relative w-full h-screen bg-[radial-gradient(circle_at_center,#070750_0%,#3A147B_35%,#191D34_92%)] flex justify-center">
+      <div className="absolute inset-0 bg-[#191D34]/20 pointer-events-none" />
+    </div>
+  );
+}
+export default function Home({ loaderData }: Route.ComponentProps) {
+  const { logged } = loaderData;
   const containerVariants = {
     initial: { opacity: 0 },
     animate: {
@@ -84,11 +101,11 @@ export default function Home() {
           variants={childVariants}
           className="relative flex items-center justify-center w-11 h-7 sm:w-12 sm:h-8 rounded-[10px] shadow-md border border-primary-100/40 border-b-primary-900/40 border-r-primary-900/20 backdrop-blur-lg text-primary-200 text-xl sm:text-2xl font-semibold bg-linear-359 from-93% to-primary-100 after:absolute after:inset-0 after:rounded-[10px] after:bg-linear-179 after:from-93% after:to-primary-900/40"
         >
-          <NavLink
-            to="/data"
+          <Link
+            to={logged === true ? "/data" : "/login"}
             className="z-10 cursor-pointer absolute inset-0"
           />
-          Регистрация
+          {logged === true ? "Начать работу" : "Вход"}
           {clicked && (
             <motion.div variants={dotContainerVariants}>
               <motion.span variants={dotVariants}>.</motion.span>

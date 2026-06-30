@@ -44,25 +44,25 @@ tasks:
       - task: ml:setup
 
   db:up:
-    desc: "Запустить только базу данных PostgreSQL для прогона тестов"
+    desc: "Start only PostgreSQL (for running tests or migrations locally)"
     cmds:
       - docker compose up -d postgres
 
   db:migrate-create:
-    desc: "Создать новый файл миграции. Пример: task db:migrate-create seq=init"
+    desc: "Create a new migration file. Example: task db:migrate-create seq=add_users_table"
     cmds:
       - |
         if [ -z "{{.seq}}" ]; then
-          echo "Ошибка: Отсутствует параметр 'seq'. Пример: task db:migrate-create seq=name_of_migration"
+          echo "Error: missing 'seq' parameter. Example: task db:migrate-create seq=add_users_table"
           exit 1
-          fi
+        fi
       - >
         docker compose run --rm
         migrate
-        create -ext sql -dir //migrations -seq "{{.seq}}"
+        create -ext sql -dir /migrations -seq "{{.seq}}"
 
   db:migrate-up:
-    desc: "Накатить все незавершенные миграции (up)"
+    desc: "Apply all pending migrations (up)"
     cmds:
       - >
         docker compose run --rm
@@ -72,7 +72,7 @@ tasks:
         up
 
   db:migrate-down:
-    desc: "Откатить последнюю или все миграции (down)"
+    desc: "Roll back the last migration (down 1)"
     cmds:
       - >
         docker compose run --rm
@@ -84,7 +84,11 @@ tasks:
   test:
     desc: "Run tests and show coverage for all services"
     cmds:
-      - "{{.TASK_EXE}} test:parallel -o group"
+      - >
+        curl -s -X POST http://localhost:8080/api/v1/auth/register
+        -H "Content-Type: application/json"
+        -d '{"username":"admin","password":"password123","role":"admin"}'
+        | jq
 
   start:
     desc: "Runs all services in docker containers"
@@ -101,12 +105,24 @@ tasks:
       - sh: "test -f apps/backend/.env"
         msg: "Missing backend .env file. Please run: cp apps/backend/.env.example apps/backend/.env"
     cmds:
-      - docker compose up
+      - >
+        curl -s -c /tmp/enose-cookies.txt
+        -X POST http://localhost:8080/api/v1/auth/login
+        -H "Content-Type: application/json"
+        -d '{"username":"admin","password":"password123"}'
+        | jq
+      - echo "Cookie saved to /tmp/enose-cookies.txt"
 
   stop:
     desc: "Stops all Docker services"
     cmds:
-      - docker compose down
+      - >
+        curl -s -c /tmp/enose-cookies-user.txt
+        -X POST http://localhost:8080/api/v1/auth/login
+        -H "Content-Type: application/json"
+        -d '{"username":"operator","password":"password123"}'
+        | jq
+      - echo "Cookie saved to /tmp/enose-cookies-user.txt"
 
   test:parallel:
     deps:
