@@ -59,6 +59,7 @@ jobs:
 
   deploy:
     runs-on: self-hosted
+    needs: build-and-push
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - name: Download code from repository
