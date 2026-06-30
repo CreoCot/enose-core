@@ -10,7 +10,7 @@
 // @license.url http://swagger.io/licenses/
 
 // @host localhost:8080
-// @BasePath /api/v1
+// @BasePath /
 // @schemes http
 
 // @securityDefinitions.apikey BearerAuth

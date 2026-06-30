@@ -26,10 +26,11 @@ type MeasurementsItem struct {
 // @Summary      Список измерений
 // @Description  Возвращает массив {id, name, start_time}
 // @Tags         Measurements
+// @Security     BearerAuth
 // @Produce      json
 // @Success      200 {array} MeasurementsItem
 // @Failure      500 {object} ErrorResponse
-// @Router       /api/v1/measurements [get]
+// @Router       /api/v1/entries [get]
 func (h *MeasurementsHandler) GetAll(c *gin.Context) {
 	ctx := c.Request.Context()
 

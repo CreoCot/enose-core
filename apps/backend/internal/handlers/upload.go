@@ -26,6 +26,7 @@ func NewUploadHandler(pc *services.ParserClient, r *repository.Registry) *Upload
 // @Summary      Загрузить файл измерения
 // @Description  Принимает файл (CSV, XML, XLSX), отправляет в parser-сервис и возвращает распарсенные данные
 // @Tags         Measurements
+// @Security     BearerAuth
 // @Accept       multipart/form-data
 // @Produce      json
 // @Param        file formData file true "Файл измерения (CSV, XML или XLSX)"
@@ -33,7 +34,7 @@ func NewUploadHandler(pc *services.ParserClient, r *repository.Registry) *Upload
 // @Failure      400 {object} ErrorResponse
 // @Failure      422 {object} ErrorResponse
 // @Failure      500 {object} ErrorResponse
-// @Router       /api/v1/measurements/upload [post]
+// @Router       /api/v1/upload [post]
 func (h *UploadHandler) Upload(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {

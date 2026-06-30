@@ -50,7 +50,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.tokenResponse"
+                            "$ref": "#/definitions/handlers.messageResponse"
                         }
                     },
                     "400": {
@@ -63,6 +63,25 @@ const docTemplate = `{
                         "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Выход из системы",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.messageResponse"
                         }
                     }
                 }
@@ -143,6 +162,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/entries": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает массив {id, name, start_time}",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Measurements"
+                ],
+                "summary": "Список измерений",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.MeasurementsItem"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/health": {
             "get": {
                 "description": "Возвращает статус сервиса, версию, время работы и состояние БД.\nИспользуется для liveness/readiness probes и мониторинга.",
@@ -172,28 +225,33 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/measurements": {
+        "/api/v1/table": {
             "get": {
-                "description": "Возвращает массив {id, name, start_time}",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает матрицу временных рядов от пьезосенсоров для визуализации.\nКаждая строка матрицы — данные одного сенсора.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Measurements"
+                    "Data"
                 ],
-                "summary": "Список измерений",
+                "summary": "Получить демо-таблицу данных сенсоров",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Пример ответа",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/handlers.MeasurementsItem"
-                            }
+                            "$ref": "#/definitions/handlers.TableResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Ошибка генерации данных",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -201,8 +259,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/measurements/upload": {
+        "/api/v1/upload": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Принимает файл (CSV, XML, XLSX), отправляет в parser-сервис и возвращает распарсенные данные",
                 "consumes": [
                     "multipart/form-data"
@@ -244,35 +307,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/table": {
-            "get": {
-                "description": "Возвращает матрицу временных рядов от пьезосенсоров для визуализации.\nКаждая строка матрицы — данные одного сенсора.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Data"
-                ],
-                "summary": "Получить демо-таблицу данных сенсоров",
-                "responses": {
-                    "200": {
-                        "description": "Пример ответа",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.TableResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка генерации данных",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -374,6 +408,14 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.messageResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.registerRequest": {
             "type": "object",
             "required": [
@@ -398,14 +440,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 64,
                     "minLength": 3
-                }
-            }
-        },
-        "handlers.tokenResponse": {
-            "type": "object",
-            "properties": {
-                "token": {
-                    "type": "string"
                 }
             }
         },
@@ -518,7 +552,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0.0",
 	Host:             "localhost:8080",
-	BasePath:         "/api/v1",
+	BasePath:         "/",
 	Schemes:          []string{"http"},
 	Title:            "Enose Core API",
 	Description:      "API for e-nose system",
