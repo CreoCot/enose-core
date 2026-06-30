@@ -1,13 +1,13 @@
 version: "3"
 
+silent: true
+
 tasks:
   default:
-    silent: true
     cmds:
       - task --list
 
   setup:
-    silent: true
     sources:
       - pyproject.toml
       - uv.lock
@@ -18,7 +18,6 @@ tasks:
 
   test:
     desc: "Run ML tests and show coverage table in terminal"
-    silent: true
     cmds:
       - |
         printf "\n\033[1;97;42m PY \033[0m \033[1;32mML Suite\033[0m\n\n"

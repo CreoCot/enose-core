@@ -1,0 +1,92 @@
+version: "3"
+
+silent: true
+
+env:
+  ANSIBLE_CONFIG: ansible/ansible.cfg
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  ping:
+    desc: "Check SSH-connection using Ansible ping"
+    cmds:
+      - ansible -m ping prod
+
+  provision:
+    desc: "Full setup of the server"
+    cmds:
+      - ansible-playbook ansible/playbook.yml
+
+  test:
+    desc: "Local tests (Ansible)"
+    cmds:
+      - task: test-env:down
+      - task: test-env:up
+      - defer: { task: test-env:down }
+
+      - |
+        timeout 10 bash -c '
+          until ssh-keyscan -p 2222 127.0.0.1 2>/dev/null | grep -q "ssh-"; do
+            sleep 0.2
+          done
+        '
+
+      - task: test-provision
+
+  test-env:build:
+    desc: "Take cached Docker image"
+    cmds:
+      - |
+        docker build -t ubuntu-ansible-test - <<EOF
+        FROM ubuntu:22.04
+        RUN apt-get update && \
+            DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server sudo python3 ufw && \
+            mkdir /var/run/sshd && \
+            useradd -m -s /bin/bash uniuser && \
+            echo 'uniuser ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/uniuser
+        CMD mkdir -p /home/uniuser/.ssh && \
+            cp /pubkey /home/uniuser/.ssh/authorized_keys && \
+            chown -R uniuser:uniuser /home/uniuser/.ssh && \
+            chmod 700 /home/uniuser/.ssh && \
+            chmod 600 /home/uniuser/.ssh/authorized_keys && \
+            /usr/sbin/sshd -D
+        EOF
+
+  test-env:up:
+    desc: "Start local SSH-container for safe tests"
+    cmds:
+      - |
+        if ! docker image inspect ubuntu-ansible-test >/dev/null 2>&1; then
+          task test-env:build
+        fi
+      - |
+        docker run -d \
+          --name local-prod-server \
+          --cap-add=NET_ADMIN \
+          -p 2222:22 \
+          -v ~/.ssh/id_ed25519.pub:/pubkey:ro \
+          ubuntu-ansible-test
+      - echo "✅ Test container is running on port 2222."
+
+  test-env:down:
+    desc: "Stop and delete SSH-container"
+    ignore_error: true
+    cmds:
+      - docker stop local-prod-server >/dev/null 2>&1 || true
+      - docker rm local-prod-server >/dev/null 2>&1 || true
+
+  test-provision:
+    desc: "test Ansible on local container"
+    cmds:
+      - |
+        ansible-playbook \
+          -i "prod," \
+          -e "ansible_host=127.0.0.1" \
+          -e "ansible_port=2222" \
+          -e "ansible_user=uniuser" \
+          -e "ansible_ssh_private_key_file=~/.ssh/id_ed25519" \
+          --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+          ansible/playbook.yml

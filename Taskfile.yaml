@@ -6,27 +6,35 @@ includes:
   backend:
     taskfile: ./apps/backend/Taskfile.yaml
     dir: ./apps/backend
+    aliases: [b]
   frontend:
     taskfile: ./apps/frontend/Taskfile.yaml
     dir: ./apps/frontend
+    aliases: [f]
   ml:
     taskfile: ./apps/ml/Taskfile.yaml
     dir: ./apps/ml
+    aliases: [m]
+  infra:
+    taskfile: ./infra/Taskfile.yaml
+    dir: ./infra
+    aliases: [i]
+
+silent: true
 
 tasks:
   default:
-    silent: true
     cmds:
       - >
         printf "\033[1;34m💡 Tip:\033[0m Filter tasks by namespace:
-        \033[1;36mtask backend:<cmd>\033[0m,
-        \033[1;33mtask frontend:<cmd>\033[0m,
-        \033[1;32mtask ml:<cmd>\033[0m\n\n"
+        \033[1;36mtask b\033[0m (backend),
+        \033[1;33mtask f\033[0m (frontend),
+        \033[1;32mtask m\033[0m (ml),
+        \033[1;35mtask i\033[0m (infra)\n\n"
       - task --list
 
   setup:
     desc: "Install all dependencies and pre-commit hooks"
-    silent: true
     cmds:
       - uv tool install pre-commit --with pre-commit-uv
       - pre-commit install
@@ -34,35 +42,6 @@ tasks:
       - task: backend:setup
       - task: frontend:setup
       - task: ml:setup
-
-  # ---------------------------------------------------------------------------
-  # Docker Compose
-  # ---------------------------------------------------------------------------
-
-  start:
-    desc: |
-      Runs all services in Docker: frontend, backend, parser, postgres, pgadmin, migrations.
-      Before running ensure root .env and apps/backend/.env exist (copy from *.example).
-    preconditions:
-      - sh: "docker info"
-        msg: "Docker daemon is not running. Please start Docker Desktop or your local runtime."
-      - sh: "test -f .env"
-        msg: "Missing root .env file. Please run: cp .env.example .env"
-      - sh: "test -f apps/backend/.env"
-        msg: "Missing backend .env file. Please run: cp apps/backend/.env.example apps/backend/.env"
-    silent: true
-    cmds:
-      - docker compose up --build
-
-  stop:
-    desc: "Stops all Docker services"
-    silent: true
-    cmds:
-      - docker compose down
-
-  # ---------------------------------------------------------------------------
-  # Database migrations (requires Docker: task db:up first)
-  # ---------------------------------------------------------------------------
 
   db:up:
     desc: "Start only PostgreSQL (for running tests or migrations locally)"
@@ -102,26 +81,8 @@ tasks:
         -database postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable
         down 1
 
-  # ---------------------------------------------------------------------------
-  # Tests
-  # ---------------------------------------------------------------------------
-
   test:
-    desc: "Run tests for all services in parallel"
-    silent: true
-    deps:
-      - task: backend:test
-      - task: ml:test
-      - task: frontend:test
-
-  # ---------------------------------------------------------------------------
-  # dev:auth:* — manual testing of auth endpoints
-  # Requires running backend: task backend:run (or task start)
-  # Cookies are stored in /tmp/enose-cookies*.txt
-  # ---------------------------------------------------------------------------
-
-  dev:auth:register:
-    desc: "Register a test admin user"
+    desc: "Run tests and show coverage for all services"
     cmds:
       - >
         curl -s -X POST http://localhost:8080/api/v1/auth/register
@@ -129,17 +90,20 @@ tasks:
         -d '{"username":"admin","password":"password123","role":"admin"}'
         | jq
 
-  dev:auth:register-user:
-    desc: "Register a test operator user"
-    cmds:
-      - >
-        curl -s -X POST http://localhost:8080/api/v1/auth/register
-        -H "Content-Type: application/json"
-        -d '{"username":"operator","password":"password123","role":"operator"}'
-        | jq
+  start:
+    desc: "Runs all services in docker containers"
+    summary: |
+      Runs services: frontend, backend, postgres, migrate, pgadmin in docker containers.
+      Before running ensure that all .env*.example copied to .env* (For development)
 
-  dev:auth:login:
-    desc: "Login as admin and save cookie to /tmp/enose-cookies.txt"
+      ⚠️ IMPORTANT:
+      Before running this, ensure you have copied all `.env.example`
+      files to `.env` in their respective directories.
+    preconditions:
+      - sh: "docker info"
+        msg: "Docker daemon is not running. Please start Docker Desktop or your local runtime."
+      - sh: "test -f apps/backend/.env"
+        msg: "Missing backend .env file. Please run: cp apps/backend/.env.example apps/backend/.env"
     cmds:
       - >
         curl -s -c /tmp/enose-cookies.txt
@@ -149,8 +113,8 @@ tasks:
         | jq
       - echo "Cookie saved to /tmp/enose-cookies.txt"
 
-  dev:auth:login-user:
-    desc: "Login as operator and save cookie to /tmp/enose-cookies-user.txt"
+  stop:
+    desc: "Stops all Docker services"
     cmds:
       - >
         curl -s -c /tmp/enose-cookies-user.txt
@@ -160,116 +124,8 @@ tasks:
         | jq
       - echo "Cookie saved to /tmp/enose-cookies-user.txt"
 
-  dev:auth:me:
-    desc: "Get current user info (admin)"
-    cmds:
-      - >
-        curl -s -b /tmp/enose-cookies.txt
-        http://localhost:8080/api/v1/auth/me
-        | jq
-
-  dev:auth:logout:
-    desc: "Logout (clear cookie)"
-    cmds:
-      - >
-        curl -s -b /tmp/enose-cookies.txt -c /tmp/enose-cookies.txt
-        -X POST http://localhost:8080/api/v1/auth/logout
-        | jq
-      - rm -f /tmp/enose-cookies.txt
-      - echo "Logged out"
-
-  # ---------------------------------------------------------------------------
-  # dev:entries:* — testing measurement list endpoints
-  # ---------------------------------------------------------------------------
-
-  dev:entries:admin:
-    desc: "List all measurements as admin"
-    cmds:
-      - >
-        curl -s -b /tmp/enose-cookies.txt
-        http://localhost:8080/api/v1/entries
-        | jq
-
-  dev:entries:user:
-    desc: "List measurements as operator (own only)"
-    cmds:
-      - >
-        curl -s -b /tmp/enose-cookies-user.txt
-        http://localhost:8080/api/v1/entries
-        | jq
-
-  dev:entries:no-cookie:
-    desc: "Check that a request without a cookie returns 401"
-    cmds:
-      - >
-        curl -s http://localhost:8080/api/v1/entries | jq
-
-  # ---------------------------------------------------------------------------
-  # dev:upload:* — testing file upload and per-measurement data endpoints
-  # Usage: task dev:upload:file file=path/to/file.xml
-  #        task dev:upload:table id=1
-  #        task dev:upload:plots id=1
-  # ---------------------------------------------------------------------------
-
-  dev:upload:file:
-    desc: "Upload a measurement file as admin. Example: task dev:upload:file file=sample.xml"
-    cmds:
-      - |
-        if [ -z "{{.file}}" ]; then
-          echo "Error: missing 'file' parameter. Example: task dev:upload:file file=sample.xml"
-          exit 1
-        fi
-      - >
-        curl -s -b /tmp/enose-cookies.txt
-        -X POST http://localhost:8080/api/v1/upload
-        -F "file=@{{.file}}"
-        | jq
-
-  dev:upload:table:
-    desc: "Get table data for a measurement by ID. Example: task dev:upload:table id=1"
-    cmds:
-      - |
-        if [ -z "{{.id}}" ]; then
-          echo "Error: missing 'id' parameter. Example: task dev:upload:table id=1"
-          exit 1
-        fi
-      - >
-        curl -s -b /tmp/enose-cookies.txt
-        http://localhost:8080/api/v1/table/{{.id}}
-        | jq '{size: .size, rows: (.data | length)}'
-
-  dev:upload:plots:
-    desc: "Get plot data for a measurement by ID. Example: task dev:upload:plots id=1"
-    cmds:
-      - |
-        if [ -z "{{.id}}" ]; then
-          echo "Error: missing 'id' parameter. Example: task dev:upload:plots id=1"
-          exit 1
-        fi
-      - >
-        curl -s -b /tmp/enose-cookies.txt
-        http://localhost:8080/api/v1/plots/{{.id}}
-        | jq '{size: .size, timestamps: (.timestamps | length), sensors: (.data | length)}'
-
-  # ---------------------------------------------------------------------------
-  # dev:parser:* — testing the parser service directly
-  # ---------------------------------------------------------------------------
-
-  dev:parser:health:
-    desc: "Check parser service health (http://localhost:8001/health)"
-    cmds:
-      - curl -s http://localhost:8001/health | jq
-
-  dev:parser:parse:
-    desc: "Send a file directly to the parser service. Example: task dev:parser:parse file=sample.xml"
-    cmds:
-      - |
-        if [ -z "{{.file}}" ]; then
-          echo "Error: missing 'file' parameter. Example: task dev:parser:parse file=sample.xml"
-          exit 1
-        fi
-      - >
-        curl -s -X POST http://localhost:8001/measurements/parse
-        -H "X-API-Key: ${PARSER_API_KEY:-example_api_key}"
-        -F "file=@{{.file}}"
-        | jq '{measurement_name: .measurement_name, sensors: (.sensors | length), data_points: (.data_points | length)}'
+  test:parallel:
+    deps:
+      - task: backend:test
+      - task: ml:test
+      - task: frontend:test

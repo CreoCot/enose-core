@@ -1,5 +1,4 @@
 services:
-  # PostgreSQL
   postgres:
     image: postgres:15-alpine
     container_name: enose-postgres-prod
@@ -10,13 +9,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: always
 
-  # Go Backend
   migrate:
     container_name: enose-migrate-prod
     image: migrate/migrate:v4.19.1
@@ -38,10 +36,7 @@ services:
       - up
 
   backend:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
-      target: production
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/enose-core-backend:latest
     container_name: enose-backend-prod
     environment:
       PORT: "8080"
@@ -60,13 +55,8 @@ services:
         condition: service_completed_successfully
     restart: always
 
-  # React Frontend (Node.js)
   frontend:
-    build:
-      context: ./apps/frontend
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=http://10.93.27.29
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/enose-core-frontend:latest
     container_name: enose-frontend-prod
     depends_on:
       - backend
