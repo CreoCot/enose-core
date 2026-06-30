@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { NavLink } from "react-router";
+import { Link } from "react-router";
 import {
   useReactTable,
   getCoreRowModel,
@@ -23,12 +23,9 @@ const columns: ColumnDef<Entry>[] = [
     accessorKey: "name",
     header: "Имя записи",
     cell: ({ row }) => (
-      <NavLink
-        to={`/entry/${row.id}`}
-        className="hover:underline cursor-pointer"
-      >
+      <Link to={`/entry/${row.id}`} className="hover:underline cursor-pointer">
         {row.getValue("name")}
-      </NavLink>
+      </Link>
     ),
   },
   {
@@ -57,18 +54,20 @@ interface Props {
 }
 
 export default function FileTable({ entries, error }: Props) {
-  // const files = useMemo<Entry[]>(() => {
-  //   return entries;
-  // }, []);
-  const files = useMemo<Entry[]>(
-    () =>
-      Array.from({ length: 23 }, (_, i) => ({
-        id: i,
-        name: `${i + 1}.txt`,
-        date: `${(i % 28) + 1}.12.26`,
-      })),
-    [],
-  );
+  const files = useMemo<Entry[]>(() => {
+    return entries;
+  }, []);
+
+  // const files = useMemo<Entry[]>(
+  //   () =>
+  //     Array.from({ length: 23 }, (_, i) => ({
+  //       id: i,
+  //       name: `${i + 1}.txt`,
+  //       date: `${(i % 28) + 1}.12.26`,
+  //     })),
+  //   [],
+  // );
+
   // const files = useMemo(() => [], []);
 
   const table = useReactTable({
