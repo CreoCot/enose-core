@@ -23,7 +23,10 @@ const columns: ColumnDef<Entry>[] = [
     accessorKey: "name",
     header: "Имя записи",
     cell: ({ row }) => (
-      <Link to={`/entry/${row.id}`} className="hover:underline cursor-pointer">
+      <Link
+        to={`/entry/${row.original.id}`}
+        className="hover:underline cursor-pointer"
+      >
         {row.getValue("name")}
       </Link>
     ),
@@ -82,7 +85,6 @@ export default function FileTable({ entries, error }: Props) {
       },
     },
   });
-
   return (
     <div className="overflow-hidden rounded-[8px] shadow-md mx-8 my-6 w-full">
       <Table className="w-full table-auto border-collapse">

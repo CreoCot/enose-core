@@ -251,7 +251,7 @@ const file = ({ loaderData }: Route.ComponentProps) => {
   const len = items.length;
   return (
     <div className="w-full overflow-hidden bg-grey-50 pb-5">
-      <Head>{`Запись №${fileId + 1}`}</Head>
+      <Head>{`Запись №${fileId}`}</Head>
       <Link
         className="flex gap-1 items-center w-fit lg:text-lg text-grey-700 hover:text-grey-600 mx-7 mt-5 transition-colors duration-200"
         to="/data"
