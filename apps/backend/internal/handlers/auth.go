@@ -40,6 +40,10 @@ type userResponse struct {
 	Role     string  `json:"role"`
 }
 
+type messageResponse struct {
+	Message string `json:"message"`
+}
+
 // Register godoc
 // @Summary      Регистрация нового пользователя
 // @Tags         Auth
@@ -82,7 +86,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        body body loginRequest true "Логин и пароль"
-// @Success      200 {object} tokenResponse
+// @Success      200 {object} messageResponse
 // @Failure      400 {object} ErrorResponse
 // @Failure      401 {object} ErrorResponse
 // @Router       /api/v1/auth/login [post]
@@ -115,7 +119,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // Logout godoc
 // @Summary      Выход из системы
 // @Tags         Auth
-// @Success      200
+// @Produce      json
+// @Success      200 {object} messageResponse
 // @Router       /api/v1/auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	c.SetSameSite(http.SameSiteLaxMode)
