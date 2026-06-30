@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/CreoCot/enose-core/backend/internal/repository"
+	"github.com/CreoCot/enose-core/backend/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
@@ -32,7 +33,15 @@ type MeasurementsItem struct {
 func (h *MeasurementsHandler) GetAll(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	measurements, err := h.Registry.Measurements.GetAll(ctx)
+	var userID *int
+	if claims, ok := c.Get("claims"); ok {
+		cl := claims.(*services.Claims)
+		if cl.Role != services.RoleAdmin {
+			userID = &cl.UserID
+		}
+	}
+
+	measurements, err := h.Registry.Measurements.GetAll(ctx, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "fetch_error",

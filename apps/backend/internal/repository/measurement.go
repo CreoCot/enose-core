@@ -16,7 +16,8 @@ type MeasurementRepository interface {
 		params []models.MeasurementParameter,
 		dataPoints []models.MeasurementData,
 	) error
-	GetAll(ctx context.Context) ([]models.Measurement, error)
+	// GetAll возвращает измерения. userID == nil → все записи (admin), иначе только записи пользователя.
+	GetAll(ctx context.Context, userID *int) ([]models.Measurement, error)
 	GetByID(ctx context.Context, id int) (*models.Measurement, error)
 	GetSensorDataPoints(
 		ctx context.Context,
@@ -77,18 +78,20 @@ func (r *measurementRepository) CreateFullMeasurement(
 	})
 }
 
-// GetAll вытягивает список всех измерений с предзагрузкой связей для главной таблицы
-func (r *measurementRepository) GetAll(ctx context.Context) ([]models.Measurement, error) {
+// GetAll вытягивает измерения. userID == nil → все (admin), иначе только записи пользователя.
+func (r *measurementRepository) GetAll(ctx context.Context, userID *int) ([]models.Measurement, error) {
 	var list []models.Measurement
-	// Preload автоматически делает JOIN-подобные запросы для связанных таблиц (Device, Object, User)
-	err := r.db.WithContext(ctx).
+	q := r.db.WithContext(ctx).
 		Preload("Device").
 		Preload("MeasurementObject").
 		Preload("User").
-		Order("created_at DESC").
-		Find(&list).Error
+		Order("created_at DESC")
 
-	return list, err
+	if userID != nil {
+		q = q.Where("user_id = ?", *userID)
+	}
+
+	return list, q.Find(&list).Error
 }
 
 // GetByID возвращает детальную информацию об одном измерении
