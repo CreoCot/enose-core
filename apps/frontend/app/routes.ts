@@ -6,8 +6,11 @@ import {
 } from "@react-router/dev/routes";
 
 export default [
+  index("routes/home.tsx"),
+  route("login", "routes/login.tsx"),
+  route("signup", "routes/signup.tsx"),
+
   layout("routes/sidebarpages.tsx", [
-    index("routes/home.tsx"),
     route("entry/:fileId", "routes/file.tsx"),
     route("data", "routes/data.tsx"),
   ]),

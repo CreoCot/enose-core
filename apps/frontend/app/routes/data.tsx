@@ -26,7 +26,7 @@ export async function clientLoader() {
   let entries: Entry[] = [],
     entryError: string = "";
   try {
-    const response = await axios.get("/api/v1/entries/");
+    const response = await axios.get("/api/v1/entries");
     console.log(response);
     if (!response.data.entries) entryError = "Ошибка API";
     entries = response.data.entries;
