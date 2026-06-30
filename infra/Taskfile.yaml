@@ -18,7 +18,7 @@ tasks:
   provision:
     desc: "Full setup of the server"
     cmds:
-      - ansible-playbook playbook.yml
+      - ansible-playbook ansible/playbook.yml
 
   test:
     desc: "Local tests (Ansible)"

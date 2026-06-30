@@ -40,16 +40,23 @@
     append: true
   loop: "{{ docker_users }}"
 
-- name: Configure Docker log rotation limits
+- name: Configure Docker daemon (mirrors and log rotation)
   ansible.builtin.copy:
     dest: /etc/docker/daemon.json
     content: |
       {
+        "registry-mirrors": [
+          "https://dockerhub.timeweb.cloud",
+          "https://dh-mirror.gitverse.ru",
+          "https://huecker.io"
+        ],
         "log-driver": "json-file",
         "log-opts": {
           "max-size": "10m",
           "max-file": "3"
         }
       }
+    owner: root
+    group: root
     mode: "0644"
   notify: Restart Docker
