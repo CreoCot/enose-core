@@ -61,17 +61,14 @@ services:
     volumes:
       - ./apps/backend:/app
       - /app/tmp
+    env_file:
+      - .env
     environment:
+      # Docker-network-specific overrides — must win over values from .env
       PORT: "8080"
-      ENV: development
       DATABASE_HOST: postgres
       DATABASE_PORT: "5432"
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
-      DATABASE_NAME: ${DATABASE_NAME:-enose}
       DATABASE_SSLMODE: disable
-      JWT_SECRET: ${JWT_SECRET:-fhu578djt4jdm%3+}
-      ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
@@ -102,6 +99,8 @@ services:
       dockerfile: Dockerfile
     container_name: enose-parser
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "${PARSER_PORT:-8001}:8001"
     healthcheck:

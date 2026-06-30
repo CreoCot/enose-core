@@ -25,9 +25,14 @@ Repository for the `enose-core` project — the core system for piezosensor data
 Copy environment files and configure as needed:
 
 ```bash
-cp .env.docker.example .env.docker
+cp .env.example .env
 cp apps/backend/.env.example apps/backend/.env
 ```
+
+> `.env` (root) is the single source of truth for Docker Compose — both for
+> `${VAR}` substitution and for injecting variables into containers via
+> `env_file:`. `apps/backend/.env` is only needed for running the backend
+> outside Docker (`task backend:run`).
 
 ### 3. Run
 

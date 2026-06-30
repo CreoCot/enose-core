@@ -37,7 +37,6 @@ apps/ml/data/
 # Infra / Local env
 .env
 docker-compose.override.yml
-.env.docker
 .task
 
 # Code Coverage

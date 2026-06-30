@@ -100,6 +100,8 @@ tasks:
     preconditions:
       - sh: "docker info"
         msg: "Docker daemon is not running. Please start Docker Desktop or your local runtime."
+      - sh: "test -f .env"
+        msg: "Missing root .env file (single source of truth for Docker Compose). Please run: cp .env.example .env"
       - sh: "test -f apps/backend/.env"
         msg: "Missing backend .env file. Please run: cp apps/backend/.env.example apps/backend/.env"
     silent: true

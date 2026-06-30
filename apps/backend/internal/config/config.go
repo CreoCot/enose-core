@@ -38,13 +38,27 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-func NewConfig() (*Config, error) {
-	err_dotenv := godotenv.Load()
-	if err_dotenv != nil {
-		if !errors.Is(err_dotenv, os.ErrNotExist) {
-			return nil, fmt.Errorf("CONFIG ERROR: Failed to parse .env")
+// loadDotEnv loads the given .env file into the process environment without
+// overwriting variables already set (by the OS or a previously loaded file).
+// A missing file is not an error — it just means that source is skipped.
+func loadDotEnv(path string) error {
+	if err := godotenv.Load(path); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("CONFIG ERROR: failed to parse %s", path)
 		}
-		slog.Debug("CONFIG WARNING: .env file was not loaded successfully, default values are used")
+		slog.Debug("CONFIG: env file not found, skipping", "path", path)
+	}
+	return nil
+}
+
+func NewConfig() (*Config, error) {
+	// Local apps/backend/.env (for non-Docker local dev) takes precedence,
+	// falling back to the root .env (single source of truth for Docker Compose).
+	if err := loadDotEnv(".env"); err != nil {
+		return nil, err
+	}
+	if err := loadDotEnv("../../.env"); err != nil {
+		return nil, err
 	}
 
 	originsStr := getEnv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
@@ -58,7 +72,7 @@ func NewConfig() (*Config, error) {
 		Env:            getEnv("ENV", "development"),
 		AllowedOrigins: origins,
 		ParserURL:      getEnv("PARSER_URL", "http://localhost:8001"),
-		ParserAPI:      getEnv("PARSER_API", "nothing"),
+		ParserAPI:      getEnv("PARSER_API_KEY", "nothing"),
 		JWTSecret:      getEnv("JWT_SECRET", "change-me-in-production"),
 		Database: DatabaseConfig{
 			Host:     getEnv("DATABASE_HOST", "localhost"),
