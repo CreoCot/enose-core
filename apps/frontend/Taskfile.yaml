@@ -1,13 +1,13 @@
 version: "3"
 
+silent: true
+
 tasks:
   default:
-    silent: true
     cmds:
       - task --list
 
   setup:
-    silent: true
     sources:
       - package.json
       - package-lock.json
@@ -18,13 +18,11 @@ tasks:
 
   run:
     desc: "Run the frontend application"
-    silent: true
     cmds:
       - npm run dev
 
   test:
     desc: "Run frontend tests with terminal reporter"
-    silent: true
     cmds:
       - |
         printf "\n\033[1;97;45m TS \033[0m \033[1;35mFrontend Suite\033[0m\n\n"

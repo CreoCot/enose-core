@@ -1,13 +1,13 @@
 version: "3"
 
+silent: true
+
 tasks:
   default:
-    silent: true
     cmds:
       - task --list
 
   setup:
-    silent: true
     sources:
       - go.mod
       - go.sum
@@ -18,33 +18,28 @@ tasks:
 
   run:
     desc: "Run server on localhost:8080"
-    silent: true
     cmds:
       - go mod tidy
       - go run ./cmd/api/main.go
 
   db:init:
     desc: "Apply pending database migrations"
-    silent: true
     cmds:
       - go run ./cmd/migrate/main.go up
 
   db:down:
     desc: "Roll back all database migrations (DESTRUCTIVE)"
     prompt: "🚨 WARNING: This will destroy your local database. Are you absolutely sure?"
-    silent: true
     cmds:
       - go run ./cmd/migrate/main.go down
 
   db:status:
     desc: "Print the active database migration version"
-    silent: true
     cmds:
       - go run ./cmd/migrate/main.go status
 
   test:
     desc: "Run backend tests and show coverage"
-    silent: true
     cmds:
       - |
         printf "\n\033[1;97;44m GO \033[0m \033[1;34mBackend Suite\033[0m\n\n"
