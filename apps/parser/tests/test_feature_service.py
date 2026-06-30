@@ -80,3 +80,36 @@ def test_performance_under_500ms():
     extract_features(m)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     assert elapsed_ms < 500, f"feature extraction took {elapsed_ms:.1f}ms (limit 500ms)"
+
+
+def test_response_time_present_and_ordered():
+    feats = extract_features(_measurement(n_sensors=3, n_points=100))
+    for f in feats:
+        assert f.response_time <= f.time_to_max + 1e-6
+        assert f.response_time >= 0
+
+
+def test_average_baseline_uses_pre_points():
+    sensors = [ParsedSensor(position=1, label="S1", unit="Hz")]
+    pts = [
+        ParsedDataPoint(time_offset_s=-3, sensor_position=1, value=100.0),
+        ParsedDataPoint(time_offset_s=-2, sensor_position=1, value=102.0),
+        ParsedDataPoint(time_offset_s=-1, sensor_position=1, value=98.0),
+    ]
+    for i in range(50):
+        pts.append(
+            ParsedDataPoint(time_offset_s=float(i), sensor_position=1, value=100.0 + i)
+        )
+    m = ParsedMeasurement(
+        device_serial="T",
+        device_type_code="MAG8",
+        measurement_name="x",
+        measurement_object="x",
+        start_time="2025-01-01T00:00:00",
+        interval_ms=1000,
+        description=None,
+        sensors=sensors,
+        data_points=pts,
+    )
+    f = extract_features(m)[0]
+    assert abs(f.end_value - 49.0) < 1.0

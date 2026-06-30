@@ -9,7 +9,13 @@ def _curve_features(times: np.ndarray, values: np.ndarray) -> dict:
     order = np.argsort(times)
     t, v = times[order], values[order]
 
-    baseline = float(v[0])
+    pre = v[t < 0]
+    if pre.size:
+        baseline = float(np.mean(pre))
+    else:
+        n_base = max(1, len(v) // 20)
+        baseline = float(np.mean(v[:n_base]))
+
     d = v - baseline
 
     measured = t >= 0
@@ -20,6 +26,7 @@ def _curve_features(times: np.ndarray, values: np.ndarray) -> dict:
             max_abs=0.0,
             max_signed=0.0,
             time_to_max=0.0,
+            response_time=0.0,
             end_value=0.0,
             auc=0.0,
             slope_init=0.0,
@@ -32,6 +39,13 @@ def _curve_features(times: np.ndarray, values: np.ndarray) -> dict:
     end_value = float(d[-1])
     auc = float(np.trapezoid(d, t) if hasattr(np, "trapezoid") else np.trapz(d, t))
 
+    threshold = 0.9 * max_signed
+    if max_signed >= 0:
+        reached = np.where(d >= threshold)[0]
+    else:
+        reached = np.where(d <= threshold)[0]
+    response_time = float(t[reached[0]]) if reached.size else float(t[i_max])
+
     n0 = max(2, len(d) // 10)
     dt = float(t[n0 - 1] - t[0]) or 1e-9
     slope_init = float((d[n0 - 1] - d[0]) / dt)
@@ -40,6 +54,7 @@ def _curve_features(times: np.ndarray, values: np.ndarray) -> dict:
         max_abs=float(np.max(np.abs(d))),
         max_signed=max_signed,
         time_to_max=float(t[i_max]),
+        response_time=response_time,
         end_value=end_value,
         auc=auc,
         slope_init=slope_init,

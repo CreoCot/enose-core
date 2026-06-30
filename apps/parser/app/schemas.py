@@ -20,6 +20,7 @@ class SensorFeatures(BaseModel):
     max_abs: float
     max_signed: float
     time_to_max: float
+    response_time: float
     end_value: float
     auc: float
     slope_init: float
