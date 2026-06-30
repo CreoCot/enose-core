@@ -1,0 +1,40 @@
+---
+- name: Setup Server
+  hosts: prod
+  become: true
+
+  vars:
+    apt_cache_valid_time: 86400
+    docker_users:
+      - uniuser
+      - github-runner
+    allowed_tcp_ports:
+      - "22"
+      - "80"
+      - "443"
+
+  tasks:
+    - name: System and Security Setup
+      ansible.builtin.import_tasks: tasks/security.yml
+      tags: ["base", "security"]
+
+    - name: Run Docker Installation
+      ansible.builtin.import_tasks: tasks/docker.yml
+      tags: ["docker"]
+
+    - name: Run GitHub Actions Environment Setup
+      ansible.builtin.import_tasks: tasks/app_env.yml
+      tags: ["app-env"]
+
+  handlers:
+    - name: Restart SSH
+      ansible.builtin.systemd:
+        name: ssh
+        state: restarted
+      ignore_errors: "{{ ansible_facts['virtualization_type'] == 'docker' }}"
+
+    - name: Restart Docker
+      ansible.builtin.systemd:
+        name: docker
+        state: restarted
+      ignore_errors: "{{ ansible_facts['virtualization_type'] == 'docker' }}"

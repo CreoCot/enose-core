@@ -1,0 +1,8 @@
+---
+- name: Create app directory in github-runner home
+  ansible.builtin.file:
+    path: /home/github-runner/app
+    state: directory
+    owner: github-runner
+    group: github-runner
+    mode: "0755"

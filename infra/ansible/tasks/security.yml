@@ -1,0 +1,70 @@
+---
+- name: Update apt cache and upgrade System
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: "{{ apt_cache_valid_time }}"
+    upgrade: dist
+    autoremove: true
+
+- name: Install essential packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - git
+      - htop
+      - ufw
+      - fail2ban
+      - ca-certificates
+      - gnupg
+      - lsb-release
+    state: present
+
+- name: Configure UFW default deny policy
+  community.general.ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+- name: Allow essential ports in UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ allowed_tcp_ports }}"
+
+- name: Ensure Fail2Ban service is running and enabled
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: started
+    enabled: true
+  ignore_errors: "{{ ansible_facts['virtualization_type'] == 'docker' }}"
+
+- name: Hardening SSH (Disable Password Auth & Allow Root Key-only Login)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    validate: /usr/sbin/sshd -t -f %s
+  loop:
+    - { regexp: "^#?PasswordAuthentication", line: "PasswordAuthentication no" }
+    - {
+        regexp: "^#?PermitRootLogin",
+        line: "PermitRootLogin prohibit-password",
+      }
+  notify: Restart SSH
+
+- name: Install unattended-upgrades for auto security patching
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+
+- name: Enable unattended-upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    owner: root
+    group: root
+    mode: "0644"
