@@ -8,22 +8,30 @@ import api from "../axios";
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
-  const login = formData.get("login") as string;
+  const username = formData.get("username") as string;
+  const email = formData.get("email") as string;
+  const fullName = formData.get("full_name") as string;
   const password = formData.get("password") as string;
+  const role = formData.get("role") as string;
+  const rememberMe = formData.get("remember_me") !== null;
   try {
-    await api.post("/api/v1/register", {
-      login,
+    await api.post("/api/v1/auth/register", {
+      username,
+      email,
+      full_name: fullName,
+      role,
+      remember_me: rememberMe,
       password,
     });
     return redirect("/data");
   } catch (error: any) {
     return {
-      error: error.response?.data?.message || "Неверный логин или пароль",
+      error: error.response?.data?.message || "Что-то пошло не так",
     };
   }
 }
 
-const login = () => {
+const signup = () => {
   const fetcher = useFetcher();
   const [role, setRole] = useState("");
 
@@ -57,7 +65,7 @@ const login = () => {
                 whileFocus={{ y: -1 }}
                 className="bg-primary-100 rounded-[15px] w-full p-2 px-3 border text-base outline outline-primary-200 focus:outline-primary-500 focus:shadow-xl transition-colors"
                 type="text"
-                name="login"
+                name="username"
               />
             </div>
             <div className="pb-2">
@@ -185,4 +193,4 @@ const login = () => {
   );
 };
 
-export default login;
+export default signup;
