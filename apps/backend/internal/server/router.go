@@ -59,7 +59,9 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 		{
 			protected.GET("/auth/me", authHandler.Me)
 			protected.GET("/table", handlers.Table)
+			protected.GET("/table/:id", measurementsHandler.GetTable)
 			protected.GET("/plots", handlers.Plots)
+			protected.GET("/plots/:id", measurementsHandler.GetPlots)
 			protected.GET("/entries", measurementsHandler.GetAll)
 
 			// Admin only

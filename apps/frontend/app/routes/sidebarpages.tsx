@@ -7,7 +7,6 @@ export async function clientLoader() {
   try {
     await api.get("/api/v1/auth/me");
   } catch (error) {
-    if (error instanceof Error) console.log("HERE2", error.message);
     throw redirect("/login");
   }
 }

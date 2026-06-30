@@ -45,7 +45,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <div className="bg-grey-200">
+    <div className="bg-grey-100">
       {/* DEBUG */}
       {/* <div
         ref={() => console.log("DEBUG!!! root.tsx")}

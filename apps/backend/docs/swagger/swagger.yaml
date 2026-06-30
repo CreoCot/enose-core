@@ -41,6 +41,22 @@ definitions:
       name:
         type: string
     type: object
+  handlers.PlotResponse:
+    properties:
+      data:
+        items:
+          items:
+            format: float64
+            type: number
+          type: array
+        type: array
+      size:
+        type: integer
+      timestamps:
+        items:
+          type: number
+        type: array
+    type: object
   handlers.TableResponse:
     properties:
       data:
@@ -293,6 +309,44 @@ paths:
       summary: Проверка работоспособности бэкенда
       tags:
       - Heartbeat
+  /api/v1/plots/{id}:
+    get:
+      description: Возвращает временные ряды каждого сенсора измерения для построения
+        графиков
+      parameters:
+      - description: ID измерения
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PlotResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Графики данных измерения
+      tags:
+      - Measurements
   /api/v1/table:
     get:
       consumes:
@@ -316,6 +370,44 @@ paths:
       summary: Получить демо-таблицу данных сенсоров
       tags:
       - Data
+  /api/v1/table/{id}:
+    get:
+      description: 'Возвращает данные сенсоров измерения в табличном виде: каждая
+        строка — момент времени, первый столбец — время, остальные — значения сенсоров'
+      parameters:
+      - description: ID измерения
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TableResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Таблица данных измерения
+      tags:
+      - Measurements
   /api/v1/upload:
     post:
       consumes:
