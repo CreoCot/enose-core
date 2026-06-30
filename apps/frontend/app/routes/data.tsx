@@ -29,8 +29,9 @@ export async function clientLoader() {
     entryError: string = "";
   try {
     const response = await axios.get("/api/v1/entries");
-    if (!response.data.entries) entryError = "Ошибка API";
-    entries = response.data.entries;
+    if (!response.data) entryError = "Ошибка API";
+    entries = response.data;
+    return { entries, entryError };
   } catch (error) {
     if (isAxiosError(error) && error.response) {
       if (error.response.data.error) {
@@ -43,8 +44,8 @@ export async function clientLoader() {
     } else {
       entryError = "Что-то пошло не так";
     }
+    return { entries: [], entryError };
   }
-  return { entries, entryError };
 }
 
 export const clientAction = async ({ request }: ClientActionFunctionArgs) => {
@@ -116,11 +117,19 @@ const data = ({ loaderData }: Route.ComponentProps) => {
                     d="M15 17h3a3 3 0 0 0 0-6h-.025a5.56 5.56 0 0 0 .025-.5A5.5 5.5 0 0 0 7.207 9.021C7.137 9.017 7.071 9 7 9a4 4 0 1 0 0 8h2.167M12 19v-9m0 0-2 2m2-2 2 2"
                   />
                 </svg>
-                <p className="mb-2 text-base">
-                  <span className="font-semibold">Click to upload</span> or drag
-                  and drop
+                <p
+                  className={`mb-2 text-base ${
+                    fetcher.data?.error ? "text-red-700" : ""
+                  }`}
+                >
+                  {fetcher.data?.error || (
+                    <>
+                      <span className="font-semibold">Нажмите</span>, чтобы
+                      загрузить файл или перетяните его в окно
+                    </>
+                  )}
                 </p>
-                <p className="text-xs">XML, CSV or XLSX</p>
+                <p className="text-xs">XML, CSV или XLSX</p>
                 <motion.button
                   whileHover={{ y: -1 }}
                   whileTap={{ y: 1 }}

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import DataSection from "../components/DataSection";
 import Head from "../components/Head";
 import MeasurementsTable from "../components/MeasurementsTable";
 import Plots from "../components/Plots";
@@ -77,7 +76,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   let table: number[][] = [],
     tableError: string = "";
   try {
-    const tableResponse = await axios.get("/api/v1/table");
+    const tableResponse = await axios.get(`/api/v1/table/${fileId}`);
     if (!tableResponse.data.data || !tableResponse.data.size) {
       tableError = "Ошибка API";
     }
@@ -100,7 +99,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     plotTimestamps: number[] = [],
     plotError: string = "";
   try {
-    const plotResponse = await axios.get("/api/v1/plots");
+    const plotResponse = await axios.get(`/api/v1/plots/${fileId}`);
     if (
       !plotResponse.data.data ||
       !plotResponse.data.size ||
@@ -254,7 +253,7 @@ const file = ({ loaderData }: Route.ComponentProps) => {
     <div className="w-full overflow-hidden bg-grey-50 pb-5">
       <Head>{`Запись №${fileId + 1}`}</Head>
       <Link
-        className="flex gap-1 items-center lg:text-lg text-grey-700 hover:text-grey-600 mx-7 mt-5"
+        className="flex gap-1 items-center w-fit lg:text-lg text-grey-700 hover:text-grey-600 mx-7 mt-5 transition-colors duration-200"
         to="/data"
       >
         <svg
@@ -274,8 +273,8 @@ const file = ({ loaderData }: Route.ComponentProps) => {
 
         <span>Назад</span>
       </Link>
-      <div className="flex flex-col pt-3 text-2xl lg:text-3xl px-6">
-        <div className="flex w-fit bg-grey-600 justify-between gap-1 p-1 rounded-full mx-7 text-grey-100">
+      <div className="flex flex-col pt-3 text-xl lg:text-2xl px-6">
+        <div className="flex w-fit bg-grey-600 justify-between gap-1 p-1 rounded-full sm:mx-7 text-grey-100">
           <button
             className={`${
               open === 1 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
