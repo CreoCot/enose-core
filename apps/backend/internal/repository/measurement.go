@@ -24,6 +24,9 @@ type MeasurementRepository interface {
 		measurementID int,
 		sensorID int,
 	) ([]models.MeasurementData, error)
+	// GetMeasurementMatrix возвращает данные всех сенсоров измерения, отсортированных по позиции.
+	// data[i] — временной ряд значений i-го сенсора, timestamps — общий ряд смещений времени (от первого сенсора).
+	GetMeasurementMatrix(ctx context.Context, measurementID int) (data [][]float64, timestamps []float64, sensorCount int, err error)
 }
 
 type measurementRepository struct {
@@ -118,4 +121,42 @@ func (r *measurementRepository) GetSensorDataPoints(ctx context.Context, measure
 		Find(&points).Error
 
 	return points, err
+}
+
+// GetMeasurementMatrix вытягивает данные всех сенсоров измерения, упорядоченных по позиции датчика.
+func (r *measurementRepository) GetMeasurementMatrix(ctx context.Context, measurementID int) ([][]float64, []float64, int, error) {
+	var params []models.MeasurementParameter
+	err := r.db.WithContext(ctx).
+		Where("measurement_id = ?", measurementID).
+		Order("position ASC").
+		Find(&params).Error
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
+	sensorCount := len(params)
+	data := make([][]float64, sensorCount)
+	var timestamps []float64
+
+	for i, p := range params {
+		points, err := r.GetSensorDataPoints(ctx, measurementID, p.SensorID)
+		if err != nil {
+			return nil, nil, 0, err
+		}
+
+		values := make([]float64, len(points))
+		for j, pt := range points {
+			values[j] = pt.Value
+		}
+		data[i] = values
+
+		if i == 0 {
+			timestamps = make([]float64, len(points))
+			for j, pt := range points {
+				timestamps[j] = pt.TimeOffsetS
+			}
+		}
+	}
+
+	return data, timestamps, sensorCount, nil
 }
