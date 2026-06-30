@@ -47,11 +47,12 @@ const login = () => {
         <h2 className="text-grey-900 text-2xl lg:text-3xl font-bold leading-none pt-2">
           Войдите, чтобы начать работу
         </h2>
-        <fetcher.Form className="w-full">
+        <fetcher.Form method="post" className="w-full">
           <div className="flex flex-col gap-4 pt-6">
             <div className="pb-2">
               <h4 className="font-mono text-lg text-grey-800">Логин</h4>
               <motion.input
+                required
                 initial={{ y: 2 }}
                 whileFocus={{ y: -1 }}
                 className="bg-primary-100 rounded-[15px] w-full p-2 px-3 border text-base outline outline-primary-200 focus:outline-primary-500 focus:shadow-xl transition-colors"
@@ -63,6 +64,7 @@ const login = () => {
               <h4 className="font-mono text-lg text-grey-800">Пароль</h4>
 
               <motion.input
+                required
                 initial={{ y: 2 }}
                 whileFocus={{ y: -1 }}
                 className="bg-primary-100 rounded-[15px] w-full p-2 px-3 border text-base outline outline-primary-200 focus:outline-primary-500 focus:shadow-xl transition-colors"
