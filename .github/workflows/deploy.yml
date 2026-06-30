@@ -54,7 +54,7 @@ jobs:
 
   deploy:
     runs-on: self-hosted
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - name: Download code from repository
         uses: actions/checkout@v6
