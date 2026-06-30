@@ -6,6 +6,8 @@ services:
       POSTGRES_USER: ${DATABASE_USER:-postgres}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
       POSTGRES_DB: ${DATABASE_NAME:-enose}
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -40,7 +42,7 @@ services:
     container_name: enose-backend-prod
     environment:
       PORT: "8080"
-      ENV: production
+      ENV: staging
       DATABASE_HOST: postgres
       DATABASE_PORT: "5432"
       DATABASE_USER: ${DATABASE_USER:-postgres}
