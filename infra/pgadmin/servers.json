@@ -1,0 +1,22 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "enose-postgres (local)",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "enose",
+      "Username": "postgres",
+      "SSLMode": "disable"
+    },
+    "2": {
+      "Name": "enose-postgres (prod)",
+      "Group": "Servers",
+      "Host": "172.17.0.1",
+      "Port": 5433,
+      "MaintenanceDB": "enose",
+      "Username": "postgres",
+      "SSLMode": "disable"
+    }
+  }
+}
