@@ -9,11 +9,15 @@ import { isAxiosError } from "axios";
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
-  const username = formData.get("username") as string;
-  const email = formData.get("email") as string;
-  const fullName = formData.get("full_name") as string;
-  const password = formData.get("password") as string;
-  const role = formData.get("role") as string;
+  const password = formData.get("password");
+  const confirmPassword = formData.get("confirmPassword");
+  if (password !== confirmPassword) {
+    return { error: "Пароли не сопадают" };
+  }
+  const username = formData.get("username");
+  const email = formData.get("email");
+  const fullName = formData.get("full_name");
+  const role = formData.get("role");
   const rememberMe = formData.get("remember_me") !== null;
   try {
     await api.post("/api/v1/auth/register", {
@@ -44,31 +48,29 @@ const signup = () => {
   const fetcher = useFetcher();
   const [role, setRole] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [passwordsEqual, setPasswordsEqual] = useState(true);
   useEffect(() => {
     setError(fetcher.data?.error);
   }, [fetcher.data]);
   const handleChange = (event: SelectChangeEvent) => {
     setRole(event.target.value);
   };
-  console.log(fetcher.formData);
   return (
-    <div className="flex w-full max-w-screen h-screen bg-primary-900">
-      <div className="absolute">
-        <Link
-          to="/"
-          className="flex items-center justify-center m-3 w-11 h-7 rounded-[10px] font-medium text-base lg:text-lg text-grey-900 hover:text-primary-700 hover:font-bold transition-all duration-150"
-        >
-          На домашнюю
-        </Link>
-      </div>
-      <div className="flex flex-col w-18 justify-center bg-white px-9 sm:px-10 xl:px-11 2xl:px-12">
+    <div className="flex w-full max-w-screen h-full min-h-screen bg-primary-900">
+      <Link
+        to="/"
+        className="flex absolute items-center justify-center m-3 w-11 h-7 rounded-[10px] font-medium text-base lg:text-lg text-grey-900 hover:text-primary-700 hover:font-bold transition-all duration-150 z-10"
+      >
+        На домашнюю
+      </Link>
+      <div className="flex flex-col w-18 justify-center bg-white py-9 px-9 sm:px-10 xl:px-11 2xl:px-12">
         <h2 className="text-sm lg:text-base text-accent-500 font-mono font-light tracking-wide transition-all">
           ЕДИНЫЙ ИНТЕРФЕЙС ЭЛЕКТРОННОГО НОСА
         </h2>
         <h3 className="text-grey-900 text-2xl lg:text-3xl font-bold leading-none pt-2">
           Зарегистрируйтесь, чтобы начать работу
         </h3>
-        <fetcher.Form method="post" className="w-full">
+        <fetcher.Form method="post" className="w-full relative">
           <div className="flex flex-col gap-3 pt-6">
             <div className="pb-2">
               <h4 className="font-mono text-lg text-grey-800">Логин</h4>
@@ -76,7 +78,7 @@ const signup = () => {
                 required
                 initial={{ y: 2 }}
                 whileFocus={{ y: -1 }}
-                className="bg-primary-100 rounded-[15px] w-full p-2 px-3 border text-base outline outline-primary-200 focus:outline-primary-500 focus:shadow-xl transition-colors"
+                className="bg-primary-100 rounded-[15px] w-full p-2 px-3 text-base outline outline-primary-200 focus:outline-primary-500 focus:shadow-xl transition-colors"
                 type="text"
                 name="username"
               />
@@ -87,7 +89,7 @@ const signup = () => {
                 required
                 initial={{ y: 2 }}
                 whileFocus={{ y: -1 }}
-                className="bg-primary-100 rounded-[15px] w-full p-2 px-3 border text-base outline outline-primary-200 focus:outline-primary-500 focus:shadow-xl transition-colors"
+                className="bg-primary-100 rounded-[15px] w-full p-2 px-3 text-base outline outline-primary-200 focus:outline-primary-500 focus:shadow-xl transition-colors"
                 type="email"
                 name="email"
               />
@@ -100,7 +102,7 @@ const signup = () => {
                 required
                 initial={{ y: 2 }}
                 whileFocus={{ y: -1 }}
-                className="bg-primary-100 rounded-[15px] w-full p-2 px-3 border text-base outline outline-primary-200 focus:outline-primary-500 focus:shadow-xl transition-colors"
+                className="bg-primary-100 rounded-[15px] w-full p-2 px-3 text-base outline outline-primary-200 focus:outline-primary-500 focus:shadow-xl transition-colors"
                 type="text"
                 name="full_name"
               />
@@ -112,9 +114,64 @@ const signup = () => {
                 required
                 initial={{ y: 2 }}
                 whileFocus={{ y: -1 }}
-                className="bg-primary-100 rounded-[15px] w-full p-2 px-3 border text-base outline outline-primary-200 focus:outline-primary-500 focus:shadow-xl transition-colors"
+                onChange={(event) => {
+                  const form = event.currentTarget.form;
+                  if (!form) return;
+                  const formData = new FormData(form);
+                  const password = formData.get("password");
+                  const confirmPassword = formData.get("confirmPassword");
+                  if (
+                    password &&
+                    confirmPassword &&
+                    password === confirmPassword
+                  ) {
+                    setPasswordsEqual(true);
+                  } else if (!password || !confirmPassword) {
+                    setPasswordsEqual(true);
+                  } else {
+                    setPasswordsEqual(false);
+                  }
+                }}
+                className="bg-primary-100 rounded-[15px] w-full p-2 px-3 text-base outline outline-primary-200 focus:outline-primary-500 focus:shadow-xl transition-colors"
                 type="password"
                 name="password"
+              />
+            </div>
+            <div className="pb-2">
+              <h4 className="font-mono text-lg text-grey-800">
+                Подтвердите пароль
+              </h4>
+
+              <motion.input
+                required
+                initial={{ y: 2 }}
+                whileFocus={{ y: -1 }}
+                onChange={(event) => {
+                  const form = event.currentTarget.form;
+                  if (!form) return;
+                  const formData = new FormData(form);
+                  const password = formData.get("password");
+                  const confirmPassword = formData.get("confirmPassword");
+                  console.log(passwordsEqual, password, confirmPassword);
+                  if (
+                    password &&
+                    confirmPassword &&
+                    password === confirmPassword
+                  ) {
+                    setPasswordsEqual(true);
+                  } else if (!password || !confirmPassword) {
+                    setPasswordsEqual(true);
+                  } else {
+                    setPasswordsEqual(false);
+                  }
+                }}
+                className={`bg-primary-100 rounded-[15px] w-full p-2 px-3 text-base outline  ${
+                  passwordsEqual
+                    ? "outline-primary-200 focus:outline-primary-500"
+                    : "outline-red-600"
+                } focus:shadow-xl transition-colors`}
+                type="password"
+                name="confirmPassword"
               />
             </div>
             <div className="pb-2">
@@ -183,11 +240,19 @@ const signup = () => {
               </Link>
             </div>
             <div className="flex gap-2 text-grey-600">
-              <input name="remember_me" className="bg-white" type="checkbox" />
-              Запомнить меня
+              <input
+                disabled
+                name="remember_me"
+                className="bg-white cursor-not-allowed"
+                type="checkbox"
+              />
+              Запомнить меня&lt;not done&gt;
             </div>
             <motion.button
-              onClick={() => setError(null)}
+              onClick={() => {
+                setError(null);
+              }}
+              disabled={fetcher.state === "submitting"}
               type="submit"
               whileHover={{ y: -1 }}
               whileTap={{ y: 1 }}
@@ -199,20 +264,20 @@ const signup = () => {
               Регистрация
             </motion.button>
           </div>
+          {error && (
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.3, ease: "easeIn" }}
+              className="text-red-600 text-base font-light px-2 pt-1 absolute bottom-0 translate-y-full"
+            >
+              {error}
+            </motion.div>
+          )}
         </fetcher.Form>
-        {error && (
-          <motion.div
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.3, ease: "easeIn" }}
-            className="text-red-600 text-base font-light px-2 relative"
-          >
-            {error}
-          </motion.div>
-        )}
       </div>
-      <div className="hidden md:flex w-full h-full bg-radial from-primary-600/90 to-accent-800/80">
-        <div className="w-full h-full bg-accent-300/40 mask-[url('../topography.svg')] mask-repeat mask-size-[500px_500px]" />
+      <div className="hidden md:flex w-full bg-radial from-primary-600/90 to-accent-800/80">
+        <div className="w-full bg-accent-300/40 mask-[url('../topography.svg')] mask-repeat mask-size-[500px_500px]" />
       </div>
     </div>
   );

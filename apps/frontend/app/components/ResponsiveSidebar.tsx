@@ -8,10 +8,10 @@ const ResponsiveSidebar = () => {
   const [smSidebarOpen, setSmSidebarOpen] = useState(false);
   return (
     <>
-      <div className="hidden sm:flex sm:h-full sm:min-h-screen">
+      <div className="hidden sm:flex sm:h-full sm:min-h-screen top-0 sticky">
         <Sidebar />
       </div>
-      <div className="flex h-full min-h-screen sm:hidden items-center">
+      <div className="flex h-full min-h-screen sm:hidden items-center top-0 sticky">
         <AnimatePresence mode="popLayout">
           {smSidebarOpen && (
             <motion.div
