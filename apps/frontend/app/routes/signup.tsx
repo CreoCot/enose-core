@@ -1,10 +1,11 @@
 import { motion } from "motion/react";
 import { Link, redirect, useFetcher } from "react-router";
 import Select, { type SelectChangeEvent } from "@mui/material/Select";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MenuItem from "@mui/material/MenuItem";
 import type { Route } from "./+types/signup";
 import api from "../axios";
+import { isAxiosError } from "axios";
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
@@ -24,20 +25,32 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
       password,
     });
     return redirect("/data");
-  } catch (error: any) {
-    return {
-      error: error.response?.data?.message || "Что-то пошло не так",
-    };
+  } catch (error) {
+    if (isAxiosError(error) && error.response) {
+      if (error.response.data.error) {
+        return { error: error.response.data.message };
+      } else {
+        return { error: error.response.data };
+      }
+    } else if (error instanceof Error) {
+      return { error: error.message };
+    } else {
+      return "Что-то пошло не так";
+    }
   }
 }
 
 const signup = () => {
   const fetcher = useFetcher();
   const [role, setRole] = useState("");
-
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    setError(fetcher.data?.error);
+  }, [fetcher.data]);
   const handleChange = (event: SelectChangeEvent) => {
     setRole(event.target.value);
   };
+  console.log(fetcher.formData);
   return (
     <div className="flex w-full max-w-screen h-screen bg-primary-900">
       <div className="absolute">
@@ -49,12 +62,12 @@ const signup = () => {
         </Link>
       </div>
       <div className="flex flex-col w-18 justify-center bg-white px-9 sm:px-10 xl:px-11 2xl:px-12">
-        <h3 className="text-sm lg:text-base text-accent-500 font-mono font-light tracking-wide transition-all">
+        <h2 className="text-sm lg:text-base text-accent-500 font-mono font-light tracking-wide transition-all">
           ЕДИНЫЙ ИНТЕРФЕЙС ЭЛЕКТРОННОГО НОСА
-        </h3>
-        <h2 className="text-grey-900 text-2xl lg:text-3xl font-bold leading-none pt-2">
-          Зарегистрируйтесь, чтобы начать работу
         </h2>
+        <h3 className="text-grey-900 text-2xl lg:text-3xl font-bold leading-none pt-2">
+          Зарегистрируйтесь, чтобы начать работу
+        </h3>
         <fetcher.Form method="post" className="w-full">
           <div className="flex flex-col gap-3 pt-6">
             <div className="pb-2">
@@ -173,18 +186,30 @@ const signup = () => {
               <input name="remember_me" className="bg-white" type="checkbox" />
               Запомнить меня
             </div>
-
             <motion.button
+              onClick={() => setError(null)}
+              type="submit"
               whileHover={{ y: -1 }}
               whileTap={{ y: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 10 }}
-              className="text-center p-2 px-3 text-lg font-semibold text-primary-100 bg-primary-600 hover:bg-primary-700 transition-colors duration-100 rounded-[15px] cursor-pointer"
-              type="submit"
+              className={`text-center p-2 px-3 text-lg font-semibold text-primary-100 bg-primary-600 hover:bg-primary-700 transition-colors duration-100 rounded-[15px] cursor-pointer  ${
+                error && "outline outline-red-600"
+              }`}
             >
               Регистрация
             </motion.button>
           </div>
         </fetcher.Form>
+        {error && (
+          <motion.div
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.3, ease: "easeIn" }}
+            className="text-red-600 text-base font-light px-2 relative"
+          >
+            {error}
+          </motion.div>
+        )}
       </div>
       <div className="hidden md:flex w-full h-full bg-radial from-primary-600/90 to-accent-800/80">
         <div className="w-full h-full bg-accent-300/40 mask-[url('../topography.svg')] mask-repeat mask-size-[500px_500px]" />
