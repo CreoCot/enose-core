@@ -16,66 +16,56 @@ import {
   TableRow,
 } from "./ui/table";
 import type { Entry } from "../routes/data";
-import { setEntryCacheNull } from "../routes/data";
-
-const columns: ColumnDef<Entry>[] = [
-  {
-    accessorKey: "name",
-    header: "Имя записи",
-    cell: ({ row }) => (
-      <Link
-        to={`/entry/${row.original.id}`}
-        className="hover:underline cursor-pointer"
-      >
-        {row.getValue("name")}
-      </Link>
-    ),
-  },
-  {
-    accessorKey: "date",
-    header: "Дата",
-  },
-  {
-    id: "actions",
-    header: "Действия",
-    cell: ({ row }) => (
-      <button
-        className="rounded-full w-11 p-0.5 text-red-900 bg-red-200 border lg:mr-7 border-red-400 text-center disabled:cursor-not-allowed cursor-pointer disabled:bg-red-100 disabled:border-red-200 enabled:hover:bg-red-300 transition-colors"
-        onClick={() => {
-          setEntryCacheNull();
-        }}
-        disabled
-      >
-        Удалить &lt;not done&gt;
-      </button>
-    ),
-  },
-];
 
 interface Props {
   entries: Entry[];
   error: string;
+  setEntryCacheNull: () => void;
 }
 
-export default function FileTable({ entries, error }: Props) {
-  const files = useMemo<Entry[]>(() => {
-    return entries;
+export default function FileTable({
+  entries,
+  error,
+  setEntryCacheNull,
+}: Props) {
+  const columns = useMemo<ColumnDef<Entry>[]>(() => {
+    return [
+      {
+        accessorKey: "name",
+        header: "Имя записи",
+        cell: ({ row }) => (
+          <Link
+            to={`/entry/${row.original.id}`}
+            className="hover:underline cursor-pointer"
+          >
+            {row.getValue("name")}
+          </Link>
+        ),
+      },
+      {
+        accessorKey: "date",
+        header: "Дата",
+      },
+      {
+        id: "actions",
+        header: "Действия",
+        cell: ({ row }) => (
+          <button
+            className="rounded-full w-11 p-0.5 text-red-900 bg-red-200 border lg:mr-7 border-red-400 text-center disabled:cursor-not-allowed cursor-pointer disabled:bg-red-100 disabled:border-red-200 enabled:hover:bg-red-300 transition-colors"
+            onClick={() => {
+              setEntryCacheNull();
+            }}
+            disabled
+          >
+            Удалить &lt;not done&gt;
+          </button>
+        ),
+      },
+    ];
   }, []);
 
-  // const files = useMemo<Entry[]>(
-  //   () =>
-  //     Array.from({ length: 23 }, (_, i) => ({
-  //       id: i,
-  //       name: `${i + 1}.txt`,
-  //       date: `${(i % 28) + 1}.12.26`,
-  //     })),
-  //   [],
-  // );
-
-  // const files = useMemo(() => [], []);
-
   const table = useReactTable({
-    data: files,
+    data: entries,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
