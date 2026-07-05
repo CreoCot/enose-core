@@ -29,7 +29,7 @@ The request body must match the `ReportRequest` schema.
 ### Example
 
 ```bash
-curl -X POST http://localhost:5050/reports \
+curl -X POST http://localhost:8002/reports \
   -H "Content-Type: application/json" \
   -H "Accept: application/pdf" \
   -H "X-API-Key: example_api_key" \
@@ -87,7 +87,7 @@ Returns a sample PDF bundled with the service.
 ### Example
 
 ```bash
-curl -X GET http://localhost:5050/example \
+curl -X GET http://localhost:8002/example \
   -H "Accept: application/pdf" \
   --output example.pdf
 ```

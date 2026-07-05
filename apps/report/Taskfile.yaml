@@ -4,9 +4,9 @@ tasks:
   run:
     desc: Run report service
     cmds:
-      - uvicorn app.main:app --host 0.0.0.0 --port 5050
+      - uvicorn app.main:app --host 0.0.0.0 --port 8002
 
   dev:
     desc: Run report service with auto reload
     cmds:
-      - uvicorn app.main:app --host 0.0.0.0 --port 5050 --reload
+      - uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload

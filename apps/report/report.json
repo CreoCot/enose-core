@@ -512,5 +512,7 @@
       ]
     }
   ],
-  "interpretation": "Some interpretation"
+  "interpretation": {
+    "text": "Some interpretation"
+  }
 }
