@@ -30,6 +30,7 @@ The request consists of regular form fields and one or more image files.
 ```bash
 curl -X POST http://localhost:5050/reports \
   -H "accept: application/pdf" \
+  -H "X-API-Key: example_api_key" \
   -F "name=Lemon" \
   -F "sensor_count=16" \
   -F "titles=Strongest per-measurement sensor response" \

@@ -26,14 +26,11 @@ class PDFGenerator:
 
     def __init__(self) -> None:
         font_path = Path(__file__).parent / "fonts" / "DejaVuSans.ttf"
-
         pdfmetrics.registerFont(TTFont("DejaVu", str(font_path)))
-
         self.styles = self._create_styles()
 
     def _create_styles(self):
         styles = getSampleStyleSheet()
-
         styles.add(
             ParagraphStyle(
                 name="ReportTitle",
@@ -46,7 +43,6 @@ class PDFGenerator:
                 spaceAfter=24,
             )
         )
-
         styles.add(
             ParagraphStyle(
                 name="Section",
@@ -59,7 +55,6 @@ class PDFGenerator:
                 spaceAfter=8,
             )
         )
-
         styles.add(
             ParagraphStyle(
                 name="Body",
@@ -70,7 +65,6 @@ class PDFGenerator:
                 spaceAfter=6,
             )
         )
-
         return styles
 
     def _generate(
@@ -81,18 +75,12 @@ class PDFGenerator:
         images: list[bytes],
     ) -> bytes:
         buffer = BytesIO()
-
         doc = SimpleDocTemplate(
             buffer,
             title=name,
             author="eNose Report Service",
         )
-
         story = []
-
-        #
-        # Title
-        #
 
         story.append(
             Paragraph(
@@ -100,7 +88,6 @@ class PDFGenerator:
                 self.styles["ReportTitle"],
             )
         )
-
         story.append(
             HRFlowable(
                 width="100%",
@@ -108,36 +95,26 @@ class PDFGenerator:
                 color=colors.grey,
             )
         )
-
         story.append(Spacer(1, 0.3 * inch))
-
-        #
-        # Metadata
-        #
-
         story.append(
             Paragraph(
                 "<b>Measurement information</b>",
                 self.styles["Section"],
             )
         )
-
         story.append(
             Paragraph(
                 f"<b>Name:</b> {name}",
                 self.styles["Body"],
             )
         )
-
         story.append(
             Paragraph(
                 f"<b>Sensor count:</b> {sensor_count}",
                 self.styles["Body"],
             )
         )
-
         story.append(Spacer(1, 0.25 * inch))
-
         story.append(
             HRFlowable(
                 width="100%",
@@ -145,12 +122,7 @@ class PDFGenerator:
                 color=colors.lightgrey,
             )
         )
-
         story.append(Spacer(1, 0.2 * inch))
-
-        #
-        # Plots
-        #
 
         story.append(
             Paragraph(
@@ -183,7 +155,6 @@ class PDFGenerator:
             story.append(Spacer(1, 0.3 * inch))
 
         doc.build(story)
-
         pdf = buffer.getvalue()
         buffer.close()
 

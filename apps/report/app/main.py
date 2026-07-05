@@ -1,6 +1,15 @@
-from typing import Annotated
+import os
+from typing import Annotated, Optional
 from pathlib import Path
-from fastapi import FastAPI, File, Form, UploadFile, HTTPException
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    Header,
+    UploadFile,
+    HTTPException,
+)
 from fastapi.responses import Response
 from pydantic import WithJsonSchema
 
@@ -12,11 +21,20 @@ app = FastAPI(
     version="0.1.0",
 )
 
+REPORT_API_KEY = os.getenv("REPORT_API_KEY", "example_api_key")
+
 UploadFile = Annotated[
     UploadFile, WithJsonSchema({"type": "string", "format": "binary"})
 ]
 
 generator = PDFGenerator()
+
+
+async def verify_api_key(x_api_key: Optional[str] = Header(None)):
+    """Middleware для проверки API ключа"""
+    if x_api_key != REPORT_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    return True
 
 
 @app.get("/health")
@@ -30,10 +48,11 @@ async def generate_report(
     sensor_count: int = Form(...),
     titles: list[str] = Form(...),
     images: list[UploadFile] = File(...),  # type: ignore
+    _: bool = Depends(verify_api_key),
 ):
     if len(titles) != len(images):
         raise HTTPException(
-            status_code=400,
+            status_code=422,
             detail="Number of titles must match number of images.",
         )
     pdf = await generator.generate(name, sensor_count, titles, images)
