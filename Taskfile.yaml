@@ -15,10 +15,15 @@ includes:
     taskfile: ./apps/ml/Taskfile.yaml
     dir: ./apps/ml
     aliases: [m]
+  report:
+    taskfile: ./apps/report/Taskfile.yaml
+    dir: ./apps/report
+    aliases: [r]
   infra:
     taskfile: ./infra/Taskfile.yaml
     dir: ./infra
     aliases: [i]
+
 
 silent: true
 
