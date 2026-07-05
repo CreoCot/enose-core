@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Head from "../components/Head";
 import MeasurementsTable from "../components/MeasurementsTable";
 import Plots from "../components/Plots";
+import MultiPlot from "../components/MultiPlot";
 import axios from "../axios";
 import { isAxiosError } from "axios";
 import type { Route } from "./+types/file";
@@ -66,6 +67,32 @@ const selectedPlotIcon = (
       d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6Zm4.5 7.5a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0v-2.25a.75.75 0 0 1 .75-.75Zm3.75-1.5a.75.75 0 0 0-1.5 0v4.5a.75.75 0 0 0 1.5 0V12Zm2.25-3a.75.75 0 0 1 .75.75v6.75a.75.75 0 0 1-1.5 0V9.75A.75.75 0 0 1 13.5 9Zm3.75-1.5a.75.75 0 0 0-1.5 0v9a.75.75 0 0 0 1.5 0v-9Z"
       clipRule="evenodd"
     />
+  </svg>
+);
+const multiPlotIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="size-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
+    />
+  </svg>
+);
+const selectedMultiPlotIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className="size-6"
+  >
+    <path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.036-.84-1.875-1.875-1.875h-.75ZM9.75 8.625c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v11.25c0 1.035-.84 1.875-1.875 1.875h-.75a1.875 1.875 0 0 1-1.875-1.875V8.625ZM3 13.125c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v6.75c0 1.035-.84 1.875-1.875 1.875h-.75A1.875 1.875 0 0 1 3 19.875v-6.75Z" />
   </svg>
 );
 
@@ -211,6 +238,12 @@ const file = ({ loaderData }: Route.ComponentProps) => {
   } = loaderData || {};
 
   const [open, setOpen] = useState(1);
+  const icons = useMemo(() => {
+    return [
+      [tableIcon, plotIcon, multiPlotIcon],
+      [selectedTableIcon, selectedPlotIcon, selectedMultiPlotIcon],
+    ];
+  }, []);
   const items = [
     useMemo(() => {
       return (
@@ -247,8 +280,25 @@ const file = ({ loaderData }: Route.ComponentProps) => {
         </motion.div>
       );
     }, [plots, plotTimestamps, plotError, sensorSize]),
+    useMemo(() => {
+      return (
+        <motion.div
+          key="multiPlots"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.15 }}
+        >
+          <MultiPlot
+            timestamps={plotTimestamps}
+            sensorData={plots}
+            sensorSize={sensorSize}
+            error={plotError}
+          />
+        </motion.div>
+      );
+    }, [plots, plotTimestamps, plotError, sensorSize]),
   ];
-  const len = items.length;
   return (
     <div className="w-full overflow-hidden bg-grey-50 pb-5">
       <Head>{`Запись №${fileId}`}</Head>
@@ -274,7 +324,18 @@ const file = ({ loaderData }: Route.ComponentProps) => {
         <span>Назад</span>
       </Link>
       <div className="flex flex-col pt-3 text-xl lg:text-2xl px-6">
-        <div className="flex w-fit bg-grey-600 justify-between gap-1 p-1 rounded-full sm:mx-7 text-grey-100">
+        <div className="flex flex-col lg:flex-row w-fit bg-grey-600 justify-between gap-1 p-2 lg:p-1 rounded-[15px] lg:rounded-full sm:mx-7 text-grey-100">
+          <button
+            className={`${
+              open === 2 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
+            onClick={() => setOpen(2)}
+          >
+            <div className="flex items-center gap-1">
+              {open === 2 ? icons[1][2] : icons[0][2]}
+              Сравнение
+            </div>
+          </button>
           <button
             className={`${
               open === 1 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
@@ -282,7 +343,7 @@ const file = ({ loaderData }: Route.ComponentProps) => {
             onClick={() => setOpen(1)}
           >
             <div className="flex items-center gap-1">
-              {open === 1 ? selectedPlotIcon : plotIcon}
+              {open === 1 ? icons[1][1] : icons[0][1]}
               Графики
             </div>
           </button>
@@ -293,7 +354,7 @@ const file = ({ loaderData }: Route.ComponentProps) => {
             onClick={() => setOpen(0)}
           >
             <div className="flex items-center gap-1">
-              {open === 0 ? selectedTableIcon : tableIcon}
+              {open === 0 ? icons[1][0] : icons[0][0]}
               Таблица
             </div>
           </button>

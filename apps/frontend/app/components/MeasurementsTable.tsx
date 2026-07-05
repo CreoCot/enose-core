@@ -64,7 +64,7 @@ const MeasurementsTable = ({ table, sensorSize, error }: Props) => {
   });
 
   return (
-    <div className="min-w-0 mx-8 my-4 rounded-[10px] shadow-md shadow-primary-300 border border-primary-300 overflow-hidden">
+    <div className="min-w-0 md:mx-8 my-4 rounded-[10px] shadow-md shadow-primary-300 border border-primary-300 overflow-hidden">
       <div className="overflow-x-auto overscroll-x-none">
         <Table className="w-full table-auto border-collapse">
           <TableHeader>
