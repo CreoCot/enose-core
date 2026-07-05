@@ -20,6 +20,7 @@ from reportlab.platypus import (
 
 from app.charts import ChartGenerator
 from app.schemas import ReportRequest
+from app.features import calculate_features
 
 
 class PDFGenerator:
@@ -132,25 +133,25 @@ class PDFGenerator:
             )
         )
 
-        feature_names = []
+        sensor_features = [
+            calculate_features(
+                report.timestamps,
+                sensor.initial,
+                sensor.values,
+            )
+            for sensor in report.sensors
+        ]
 
-        for sensor in report.sensors:
-            for feature in sensor.features:
-                if feature not in feature_names:
-                    feature_names.append(feature)
+        feature_names = list(sensor_features[0].keys()) if sensor_features else []
 
         table_data = [["Sensor", *feature_names]]
 
-        for sensor in report.sensors:
+        for sensor, features in zip(report.sensors, sensor_features):
             row = [sensor.name]
 
             for feature in feature_names:
-                value = sensor.features.get(feature)
-
-                if value is None:
-                    row.append("-")
-                else:
-                    row.append(f"{value:.3f}")
+                value = features.get(feature)
+                row.append("-" if value is None else f"{value:.3f}")
 
             table_data.append(row)
 

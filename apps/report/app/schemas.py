@@ -15,7 +15,6 @@ class SensorSeries(BaseModel):
     name: str
     initial: float
     values: list[float]
-    features: dict[str, float]
 
 
 class Interpretation(BaseModel):

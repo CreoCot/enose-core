@@ -53,17 +53,7 @@ curl -X POST http://localhost:5050/reports \
       "id": 1,
       "name": "SID0001",
       "initial": 9965895,
-      "values": [9965894.78, 9965894.63, 9965894.42],
-      "features": {
-        "max_abs": 4.12,
-        "max_signed": -4.12,
-        "time_to_max": 2.0,
-        "end_value": -4.12,
-        "auc": -8.43,
-        "slope_init": -0.22,
-        "drop_from_max": 0.0,
-        "noise_std": 0.05
-      }
+      "values": [9965894.78, 9965894.63, 9965894.42]
     }
   ],
   "interpretation": "Detected lemon oil with high confidence."
