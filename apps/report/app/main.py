@@ -1,33 +1,22 @@
 import os
-from typing import Annotated, Optional
 from pathlib import Path
-from fastapi import (
-    Depends,
-    FastAPI,
-    File,
-    Form,
-    Header,
-    UploadFile,
-    HTTPException,
-)
+from typing import Optional
+from urllib.parse import quote
+
+from fastapi import Depends, FastAPI, HTTPException, Header
 from fastapi.responses import Response
-from pydantic import WithJsonSchema
 
 from app.pdf import PDFGenerator
-
+from app.schemas import ReportRequest
 
 app = FastAPI(
     title="Report Service",
     version="0.1.0",
 )
 
-REPORT_API_KEY = os.getenv("REPORT_API_KEY", "example_api_key")
-
-UploadFile = Annotated[
-    UploadFile, WithJsonSchema({"type": "string", "format": "binary"})
-]
-
 generator = PDFGenerator()
+
+REPORT_API_KEY = os.getenv("REPORT_API_KEY", "example_api_key")
 
 
 async def verify_api_key(x_api_key: Optional[str] = Header(None)):
@@ -37,53 +26,37 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None)):
     return True
 
 
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
-
-
-@app.post("/reports")
+@app.post(
+    "/reports",
+    response_class=Response,
+)
 async def generate_report(
-    name: str = Form(...),
-    sensor_count: int = Form(...),
-    titles: list[str] = Form(...),
-    images: list[UploadFile] = File(...),  # type: ignore
+    report: ReportRequest,
     _: bool = Depends(verify_api_key),
 ):
-    if len(titles) != len(images):
-        raise HTTPException(
-            status_code=422,
-            detail="Number of titles must match number of images.",
-        )
-    pdf = await generator.generate(name, sensor_count, titles, images)
+    pdf = generator.generate(report)
+    filename = quote(f"{report.header.name}.pdf")
 
     return Response(
         content=pdf,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{name}.pdf"'},
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
     )
 
 
 @app.get("/example")
 async def example_report():
-    images = [
-        Path("app/examples/1.png"),
-        Path("app/examples/2.png"),
-        Path("app/examples/3.png"),
-    ]
+    report_path = Path(__file__).parent.parent / "report.json"
 
-    titles = [
-        "Strongest per-measurement sensor response - the peak detection (delta) feature across substances.",
-        "A single response curve with the extracted features marked: AUC (shaded area), response time, and the curve maximum.",
-        "Baseline normalization: the raw frequency signal (left) is normalized against its own baseline to produce the delta curve (right) used for feature extraction.",
-    ]
+    if not report_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Example report not found.",
+        )
 
-    pdf = generator.generate_from_paths(
-        name="Lemon",
-        sensor_count=16,
-        titles=titles,
-        images=images,
-    )
+    report = ReportRequest.model_validate_json(report_path.read_text(encoding="utf-8"))
+
+    pdf = generator.generate(report)
 
     return Response(
         content=pdf,

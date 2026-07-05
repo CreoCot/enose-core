@@ -1,5 +1,15 @@
 ## API Usage
 
+### Authentication
+
+Pass API key using the `X-API-Key` header:
+
+```http
+X-API-Key: example_api_key
+```
+
+---
+
 ### Generate Report
 
 **Endpoint**
@@ -11,51 +21,53 @@ POST /reports
 **Content-Type**
 
 ```text
-multipart/form-data
+application/json
 ```
 
-The request consists of regular form fields and one or more image files.
+The request body must match the `ReportRequest` schema.
 
-| Field          | Type     | Required | Description                                                        |
-| -------------- | -------- | -------- | ------------------------------------------------------------------ |
-| `name`         | string   | ✅       | Report name. Used as the output PDF filename.                      |
-| `sensor_count` | integer  | ✅       | Number of sensors used in the experiment.                          |
-| `titles`       | string[] | ✅       | One title for each uploaded image.                                 |
-| `images`       | file[]   | ✅       | Plot images. The number of images must match the number of titles. |
-
-> **Important:** `titles` must be sent as **multiple form fields**, **not** as a comma-separated string.
-
-### Correct example
+### Example
 
 ```bash
 curl -X POST http://localhost:5050/reports \
-  -H "accept: application/pdf" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/pdf" \
   -H "X-API-Key: example_api_key" \
-  -F "name=Lemon" \
-  -F "sensor_count=16" \
-  -F "titles=Strongest per-measurement sensor response" \
-  -F "titles=Single response curve with extracted features" \
-  -F "titles=Baseline normalization" \
-  -F "images=@app/examples/1.png" \
-  -F "images=@app/examples/2.png" \
-  -F "images=@app/examples/3.png" \
+  --data @report.json \
   --output report.pdf
 ```
 
-### Incorrect example
+### Request Schema
 
-Do **not** send titles as a single comma-separated value:
-
-```bash
--F "titles=Title 1,Title 2,Title 3"
-```
-
-Instead, repeat the `titles` field once for each image:
-
-```bash
--F "titles=Title 1"
--F "titles=Title 2"
--F "titles=Title 3"
+```json
+{
+  "header": {
+    "name": "Lemon oil",
+    "device": "eNose-01",
+    "object": "Lemon oil",
+    "date": "2026-07-05T16:53:39"
+  },
+  "timestamps": [0, 1, 2],
+  "sensors": [
+    {
+      "id": 1,
+      "name": "SID0001",
+      "initial": 9965895,
+      "values": [9965894.78, 9965894.63, 9965894.42],
+      "features": {
+        "max_abs": 4.12,
+        "max_signed": -4.12,
+        "time_to_max": 2.0,
+        "end_value": -4.12,
+        "auc": -8.43,
+        "slope_init": -0.22,
+        "drop_from_max": 0.0,
+        "noise_std": 0.05
+      }
+    }
+  ],
+  "interpretation": "Detected lemon oil with high confidence."
+}
 ```
 
 ### Response
@@ -68,7 +80,9 @@ On success, the service returns a PDF document.
 application/pdf
 ```
 
-The response includes the `Content-Disposition` header so the browser or client can download the generated report.
+The response includes the `Content-Disposition` header so the generated report can be downloaded.
+
+---
 
 ### Example Report
 
@@ -78,19 +92,17 @@ The response includes the `Content-Disposition` header so the browser or client 
 GET /example
 ```
 
-Returns a sample PDF generated from the bundled example images. This endpoint is intended for quickly verifying that the service is running correctly and demonstrating the report layout.
+Returns a sample PDF bundled with the service.
 
 ### Example
 
 ```bash
 curl -X GET http://localhost:5050/example \
-  -H "accept: application/pdf" \
+  -H "Accept: application/pdf" \
   --output example.pdf
 ```
 
 ### Response
-
-On success, the service returns a PDF document.
 
 **Content-Type**
 

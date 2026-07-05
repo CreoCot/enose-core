@@ -3,3 +3,5 @@ uvicorn[standard]==0.50.0
 pydantic==2.13.4
 reportlab==5.0.0
 python-multipart==0.0.32
+matplotlib==3.11.0
+pytest==9.1.1
