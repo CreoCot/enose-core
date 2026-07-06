@@ -12,6 +12,9 @@
       - "22"
       - "80"
       - "443"
+    backup_dir: "/var/backups/enose"
+    backup_retention_days: 7
+    backup_postgres_container: "enose-postgres-prod"
 
   tasks:
     - name: System and Security Setup
@@ -25,6 +28,10 @@
     - name: Run GitHub Actions Environment Setup
       ansible.builtin.import_tasks: tasks/app_env.yml
       tags: ["app-env"]
+
+    - name: Setup Staging Database Backups
+      ansible.builtin.import_tasks: tasks/backup.yml
+      tags: ["backup"]
 
   handlers:
     - name: Restart SSH
