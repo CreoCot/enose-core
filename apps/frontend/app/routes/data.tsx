@@ -3,9 +3,13 @@ import FileTable from "../components/FileTable";
 import type { Route } from "./+types/data";
 import axios from "../axios";
 import { isAxiosError } from "axios";
-import { useFetcher, type ClientActionFunctionArgs } from "react-router";
+import {
+  useFetcher,
+  useRevalidator,
+  type ClientActionFunctionArgs,
+} from "react-router";
 import { motion } from "motion/react";
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 
 export type Entry = {
   id: number;
@@ -13,18 +17,7 @@ export type Entry = {
   date: string;
 };
 
-let entryCache: Entry[] | null = null;
-
-export function setEntryCacheNull() {
-  entryCache = null;
-  clientLoader();
-}
-
 export async function clientLoader() {
-  const cache = entryCache;
-  if (cache !== null) {
-    return { entries: cache, entryError: "" };
-  }
   let entries: Entry[] = [],
     entryError: string = "";
   try {
@@ -67,16 +60,27 @@ export const clientAction = async ({ request }: ClientActionFunctionArgs) => {
 
 export function HydrateFallback() {
   <div className="flex justify-center">
-    <FileTable entries={[]} error={""} />
+    <FileTable entries={[]} error={""} setEntryCacheNull={() => {}} />
   </div>;
 }
 
-const data = ({ loaderData }: Route.ComponentProps) => {
+const data = ({ loaderData, actionData }: Route.ComponentProps) => {
+  const [entryCache, setEntryCache] = useState<Entry[] | null>(null);
+  function setEntryCacheNull() {
+    setEntryCache(null);
+  }
   const { entries = [], entryError = "" } = loaderData || {};
   const fetcher = useFetcher();
   const [formData, setFormData] = useState({
     file: "",
   });
+
+  const revalidator = useRevalidator();
+  useEffect(() => {
+    if (actionData?.success) {
+      revalidator.revalidate();
+    }
+  }, [actionData, revalidator]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -86,7 +90,11 @@ const data = ({ loaderData }: Route.ComponentProps) => {
     <div className="w-full overflow-hidden bg-grey-50 pb-5">
       <Head>Ваши записи</Head>
       <div className="flex justify-center">
-        <FileTable entries={entries} error={entryError} />
+        <FileTable
+          entries={entries}
+          error={entryError}
+          setEntryCacheNull={setEntryCacheNull}
+        />
       </div>
       <div className="flex flex-col gap-1 mx-8">
         <fetcher.Form
@@ -138,7 +146,10 @@ const data = ({ loaderData }: Route.ComponentProps) => {
                     isFileEmpty ? "hidden" : ""
                   } mt-4 text-center py-2 px-6 text-lg text-primary-100 bg-primary-600 hover:bg-primary-600 transition-colors duration-100 rounded-[15px] cursor-pointer`}
                   type="submit"
-                  onClick={() => setFormData({ file: "" })}
+                  onClick={() => {
+                    setFormData({ file: "" });
+                    setEntryCacheNull();
+                  }}
                   disabled={fetcher.state === "submitting"}
                 >
                   {fetcher.state === "submitting"
