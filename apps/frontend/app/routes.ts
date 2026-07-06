@@ -13,5 +13,6 @@ export default [
   layout("routes/sidebarpages.tsx", [
     route("entry/:fileId", "routes/file.tsx"),
     route("data", "routes/data.tsx"),
+    route("profile", "routes/profile.tsx"),
   ]),
 ] satisfies RouteConfig;

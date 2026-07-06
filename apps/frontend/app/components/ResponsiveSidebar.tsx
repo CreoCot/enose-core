@@ -4,12 +4,16 @@ import { useState } from "react";
 import Sidebar from "./Sidebar";
 import IconSidebar from "./IconSidebar";
 
-const ResponsiveSidebar = () => {
+interface Props {
+  login: string;
+}
+
+const ResponsiveSidebar = ({ login }: Props) => {
   const [smSidebarOpen, setSmSidebarOpen] = useState(false);
   return (
     <>
       <div className="hidden sm:flex sm:h-full sm:min-h-screen top-0 sticky">
-        <Sidebar />
+        <Sidebar login={login} />
       </div>
       <div className="flex h-full min-h-screen sm:hidden items-center top-0 sticky">
         <AnimatePresence mode="popLayout">
@@ -23,7 +27,7 @@ const ResponsiveSidebar = () => {
               transition={{ duration: 0.07 }}
               className="flex absolute h-full"
             >
-              <Sidebar />
+              <Sidebar login={login} />
             </motion.div>
           )}
           {!smSidebarOpen && (
