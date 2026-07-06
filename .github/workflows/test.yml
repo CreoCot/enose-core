@@ -18,11 +18,11 @@ jobs:
       ml: ${{ steps.filter.outputs.ml }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Detect changed paths
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           base: ${{ github.event.pull_request.base.ref || 'HEAD' }}
           filters: |
@@ -47,7 +47,7 @@ jobs:
         working-directory: apps/frontend
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -67,7 +67,7 @@ jobs:
 
       - name: Upload Frontend Coverage to Codecov
         if: ${{ !env.ACT }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: apps/frontend/coverage/clover.xml
           flags: frontend
@@ -82,7 +82,7 @@ jobs:
         working-directory: apps/backend
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload Backend Coverage to Codecov
         if: ${{ !env.ACT }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: apps/backend/coverage.out
           flags: backend
@@ -114,7 +114,7 @@ jobs:
         working-directory: apps/ml
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -135,7 +135,7 @@ jobs:
 
       - name: Upload ML Coverage to Codecov
         if: ${{ !env.ACT }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: apps/ml/coverage.xml
           flags: ml
