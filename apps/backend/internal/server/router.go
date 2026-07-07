@@ -13,7 +13,7 @@ import (
 	"github.com/CreoCot/enose-core/backend/internal/services"
 )
 
-func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.ParserClient) *gin.Engine {
+func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.ParserClient, report *services.ReportClient, ml *services.MLClient) *gin.Engine {
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
@@ -38,7 +38,7 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 	authSvc := services.NewAuthService(reg.Users, cfg.JWTSecret)
 
 	uploadHandler := handlers.NewUploadHandler(parser, reg)
-	measurementsHandler := handlers.NewMeasurementsHandler(reg)
+	measurementsHandler := handlers.NewMeasurementsHandler(reg, report, ml)
 	authHandler := handlers.NewAuthHandler(authSvc, reg.Measurements, cfg.Env == "production")
 
 	v1 := r.Group("api/v1")
@@ -63,6 +63,8 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 			protected.GET("/plots", handlers.Plots)
 			protected.GET("/plots/:id", measurementsHandler.GetPlots)
 			protected.GET("/entries", measurementsHandler.GetAll)
+			protected.GET("/measurements/:id/report", measurementsHandler.GetReport)
+			protected.GET("/measurements/:id/features", measurementsHandler.GetFeatures)
 			// Измерение привязывается к загрузившему (user_id из клеймов),
 			// оператор видит только свои — поэтому загрузка доступна всем ролям.
 			protected.POST("/upload", uploadHandler.Upload)

@@ -24,9 +24,9 @@ RUN useradd --create-home --uid 1000 appuser \
     && chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 8002
+EXPOSE 8003
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD curl -f http://localhost:8002/health || exit 1
+    CMD curl -f http://localhost:8003/health || exit 1
 
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003"]

@@ -28,6 +28,15 @@ type MeasurementRepository interface {
 	// GetMeasurementMatrix возвращает данные всех сенсоров измерения, отсортированных по позиции.
 	// data[i] — временной ряд значений i-го сенсора, timestamps — общий ряд смещений времени (от первого сенсора).
 	GetMeasurementMatrix(ctx context.Context, measurementID int) (data [][]float64, timestamps []float64, sensorCount int, err error)
+	// GetReportSeries возвращает серии сенсоров с именами (для отчёта) и общий ряд времени.
+	GetReportSeries(ctx context.Context, measurementID int) (sensors []ReportSensorSeries, timestamps []float64, err error)
+}
+
+// ReportSensorSeries — серия одного сенсора для сборки отчёта: id, отображаемое имя и абсолютные значения.
+type ReportSensorSeries struct {
+	SensorID int
+	Name     string
+	Values   []float64
 }
 
 type measurementRepository struct {
@@ -121,6 +130,55 @@ func (r *measurementRepository) CountByUserID(ctx context.Context, userID int) (
 		Where("user_id = ?", userID).
 		Count(&count).Error
 	return count, err
+}
+
+// GetReportSeries собирает серии всех сенсоров измерения с именами (label → fallback на имя сенсора),
+// упорядоченные по позиции датчика, плюс общий ряд смещений времени (от первого сенсора).
+func (r *measurementRepository) GetReportSeries(ctx context.Context, measurementID int) ([]ReportSensorSeries, []float64, error) {
+	var params []models.MeasurementParameter
+	err := r.db.WithContext(ctx).
+		Preload("Sensor").
+		Where("measurement_id = ?", measurementID).
+		Order("position ASC").
+		Find(&params).Error
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sensors := make([]ReportSensorSeries, 0, len(params))
+	var timestamps []float64
+
+	for i, p := range params {
+		points, err := r.GetSensorDataPoints(ctx, measurementID, p.SensorID)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		values := make([]float64, len(points))
+		for j, pt := range points {
+			values[j] = pt.Value
+		}
+
+		name := p.Sensor.Name
+		if p.Label != nil && *p.Label != "" {
+			name = *p.Label
+		}
+
+		sensors = append(sensors, ReportSensorSeries{
+			SensorID: p.SensorID,
+			Name:     name,
+			Values:   values,
+		})
+
+		if i == 0 {
+			timestamps = make([]float64, len(points))
+			for j, pt := range points {
+				timestamps[j] = pt.TimeOffsetS
+			}
+		}
+	}
+
+	return sensors, timestamps, nil
 }
 
 // GetSensorDataPoints вытягивает временной ряд конкретного сенсора для построения графиков кривых

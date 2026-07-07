@@ -56,7 +56,9 @@ func main() {
 
 	reg := repository.NewRegistry(database.DB())
 	parser := services.NewParserClient(cfg.ParserURL, cfg.ParserAPI)
-	router := server.SetupRouter(cfg, reg, parser)
+	report := services.NewReportClient(cfg.ReportURL, cfg.ReportAPI)
+	ml := services.NewMLClient(cfg.MLURL, cfg.MLAPI)
+	router := server.SetupRouter(cfg, reg, parser, report, ml)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

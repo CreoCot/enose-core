@@ -16,6 +16,10 @@ type Config struct {
 	AllowedOrigins []string
 	ParserURL      string
 	ParserAPI      string
+	ReportURL      string
+	ReportAPI      string
+	MLURL          string
+	MLAPI          string
 	JWTSecret      string
 	Database       DatabaseConfig
 }
@@ -73,6 +77,10 @@ func NewConfig() (*Config, error) {
 		AllowedOrigins: origins,
 		ParserURL:      getEnv("PARSER_URL", "http://localhost:8001"),
 		ParserAPI:      getEnv("PARSER_API_KEY", "nothing"),
+		ReportURL:      getEnv("REPORT_URL", "http://localhost:8002"),
+		ReportAPI:      getEnv("REPORT_API_KEY", "example_api_key"),
+		MLURL:          getEnv("ML_URL", "http://localhost:8003"),
+		MLAPI:          getEnv("ML_API_KEY", "example_api_key"),
 		JWTSecret:      getEnv("JWT_SECRET", "change-me-in-production"),
 		Database: DatabaseConfig{
 			Host:     getEnv("DATABASE_HOST", "localhost"),
