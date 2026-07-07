@@ -38,6 +38,7 @@ apps/ml/data/
 .env
 docker-compose.override.yml
 .task
+.ansible
 
 # Code Coverage
 .coverage
