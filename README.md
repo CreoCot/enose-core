@@ -143,17 +143,17 @@ docker compose up -d report
 
 ## API Overview
 
-| Method | Path                    | Auth        | Description                                   |
-| ------ | ----------------------- | ----------- | --------------------------------------------- |
-| GET    | `/api/v1/health`        | —           | Service health check                          |
-| POST   | `/api/v1/auth/register` | —           | Register a new user                           |
-| POST   | `/api/v1/auth/login`    | —           | Login (sets httpOnly JWT cookie)              |
-| POST   | `/api/v1/auth/logout`   | —           | Logout (clears cookie)                        |
-| GET    | `/api/v1/auth/me`       | JWT         | Get current user info                         |
-| GET    | `/api/v1/entries`       | JWT         | List measurements (admin: all, operator: own) |
-| POST   | `/api/v1/upload`        | JWT (admin) | Upload a measurement file (CSV/XML/XLSX)      |
-| GET    | `/api/v1/table/:id`     | JWT         | Table view of measurement data                |
-| GET    | `/api/v1/plots/:id`     | JWT         | Time-series data per sensor for plotting      |
+| Method | Path                    | Auth | Description                                                     |
+| ------ | ----------------------- | ---- | --------------------------------------------------------------- |
+| GET    | `/api/v1/health`        | —    | Service health check                                            |
+| POST   | `/api/v1/auth/register` | —    | Register a new user                                             |
+| POST   | `/api/v1/auth/login`    | —    | Login (sets httpOnly JWT cookie)                                |
+| POST   | `/api/v1/auth/logout`   | —    | Logout (clears cookie)                                          |
+| GET    | `/api/v1/auth/me`       | JWT  | Get current user info                                           |
+| GET    | `/api/v1/entries`       | JWT  | List measurements (admin: all, operator: own)                   |
+| POST   | `/api/v1/upload`        | JWT  | Upload a measurement file (CSV/XML/XLSX), bound to the uploader |
+| GET    | `/api/v1/table/:id`     | JWT  | Table view of measurement data                                  |
+| GET    | `/api/v1/plots/:id`     | JWT  | Time-series data per sensor for plotting                        |
 
 Authentication uses httpOnly cookies (`SameSite=Lax`). The `Secure` flag is enabled only in production.
 
@@ -243,7 +243,7 @@ task dev:auth:logout
 ### Upload and measurement data endpoints
 
 ```bash
-# Upload a file (admin only)
+# Upload a file (any authenticated user; the measurement is bound to the uploader)
 task dev:upload:file file=apps/parser/tests/fixtures/sample.xml
 
 # Get table view of measurement id=1

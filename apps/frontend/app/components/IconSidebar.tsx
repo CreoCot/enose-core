@@ -6,7 +6,7 @@ function useIsActive(to: string) {
   return !!useMatch({ path: resolvedPath.pathname, end: true });
 }
 
-const Sidebar = () => {
+const IconSidebar = () => {
   const isHomeActive = useIsActive("/");
   const isDataActive = useIsActive("/data");
 
@@ -14,24 +14,29 @@ const Sidebar = () => {
     "relative after:absolute after:right-0 after:top-0 after:bottom-0 after:w-1 after:bg-accent-700";
 
   return (
-    <div className="flex flex-col bg-grey-100 border-r border-r-grey-200 w-8">
-      <div
-        className={`flex h-8 border-b border-grey-300 justify-center items-center ${
-          isHomeActive ? activeClass : ""
-        }`}
-      >
-        <SidebarButton to="/" type="home" />
-      </div>
+    <div className="flex flex-col justify-between bg-grey-100 border-r border-r-grey-200 w-8">
+      <div className="flex flex-col">
+        <div
+          className={`flex h-8 border-b border-grey-300 justify-center items-center ${
+            isHomeActive ? activeClass : ""
+          }`}
+        >
+          <SidebarButton to="/" type="home" />
+        </div>
 
-      <div
-        className={`flex justify-center items-baseline ${
-          isDataActive ? activeClass : ""
-        }`}
-      >
-        <SidebarButton to="/data" type="data" />
+        <div
+          className={`flex justify-center items-baseline ${
+            isDataActive ? activeClass : ""
+          }`}
+        >
+          <SidebarButton to="/data" type="data" />
+        </div>
+      </div>
+      <div className="flex justify-center py-2">
+        <SidebarButton to="/profile" type="profile" />
       </div>
     </div>
   );
 };
 
-export default Sidebar;
+export default IconSidebar;

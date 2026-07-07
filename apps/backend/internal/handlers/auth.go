@@ -3,7 +3,9 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"time"
 
+	"github.com/CreoCot/enose-core/backend/internal/repository"
 	"github.com/CreoCot/enose-core/backend/internal/services"
 	"github.com/gin-gonic/gin"
 )
@@ -12,11 +14,12 @@ const cookieName = "jwt"
 
 type AuthHandler struct {
 	auth         services.AuthService
+	measurements repository.MeasurementRepository
 	secureCookie bool
 }
 
-func NewAuthHandler(auth services.AuthService, secureCookie bool) *AuthHandler {
-	return &AuthHandler{auth: auth, secureCookie: secureCookie}
+func NewAuthHandler(auth services.AuthService, measurements repository.MeasurementRepository, secureCookie bool) *AuthHandler {
+	return &AuthHandler{auth: auth, measurements: measurements, secureCookie: secureCookie}
 }
 
 type registerRequest struct {
@@ -33,11 +36,22 @@ type loginRequest struct {
 }
 
 type userResponse struct {
-	ID       int     `json:"id"`
-	Username string  `json:"username"`
-	FullName *string `json:"full_name"`
-	Email    *string `json:"email"`
-	Role     string  `json:"role"`
+	ID        int       `json:"id"`
+	Username  string    `json:"username"`
+	FullName  *string   `json:"full_name"`
+	Email     *string   `json:"email"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type profileResponse struct {
+	ID        int       `json:"id"`
+	Username  string    `json:"username"`
+	FullName  *string   `json:"full_name"`
+	Email     *string   `json:"email"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+	Count     int64     `json:"count"`
 }
 
 type messageResponse struct {
@@ -72,11 +86,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, userResponse{
-		ID:       user.ID,
-		Username: user.Username,
-		FullName: user.FullName,
-		Email:    user.Email,
-		Role:     user.Role,
+		ID:        user.ID,
+		Username:  user.Username,
+		FullName:  user.FullName,
+		Email:     user.Email,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt,
 	})
 }
 
@@ -133,14 +148,37 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 // @Tags         Auth
 // @Security     BearerAuth
 // @Produce      json
-// @Success      200 {object} userResponse
+// @Success      200 {object} profileResponse
 // @Failure      401 {object} ErrorResponse
+// @Failure      500 {object} ErrorResponse
 // @Router       /api/v1/auth/me [get]
 func (h *AuthHandler) Me(c *gin.Context) {
 	claims := c.MustGet("claims").(*services.Claims)
-	c.JSON(http.StatusOK, gin.H{
-		"id":       claims.UserID,
-		"username": claims.Username,
-		"role":     claims.Role,
+
+	user, err := h.auth.GetUserByID(c.Request.Context(), claims.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "internal_error", Message: "failed to load user"})
+		return
+	}
+	if user == nil {
+		// Токен валиден, но пользователь удалён — сессия больше не действительна.
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized", Message: "user no longer exists"})
+		return
+	}
+
+	count, err := h.measurements.CountByUserID(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "internal_error", Message: "failed to count measurements"})
+		return
+	}
+
+	c.JSON(http.StatusOK, profileResponse{
+		ID:        user.ID,
+		Username:  user.Username,
+		FullName:  user.FullName,
+		Email:     user.Email,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt,
+		Count:     count,
 	})
 }

@@ -39,7 +39,7 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 
 	uploadHandler := handlers.NewUploadHandler(parser, reg)
 	measurementsHandler := handlers.NewMeasurementsHandler(reg)
-	authHandler := handlers.NewAuthHandler(authSvc, cfg.Env == "production")
+	authHandler := handlers.NewAuthHandler(authSvc, reg.Measurements, cfg.Env == "production")
 
 	v1 := r.Group("api/v1")
 	{
@@ -63,13 +63,9 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 			protected.GET("/plots", handlers.Plots)
 			protected.GET("/plots/:id", measurementsHandler.GetPlots)
 			protected.GET("/entries", measurementsHandler.GetAll)
-
-			// Admin only
-			admin := protected.Group("/")
-			admin.Use(middleware.RoleMiddleware(services.RoleAdmin))
-			{
-				admin.POST("/upload", uploadHandler.Upload)
-			}
+			// Измерение привязывается к загрузившему (user_id из клеймов),
+			// оператор видит только свои — поэтому загрузка доступна всем ролям.
+			protected.POST("/upload", uploadHandler.Upload)
 		}
 	}
 
