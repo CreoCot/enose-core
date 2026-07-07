@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [backend, frontend, parser, ml]
+        service: [backend, frontend, parser, ml, report]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -87,7 +87,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [backend, frontend, parser, ml]
+        service: [backend, frontend, parser, ml, report]
     steps:
       - name: Delete untagged image versions
         uses: actions/delete-package-versions@v5

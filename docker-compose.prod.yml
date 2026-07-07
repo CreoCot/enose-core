@@ -53,12 +53,20 @@ services:
       ALLOWED_ORIGINS: http://10.93.27.29
       PARSER_URL: http://parser:8001
       PARSER_API_KEY: enose-parser-secret
+      REPORT_URL: http://report:8002
+      REPORT_API_KEY: enose-report-secret
+      ML_URL: http://ml:8003
+      ML_API_KEY: enose-ml-secret
     depends_on:
       postgres:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
       parser:
+        condition: service_healthy
+      report:
+        condition: service_healthy
+      ml:
         condition: service_healthy
     restart: always
 
@@ -69,6 +77,30 @@ services:
       PARSER_API_KEY: enose-parser-secret
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  report:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/enose-core-report:latest
+    container_name: enose-report-prod
+    environment:
+      REPORT_API_KEY: enose-report-secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  ml:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/enose-core-ml:latest
+    container_name: enose-ml-prod
+    environment:
+      ML_API_KEY: enose-ml-secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 15s
       timeout: 5s
       retries: 5

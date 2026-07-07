@@ -56,7 +56,8 @@ Services will be available at:
 | Backend API    | http://localhost:8080                    |
 | Swagger UI     | http://localhost:8080/swagger/index.html |
 | Parser service | http://localhost:8001                    |
-| Report Service | http://localhost:8002                    |
+| Report service | http://localhost:8002                    |
+| ML service     | http://localhost:8003                    |
 | pgAdmin        | http://localhost:5050                    |
 | PostgreSQL     | localhost:5432                           |
 
@@ -139,6 +140,17 @@ docker compose up -d report
 | POST   | `/reports` | API Key | Generate a PDF report       |
 | GET    | `/example` | —       | Download an example report  |
 
+### 7. ML service
+
+```bash
+docker compose up -d ml
+```
+
+| Method | Path       | Auth    | Description                   |
+| ------ | ---------- | ------- | ----------------------------- |
+| GET    | `/health`  | —       | ML service health check       |
+| POST   | `/analyze` | API Key | Compute sensor curve features |
+
 ---
 
 ## API Overview
@@ -154,8 +166,12 @@ docker compose up -d report
 | POST   | `/api/v1/upload`        | JWT  | Upload a measurement file (CSV/XML/XLSX), bound to the uploader |
 | GET    | `/api/v1/table/:id`     | JWT  | Table view of measurement data                                  |
 | GET    | `/api/v1/plots/:id`     | JWT  | Time-series data per sensor for plotting                        |
+| GET    | `/api/v1/report/:id`    | JWT  | Generate a PDF report (proxies the report service)              |
+| GET    | `/api/v1/features/:id`  | JWT  | Sensor curve features (proxies the ML service)                  |
 
 Authentication uses httpOnly cookies (`SameSite=Lax`). The `Secure` flag is enabled only in production.
+
+The backend orchestrates the stateless Python services: `/upload` → parser, `/report/:id` → report, `/features/:id` → ML. Those services have no DB access; the backend is the sole DB owner.
 
 Full interactive docs: **http://localhost:8080/swagger/index.html**
 
@@ -517,13 +533,30 @@ Ensure PostgreSQL is running and credentials in `apps/backend/.env` are correct:
 docker exec -i enose-postgres psql -U postgres -d enose -c "SELECT 1"
 ```
 
-### Parser service not reachable from backend
+### `connection refused` when the backend calls a service (parser/report/ml)
 
-Inside Docker the backend connects to the parser via the Docker service name `http://parser:8001` (set in root `.env` as `PARSER_URL=http://parser:8001`). Check the parser container is healthy:
+Inside Docker the backend reaches the Python services by their Docker service names, set in root `.env`:
+
+```
+PARSER_URL=http://parser:8001
+REPORT_URL=http://report:8002
+ML_URL=http://ml:8003
+```
+
+If the error mentions `http://localhost:8002` (or `:8001` / `:8003`), the backend is falling back to its default because the `*_URL` variable never reached the container — usually because the container was created **before** that line was added to `.env`.
+
+`env_file` is read only when a container is **created**. `air` hot-reloads Go code but **not** environment variables, and `docker compose restart` restarts the process **without** re-reading `.env`. After editing `.env` you must recreate the container:
 
 ```bash
-docker ps | grep parser
-task dev:parser:health
+docker compose up -d --force-recreate backend
+# verify the value is now present inside the container:
+docker compose exec backend env | grep -E 'REPORT_URL|ML_URL|PARSER_URL'
+```
+
+Also confirm the target service is healthy:
+
+```bash
+docker compose ps        # report/ml/parser should be "healthy"
 ```
 
 ### Swagger documentation not loading

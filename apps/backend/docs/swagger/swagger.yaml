@@ -142,6 +142,24 @@ definitions:
       time.Time:
         type: string
     type: object
+  services.MLAnalyzeResponse:
+    properties:
+      computed_at:
+        type: string
+      features:
+        items:
+          $ref: '#/definitions/services.MLFeatureItem'
+        type: array
+    type: object
+  services.MLFeatureItem:
+    properties:
+      name:
+        type: string
+      sensor_id:
+        type: integer
+      value:
+        type: number
+    type: object
   services.ParsedDataPoint:
     properties:
       sensor_position:
@@ -311,6 +329,51 @@ paths:
       summary: Список измерений
       tags:
       - Measurements
+  /api/v1/features/{id}:
+    get:
+      description: Считает признаки кривых сенсоров через ML-сервис и возвращает их
+      parameters:
+      - description: ID измерения
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.MLAnalyzeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Признаки измерения
+      tags:
+      - Measurements
   /api/v1/health:
     get:
       consumes:
@@ -368,6 +431,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Графики данных измерения
+      tags:
+      - Measurements
+  /api/v1/report/{id}:
+    get:
+      description: Собирает данные измерения, отправляет их в report-сервис и возвращает
+        готовый PDF
+      parameters:
+      - description: ID измерения
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: PDF-файл отчёта
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: PDF-отчёт по измерению
       tags:
       - Measurements
   /api/v1/table:

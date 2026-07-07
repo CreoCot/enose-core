@@ -76,6 +76,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      report:
+        condition: service_healthy
+      ml:
+        condition: service_healthy
 
   # React Frontend
   frontend:
@@ -123,6 +127,22 @@ services:
       - "${REPORT_PORT:-8002}:8002"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  ml:
+    build:
+      context: ./apps/ml
+      dockerfile: Dockerfile
+    container_name: enose-ml
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${ML_PORT:-8003}:8003"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
       timeout: 5s
       retries: 3
