@@ -168,7 +168,7 @@ func (h *MeasurementsHandler) GetPlots(c *gin.Context) {
 // @Failure      422 {object} ErrorResponse
 // @Failure      500 {object} ErrorResponse
 // @Failure      502 {object} ErrorResponse
-// @Router       /api/v1/measurements/{id}/report [get]
+// @Router       /api/v1/report/{id} [get]
 func (h *MeasurementsHandler) GetReport(c *gin.Context) {
 	measurement, ok := h.loadAuthorizedMeasurement(c)
 	if !ok {
@@ -257,7 +257,7 @@ func (h *MeasurementsHandler) GetReport(c *gin.Context) {
 // @Failure      422 {object} ErrorResponse
 // @Failure      500 {object} ErrorResponse
 // @Failure      502 {object} ErrorResponse
-// @Router       /api/v1/measurements/{id}/features [get]
+// @Router       /api/v1/features/{id} [get]
 func (h *MeasurementsHandler) GetFeatures(c *gin.Context) {
 	measurement, ok := h.loadAuthorizedMeasurement(c)
 	if !ok {
