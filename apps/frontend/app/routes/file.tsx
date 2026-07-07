@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Head from "../components/Head";
 import MeasurementsTable from "../components/MeasurementsTable";
 import Plots from "../components/Plots";
@@ -7,7 +7,7 @@ import axios from "../axios";
 import { isAxiosError } from "axios";
 import type { Route } from "./+types/file";
 import { AnimatePresence, motion, type Variants } from "motion/react";
-import { Link } from "react-router";
+import { Link, useFetcher } from "react-router";
 
 const tableIcon = (
   <svg
@@ -93,6 +93,22 @@ const selectedMultiPlotIcon = (
     className="size-6"
   >
     <path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.036-.84-1.875-1.875-1.875h-.75ZM9.75 8.625c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v11.25c0 1.035-.84 1.875-1.875 1.875h-.75a1.875 1.875 0 0 1-1.875-1.875V8.625ZM3 13.125c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v6.75c0 1.035-.84 1.875-1.875 1.875h-.75A1.875 1.875 0 0 1 3 19.875v-6.75Z" />
+  </svg>
+);
+const downloadIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="size-5 lg:size-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+    />
   </svg>
 );
 
@@ -226,6 +242,56 @@ export function HydrateFallback() {
   );
 }
 
+const handleDownload = async (
+  fileId: number,
+  setError: (arg0: string) => void,
+) => {
+  try {
+    const response = await axios.get(`/api/v1/report/${fileId}`, {
+      responseType: "blob",
+    });
+    const contentDisposition = response.headers["content-disposition"];
+    let filename = `report-${fileId}.pdf`;
+    if (contentDisposition && contentDisposition.includes("filename=")) {
+      filename = contentDisposition.split("filename=")[1].replace(/["']/g, "");
+    }
+    const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+    return { success: true };
+  } catch (error) {
+    if (isAxiosError(error) && error.response) {
+      if (error.response.data instanceof Blob) {
+        try {
+          const textError = await error.response.data.text();
+
+          const jsonError = JSON.parse(textError);
+          setError(
+            jsonError.message ||
+              jsonError.error ||
+              `Ошибка: ${error.response.status}`,
+          );
+        } catch {
+          setError(
+            `Ошибка сервера: ${error.response.status} ${error.response.statusText}`,
+          );
+        }
+      } else {
+        setError("Не удалось обработать ответ сервера");
+      }
+    } else if (error instanceof Error) {
+      setError(error.message);
+    } else {
+      setError("Что-то пошло не так");
+    }
+  }
+};
+
 const file = ({ loaderData }: Route.ComponentProps) => {
   const {
     sensorSize = 0,
@@ -238,10 +304,16 @@ const file = ({ loaderData }: Route.ComponentProps) => {
   } = loaderData || {};
 
   const [open, setOpen] = useState(1);
+  const [downloadError, setDownloadError] = useState("");
   const icons = useMemo(() => {
     return [
-      [tableIcon, plotIcon, multiPlotIcon],
-      [selectedTableIcon, selectedPlotIcon, selectedMultiPlotIcon],
+      [tableIcon, plotIcon, multiPlotIcon, downloadIcon],
+      [
+        selectedTableIcon,
+        selectedPlotIcon,
+        selectedMultiPlotIcon,
+        downloadIcon,
+      ],
     ];
   }, []);
   const items = [
@@ -358,6 +430,42 @@ const file = ({ loaderData }: Route.ComponentProps) => {
               Таблица
             </div>
           </button>
+          <div className="relative">
+            <AnimatePresence mode="wait">
+              {downloadError.length !== 0 && (
+                <motion.p
+                  initial={{ y: -20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -20, opacity: 0 }}
+                  transition={{ duration: 0.15, ease: "easeIn" }}
+                  className="absolute my-2 -top-1/2 rounded-[15px] p-2 right-1/2 translate-x-1/2 -translate-y-full text-lg text-red-600 bg-red-100 border border-red-800 w-max"
+                >
+                  {downloadError}
+                  <button
+                    className="text-grey-600 pl-2 font-light cursor-pointer"
+                    onClick={() => setDownloadError("")}
+                  >
+                    X
+                  </button>
+                </motion.p>
+              )}
+            </AnimatePresence>
+            <button
+              id="download"
+              onClick={() => {
+                setDownloadError("");
+                handleDownload(fileId, setDownloadError);
+              }}
+              className={`bg-grey-600 hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 ${
+                downloadError.length !== 0 ? "outline outline-red-700" : ""
+              }`}
+            >
+              <div className="flex items-center gap-1">
+                Отчет
+                {icons[0][3]}
+              </div>
+            </button>
+          </div>
         </div>
         <AnimatePresence mode="wait">{items[open]}</AnimatePresence>
       </div>
