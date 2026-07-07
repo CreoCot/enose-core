@@ -1,0 +1,23 @@
+---
+- name: Ensure backup directory exists
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Copy database backup script
+  ansible.builtin.template:
+    src: backup_db.sh.j2
+    dest: /usr/local/bin/backup_db.sh
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Setup daily cron job for staging database backup
+  ansible.builtin.cron:
+    name: "Daily PostgreSQL Backup"
+    special_time: daily
+    job: "/usr/local/bin/backup_db.sh >> /var/log/enose_backup.log 2>&1"
+    user: root
