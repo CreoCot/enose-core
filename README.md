@@ -56,6 +56,7 @@ Services will be available at:
 | Backend API    | http://localhost:8080                    |
 | Swagger UI     | http://localhost:8080/swagger/index.html |
 | Parser service | http://localhost:8001                    |
+| Report Service | http://localhost:8002                    |
 | pgAdmin        | http://localhost:5050                    |
 | PostgreSQL     | localhost:5432                           |
 
@@ -125,6 +126,18 @@ task frontend:run
 cd apps/parser
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
+
+### 6. Report service
+
+```bash
+docker compose up -d report
+```
+
+| Method | Path       | Auth    | Description                 |
+| ------ | ---------- | ------- | --------------------------- |
+| GET    | `/health`  | —       | Report service health check |
+| POST   | `/reports` | API Key | Generate a PDF report       |
+| GET    | `/example` | —       | Download an example report  |
 
 ---
 
@@ -249,6 +262,81 @@ task dev:parser:health
 # Send a file directly to the parser (bypasses backend auth)
 task dev:parser:parse file=apps/parser/tests/fixtures/sample.xml
 ```
+
+### Report service (direct)
+
+1. Navigate to the report service:
+
+   ```bash
+   cd apps/report
+   ```
+
+2. Generate a report using the provided example request:
+
+   ```bash
+   curl -X POST http://localhost:8002/reports \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/pdf" \
+     -H "X-API-Key: example_api_key" \
+     --data @report.json \
+     --output report.pdf
+   ```
+
+3. Generate the bundled example report:
+
+   ```bash
+   curl -X GET http://localhost:8002/example \
+     -H "Accept: application/pdf" \
+     --output example.pdf
+   ```
+
+4. Verify that both `report.pdf` and `example.pdf` are generated successfully and can be opened.
+
+#### Unit Tests
+
+1. Navigate to the report service:
+
+   ```bash
+   cd apps/report
+   ```
+
+2. Create a virtual environment:
+
+   ```bash
+   python3 -m venv .venv
+   ```
+
+3. Activate it:
+
+   ```bash
+   source .venv/bin/activate
+   ```
+
+   > **Windows (PowerShell):**
+   >
+   > ```powershell
+   > .venv\Scripts\Activate.ps1
+   > ```
+   >
+   > **Windows (Git Bash):**
+   >
+   > ```bash
+   > source .venv/Scripts/activate
+   > ```
+
+4. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. Run the tests:
+
+   ```bash
+   pytest
+   ```
+
+6. Verify that all tests pass.
 
 ### Auth endpoints (manual curl)
 
@@ -395,6 +483,14 @@ enose-core/
 │   │   └── app/
 │   │       ├── main.py           # FastAPI app + /measurements/parse endpoint
 │   │       └── parsers/          # CSV, XML, XLSX parsers
+│   ├── report/                   # FastAPI PDF report service
+│   │   └── app/
+│   │       ├── main.py           # FastAPI app
+│   │       ├── charts.py         # Chart generation (Matplotlib)
+│   │       ├── features.py       # Features generation (numpy)
+│   │       ├── pdf.py            # PDF generation (ReportLab)
+│   │       ├── schemas.py        # Request models
+│   │       └── tests/            # Unit tests
 │   └── ml/                       # Python ML service
 ├── docker-compose.yml            # Docker orchestration (all services)
 ├── Taskfile.yaml                 # Task automation
