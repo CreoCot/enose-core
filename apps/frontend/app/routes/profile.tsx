@@ -7,12 +7,21 @@ import Head from "../components/Head";
 export async function clientLoader() {
   try {
     const response = await api.get("/api/v1/auth/me");
+    // const response = {
+    //   data: {
+    //     username: "login",
+    //     role: "admin",
+    //     full_name: "Trofimov Andrei Victorovich",
+    //     email: "n.shilov@innopolis.university",
+    //     count: 0,
+    //   },
+    // };
     if (
       !response.data.username ||
       !response.data.role ||
       !response.data.full_name ||
       !response.data.email ||
-      !response.data.count
+      response.data.count === undefined
     )
       return { error: "Ошибка API" };
     return {
@@ -94,9 +103,11 @@ const profile = () => {
             </div>
             <div className="flex flex-col bg-white rounded-[15px] px-6 py-5 gap-3 pb-6 w-full">
               <h2 className="text-primary-500 text-base lg:text-lg">
-                {entryCount}
+                Количество записей
               </h2>
-              <p className="text-grey-800 font-bold text-lg lg:text-xl">5</p>
+              <p className="text-grey-800 font-bold text-lg lg:text-xl">
+                {entryCount}
+              </p>
             </div>
           </div>
         )}
