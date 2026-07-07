@@ -39,7 +39,7 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 
 	uploadHandler := handlers.NewUploadHandler(parser, reg)
 	measurementsHandler := handlers.NewMeasurementsHandler(reg)
-	authHandler := handlers.NewAuthHandler(authSvc, cfg.Env == "production")
+	authHandler := handlers.NewAuthHandler(authSvc, reg.Measurements, cfg.Env == "production")
 
 	v1 := r.Group("api/v1")
 	{

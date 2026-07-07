@@ -19,6 +19,7 @@ type MeasurementRepository interface {
 	// GetAll возвращает измерения. userID == nil → все записи (admin), иначе только записи пользователя.
 	GetAll(ctx context.Context, userID *int) ([]models.Measurement, error)
 	GetByID(ctx context.Context, id int) (*models.Measurement, error)
+	CountByUserID(ctx context.Context, userID int) (int64, error)
 	GetSensorDataPoints(
 		ctx context.Context,
 		measurementID int,
@@ -110,6 +111,16 @@ func (r *measurementRepository) GetByID(ctx context.Context, id int) (*models.Me
 		return nil, err
 	}
 	return &m, nil
+}
+
+// CountByUserID возвращает количество измерений, принадлежащих пользователю
+func (r *measurementRepository) CountByUserID(ctx context.Context, userID int) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Measurement{}).
+		Where("user_id = ?", userID).
+		Count(&count).Error
+	return count, err
 }
 
 // GetSensorDataPoints вытягивает временной ряд конкретного сенсора для построения графиков кривых

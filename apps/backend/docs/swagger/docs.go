@@ -105,11 +105,17 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.userResponse"
+                            "$ref": "#/definitions/handlers.profileResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -556,6 +562,32 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.profileResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.registerRequest": {
             "type": "object",
             "required": [
@@ -586,6 +618,9 @@ const docTemplate = `{
         "handlers.userResponse": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },

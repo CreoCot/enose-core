@@ -34,6 +34,7 @@ type AuthService interface {
 	Register(ctx context.Context, username, password string, fullName, email *string, role string) (*models.User, error)
 	Login(ctx context.Context, username, password string) (string, error)
 	ValidateToken(tokenStr string) (*Claims, error)
+	GetUserByID(ctx context.Context, id int) (*models.User, error)
 }
 
 type authService struct {
@@ -111,6 +112,10 @@ func (s *authService) Login(ctx context.Context, username, password string) (str
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(s.jwtSecret)
+}
+
+func (s *authService) GetUserByID(ctx context.Context, id int) (*models.User, error) {
+	return s.users.FindByID(ctx, id)
 }
 
 func (s *authService) ValidateToken(tokenStr string) (*Claims, error) {
