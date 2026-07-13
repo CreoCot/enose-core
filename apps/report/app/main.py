@@ -28,7 +28,7 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None)):
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "parser-pure"}
+    return {"status": "ok", "service": "report"}
 
 
 @app.post(

@@ -56,7 +56,9 @@ curl -X POST http://localhost:8002/reports \
       "values": [9965894.78, 9965894.63, 9965894.42]
     }
   ],
-  "interpretation": "Detected lemon oil with high confidence."
+  "interpretation": {
+    "text": "Detected lemon oil with high confidence."
+  }
 }
 ```
 
