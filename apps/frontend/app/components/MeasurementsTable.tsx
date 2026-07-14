@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -22,16 +22,19 @@ interface Props {
 }
 
 const MeasurementsTable = ({ table, sensorSize, error }: Props) => {
+  const [absoluteData, setAbsoluteData] = useState(false);
+  const initialData = table[0];
   const data = useMemo(() => {
     return table.map((row) => {
       const rowData: Record<string, number> = { time: row[0] };
       for (let i = 1; i <= sensorSize; i++) {
-        rowData[`sensor_${i}`] = row[i];
+        rowData[`sensor_${i}`] = absoluteData
+          ? row[i]
+          : row[i] - initialData[i];
       }
       return rowData;
     });
-  }, [table, sensorSize]);
-
+  }, [table, sensorSize, absoluteData]);
   const columns = useMemo<ColumnDef<Record<string, number>>[]>(() => {
     const cols: ColumnDef<Record<string, number>>[] = [
       {
@@ -136,13 +139,28 @@ const MeasurementsTable = ({ table, sensorSize, error }: Props) => {
 
       {tableInstance.getRowModel().rows?.length > 0 && (
         <div className="flex items-center justify-between px-4 py-3 bg-grey-50 border-t border-primary-200">
-          <div className="text-sm text-primary-700">
-            Страница{" "}
-            <span className="font-medium">
-              {tableInstance.getState().pagination.pageIndex + 1}
-            </span>{" "}
-            из{" "}
-            <span className="font-medium">{tableInstance.getPageCount()}</span>
+          <div className="flex gap-4 items-center">
+            <div className="text-sm text-primary-700">
+              Страница{" "}
+              <span className="font-medium">
+                {tableInstance.getState().pagination.pageIndex + 1}
+              </span>{" "}
+              из{" "}
+              <span className="font-medium">
+                {tableInstance.getPageCount()}
+              </span>
+            </div>
+            <div className="text-primary-600 font-semibold text-lg flex gap-2">
+              <input
+                type="checkbox"
+                onClick={() =>
+                  setAbsoluteData((prev) => {
+                    return !prev;
+                  })
+                }
+              />
+              Абсолютные значения
+            </div>
           </div>
 
           <div className="flex gap-2">
