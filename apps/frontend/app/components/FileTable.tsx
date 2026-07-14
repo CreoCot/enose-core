@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link } from "react-router";
+import { Link, useFetcher } from "react-router";
 import {
   useReactTable,
   getCoreRowModel,
@@ -20,14 +20,12 @@ import type { Entry } from "../routes/data";
 interface Props {
   entries: Entry[];
   error: string;
-  setEntryCacheNull: () => void;
+  fetcher: ReturnType<typeof useFetcher> | null;
+  // handleDelete: (n: number) => void;
 }
 
-export default function FileTable({
-  entries,
-  error,
-  setEntryCacheNull,
-}: Props) {
+export default function FileTable({ entries, error, fetcher }: Props) {
+  if (!fetcher) return;
   const columns = useMemo<ColumnDef<Entry>[]>(() => {
     return [
       {
@@ -50,15 +48,16 @@ export default function FileTable({
         id: "actions",
         header: "Действия",
         cell: ({ row }) => (
-          <button
-            className="rounded-full w-11 p-0.5 text-red-900 bg-red-200 border lg:mr-7 border-red-400 text-center disabled:cursor-not-allowed cursor-pointer disabled:bg-red-100 disabled:border-red-200 enabled:hover:bg-red-300 transition-colors"
-            onClick={() => {
-              setEntryCacheNull();
-            }}
-            disabled
-          >
-            Удалить &lt;not done&gt;
-          </button>
+          <fetcher.Form method="post">
+            <input type="hidden" name="deleteEntry" value={row.original.id} />
+            <button
+              className="rounded-full w-11 p-0.5 text-red-900 bg-red-200 border lg:mr-7 border-red-400 text-center disabled:cursor-not-allowed cursor-pointer disabled:bg-red-100 disabled:border-red-200 enabled:hover:bg-red-300 transition-colors"
+              type="submit"
+              disabled={fetcher.state === "submitting"}
+            >
+              Удалить
+            </button>
+          </fetcher.Form>
         ),
       },
     ];

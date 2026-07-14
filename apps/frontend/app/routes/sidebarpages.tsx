@@ -1,7 +1,6 @@
 import { Outlet, redirect, useLoaderData } from "react-router";
 import ResponsiveSidebar from "../components/ResponsiveSidebar";
 import api from "../axios";
-import type { LoaderFunctionArgs } from "react-router";
 
 export async function clientLoader() {
   try {

@@ -4,19 +4,19 @@ import type { Route } from "./+types/data";
 import axios from "../axios";
 import { isAxiosError } from "axios";
 import {
+  useActionData,
   useFetcher,
-  useRevalidator,
   type ClientActionFunctionArgs,
 } from "react-router";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState, type ChangeEvent } from "react";
+import Toast from "../components/Toast";
 
 export type Entry = {
   id: number;
   name: string;
   date: string;
 };
-
 export async function clientLoader() {
   let entries: Entry[] = [],
     entryError: string = "";
@@ -43,58 +43,79 @@ export async function clientLoader() {
 
 export const clientAction = async ({ request }: ClientActionFunctionArgs) => {
   const formData = await request.formData();
-  const file = formData.get("file") as File | null;
-  if (!file || file.size === 0) {
-    return { error: "No file provided" };
-  }
+  if (formData.get("file")) {
+    const file = formData.get("file") as File | null;
+    if (!file || file.size === 0) {
+      return { uploadError: "No file provided" };
+    }
 
-  const uploadData = new FormData();
-  uploadData.append("file", file);
-  try {
-    const response = await axios.post("/api/v1/upload", uploadData);
-    return { success: true, url: response.data.url };
-  } catch (error) {
-    return { error: "Upload failed" };
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+    try {
+      const response = await axios.post("/api/v1/upload", uploadData);
+      return { success: true, url: response.data.url };
+    } catch (error) {
+      return { uploadError: "Upload failed" };
+    }
+  } else if (formData.get("deleteEntry")) {
+    try {
+      const response = await axios.delete(
+        `/api/v1/delete/${formData.get("deleteEntry")}`,
+      );
+      return { success: true, url: response.data.url };
+    } catch (error) {
+      if (isAxiosError(error) && error.response) {
+        if (error.response.data.error) {
+          return { deleteError: error.response.data.message };
+        } else {
+          return { deleteError: error.response.data };
+        }
+      } else if (error instanceof Error) {
+        return { deleteError: error.message };
+      } else {
+        return { deleteError: "Что-то пошло не так" };
+      }
+    }
   }
 };
 
 export function HydrateFallback() {
   <div className="flex justify-center">
-    <FileTable entries={[]} error={""} setEntryCacheNull={() => {}} />
+    <FileTable entries={[]} error={""} fetcher={null} />
   </div>;
 }
 
-const data = ({ loaderData, actionData }: Route.ComponentProps) => {
-  const [entryCache, setEntryCache] = useState<Entry[] | null>(null);
-  function setEntryCacheNull() {
-    setEntryCache(null);
-  }
+const data = ({ loaderData }: Route.ComponentProps) => {
   const { entries = [], entryError = "" } = loaderData || {};
   const fetcher = useFetcher();
   const [formData, setFormData] = useState({
     file: "",
   });
-
-  const revalidator = useRevalidator();
-  useEffect(() => {
-    if (actionData?.success) {
-      revalidator.revalidate();
-    }
-  }, [actionData, revalidator]);
-
+  const [toastOpen, setToastOpen] = useState(false);
+  const handleCloseToast = () => {
+    setToastOpen(false);
+    fetcher.reset();
+  };
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
+  const deleteError = fetcher.data?.deleteError;
+  useEffect(() => {
+    setToastOpen(true);
+  }, [deleteError]);
   const isFileEmpty = formData.file === "";
   return (
-    <div className="w-full overflow-hidden bg-grey-50 pb-5">
+    <div className="w-full overflow-hidden bg-grey-50 pb-5 relative">
       <Head>Ваши записи</Head>
+      <AnimatePresence>
+        {deleteError && toastOpen && (
+          <Toast onClose={handleCloseToast}>
+            {`Ошибка при удалении измерения: ${deleteError}`}
+          </Toast>
+        )}
+      </AnimatePresence>
       <div className="flex justify-center">
-        <FileTable
-          entries={entries}
-          error={entryError}
-          setEntryCacheNull={setEntryCacheNull}
-        />
+        <FileTable entries={entries} error={entryError} fetcher={fetcher} />
       </div>
       <div className="flex flex-col gap-1 mx-8">
         <fetcher.Form
@@ -127,10 +148,10 @@ const data = ({ loaderData, actionData }: Route.ComponentProps) => {
                 </svg>
                 <p
                   className={`mb-2 text-base ${
-                    fetcher.data?.error ? "text-red-700" : ""
+                    fetcher.data?.uploadError ? "text-red-700" : ""
                   }`}
                 >
-                  {fetcher.data?.error || (
+                  {fetcher.data?.uploadError || (
                     <>
                       <span className="font-semibold">Нажмите</span>, чтобы
                       загрузить файл или перетяните его в окно
@@ -148,7 +169,6 @@ const data = ({ loaderData, actionData }: Route.ComponentProps) => {
                   type="submit"
                   onClick={() => {
                     setFormData({ file: "" });
-                    setEntryCacheNull();
                   }}
                   disabled={fetcher.state === "submitting"}
                 >
