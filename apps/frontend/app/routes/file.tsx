@@ -156,7 +156,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
     for (let i = 0; i < plots.length; i++) {
       for (let j = 1; j < plots[i].length; j++) {
-        plots[i][j] -= plots[i][0];
+        plots[i][j] = plots[i][0] - plots[i][j];
       }
     }
     plots = plots.map((item) => {

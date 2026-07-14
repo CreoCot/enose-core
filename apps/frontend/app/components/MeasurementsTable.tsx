@@ -30,7 +30,7 @@ const MeasurementsTable = ({ table, sensorSize, error }: Props) => {
       for (let i = 1; i <= sensorSize; i++) {
         rowData[`sensor_${i}`] = absoluteData
           ? row[i]
-          : row[i] - initialData[i];
+          : initialData[i] - row[i];
       }
       return rowData;
     });
