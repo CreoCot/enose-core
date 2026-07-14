@@ -359,6 +359,35 @@ func pickFloat(src []float64, idx []int) []float64 {
 	return out
 }
 
+// Delete godoc
+// @Summary      Удалить измерение
+// @Description  Удаляет измерение; параметры датчиков и точки данных удаляются каскадно
+// @Tags         Measurements
+// @Security     BearerAuth
+// @Param        id path int true "ID измерения"
+// @Success      204 "Измерение удалено"
+// @Failure      400 {object} ErrorResponse
+// @Failure      403 {object} ErrorResponse
+// @Failure      404 {object} ErrorResponse
+// @Failure      500 {object} ErrorResponse
+// @Router       /api/v1/delete/{id} [delete]
+func (h *MeasurementsHandler) Delete(c *gin.Context) {
+	measurement, ok := h.loadAuthorizedMeasurement(c)
+	if !ok {
+		return
+	}
+
+	if err := h.Registry.Measurements.Delete(c.Request.Context(), measurement.ID); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "delete_error",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
 // loadAuthorizedMeasurement читает :id из пути, загружает измерение и проверяет права доступа:
 // admin видит все измерения, остальные роли — только свои.
 func (h *MeasurementsHandler) loadAuthorizedMeasurement(c *gin.Context) (*models.Measurement, bool) {

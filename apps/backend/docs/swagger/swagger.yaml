@@ -308,6 +308,40 @@ paths:
       summary: Регистрация нового пользователя
       tags:
       - Auth
+  /api/v1/delete/{id}:
+    delete:
+      description: Удаляет измерение; параметры датчиков и точки данных удаляются
+        каскадно
+      parameters:
+      - description: ID измерения
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Измерение удалено
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удалить измерение
+      tags:
+      - Measurements
   /api/v1/entries:
     get:
       description: Возвращает массив {id, name, start_time}

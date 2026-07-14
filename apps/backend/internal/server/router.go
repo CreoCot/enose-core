@@ -65,6 +65,7 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 			protected.GET("/entries", measurementsHandler.GetAll)
 			protected.GET("/report/:id", measurementsHandler.GetReport)
 			protected.GET("/features/:id", measurementsHandler.GetFeatures)
+			protected.DELETE("/delete/:id", measurementsHandler.Delete)
 			// Измерение привязывается к загрузившему (user_id из клеймов),
 			// оператор видит только свои — поэтому загрузка доступна всем ролям.
 			protected.POST("/upload", uploadHandler.Upload)
