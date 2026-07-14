@@ -99,7 +99,7 @@ class ChartGenerator:
             for sensor in report.sensors
         ]
 
-        fig = plt.figure(figsize=(6.4, 5.2), facecolor="white")
+        fig = plt.figure(figsize=(7.2, 6.2), facecolor="white")
         ax = fig.add_subplot(111, polar=True)
         ax.set_facecolor("#F8FAFC")
 
@@ -121,8 +121,11 @@ class ChartGenerator:
                 markeredgewidth=1,
             )
             ax.fill(closed_angles, closed_values, color="#2563EB", alpha=0.16)
+            axis_labels = [
+                f"{label}\n{value:,.2f} Hz" for label, value in zip(labels, values)
+            ]
             ax.set_xticks(angles)
-            ax.set_xticklabels(labels, color="#334155", fontsize=8.5)
+            ax.set_xticklabels(axis_labels, color="#334155", fontsize=9)
             ax.set_ylim(0, upper_limit)
         else:
             ax.set_xticks([])
@@ -143,18 +146,18 @@ class ChartGenerator:
         ax.grid(color="#CBD5E1", linewidth=0.7, alpha=0.85)
         ax.spines["polar"].set_color("#DCE4EE")
         ax.spines["polar"].set_linewidth(0.8)
-        ax.tick_params(axis="x", pad=8)
-        ax.tick_params(axis="y", colors="#64748B", labelsize=7)
+        ax.tick_params(axis="x", pad=11)
+        ax.tick_params(axis="y", colors="#64748B", labelsize=8)
         ax.set_rlabel_position(18)
         ax.set_title(
             "Peak response by sensor, Hz",
             color="#0F172A",
-            fontsize=11,
+            fontsize=12,
             fontweight="bold",
             pad=18,
         )
 
-        fig.subplots_adjust(left=0.15, right=0.85, bottom=0.12, top=0.84)
+        fig.subplots_adjust(left=0.13, right=0.87, bottom=0.13, top=0.84)
         buffer = BytesIO()
         fig.savefig(
             buffer,

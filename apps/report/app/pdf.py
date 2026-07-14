@@ -345,9 +345,9 @@ class PDFGenerator:
             ),
         ]
         card = Table(
-            [[Image(BytesIO(radar), width=72 * mm, height=58.5 * mm), details]],
-            colWidths=[82 * mm, self.CONTENT_WIDTH - 82 * mm],
-            rowHeights=[64 * mm],
+            [[Image(BytesIO(radar), width=96 * mm, height=82.5 * mm), details]],
+            colWidths=[108 * mm, self.CONTENT_WIDTH - 108 * mm],
+            rowHeights=[88 * mm],
         )
         card.setStyle(
             TableStyle(
