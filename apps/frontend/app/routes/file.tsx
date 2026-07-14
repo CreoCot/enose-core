@@ -153,6 +153,17 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     }
     plotTimestamps = plotResponse.data.timestamps;
     plots = plotResponse.data.data;
+
+    for (let i = 0; i < plots.length; i++) {
+      for (let j = 1; j < plots[i].length; j++) {
+        plots[i][j] -= plots[i][0];
+      }
+    }
+    plots = plots.map((item) => {
+      return item.slice(1, item.length);
+    });
+
+    console.log(plots);
     if (sensorSize === 0) sensorSize = plotResponse.data.size;
   } catch (error) {
     if (isAxiosError(error) && error.response) {
