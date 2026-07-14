@@ -3,6 +3,7 @@ import Head from "../components/Head";
 import MeasurementsTable from "../components/MeasurementsTable";
 import Plots from "../components/Plots";
 import MultiPlot from "../components/MultiPlot";
+import MaxRadar from "../components/MaxRadar";
 import axios from "../axios";
 import { isAxiosError } from "axios";
 import type { Route } from "./+types/file";
@@ -111,6 +112,46 @@ const downloadIcon = (
     />
   </svg>
 );
+const maxRadarIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="size-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z"
+    />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z"
+    />
+  </svg>
+);
+const selectedMaxRadarIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className="size-6"
+  >
+    <path
+      fillRule="evenodd"
+      d="M2.25 13.5a8.25 8.25 0 0 1 8.25-8.25.75.75 0 0 1 .75.75v6.75H18a.75.75 0 0 1 .75.75 8.25 8.25 0 0 1-16.5 0Z"
+      clipRule="evenodd"
+    />
+    <path
+      fillRule="evenodd"
+      d="M12.75 3a.75.75 0 0 1 .75-.75 8.25 8.25 0 0 1 8.25 8.25.75.75 0 0 1-.75.75h-7.5a.75.75 0 0 1-.75-.75V3Z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const fileId = Number(params.fileId);
@@ -163,7 +204,6 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
       return item.slice(1, item.length);
     });
 
-    console.log(plots);
     if (sensorSize === 0) sensorSize = plotResponse.data.size;
   } catch (error) {
     if (isAxiosError(error) && error.response) {
@@ -313,16 +353,16 @@ const file = ({ loaderData }: Route.ComponentProps) => {
     plotError = "",
     fileId = -1,
   } = loaderData || {};
-
   const [open, setOpen] = useState(1);
   const [downloadError, setDownloadError] = useState("");
   const icons = useMemo(() => {
     return [
-      [tableIcon, plotIcon, multiPlotIcon, downloadIcon],
+      [tableIcon, plotIcon, multiPlotIcon, maxRadarIcon, downloadIcon],
       [
         selectedTableIcon,
         selectedPlotIcon,
         selectedMultiPlotIcon,
+        selectedMaxRadarIcon,
         downloadIcon,
       ],
     ];
@@ -381,7 +421,26 @@ const file = ({ loaderData }: Route.ComponentProps) => {
         </motion.div>
       );
     }, [plots, plotTimestamps, plotError, sensorSize]),
+    useMemo(() => {
+      const maxArray = plots.map((item) => Math.max(...item));
+      return (
+        <motion.div
+          key="maxRadar"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.15 }}
+        >
+          <MaxRadar
+            maxArray={maxArray}
+            sensorSize={sensorSize}
+            error={plotError}
+          />
+        </motion.div>
+      );
+    }, [plots, plotError, sensorSize]),
   ];
+
   return (
     <div className="w-full overflow-hidden bg-grey-50 pb-5">
       <Head>{`Запись №${fileId}`}</Head>
@@ -441,6 +500,17 @@ const file = ({ loaderData }: Route.ComponentProps) => {
               Таблица
             </div>
           </button>
+          <button
+            className={`${
+              open === 3 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
+            onClick={() => setOpen(3)}
+          >
+            <div className="flex items-center gap-1">
+              {open === 3 ? icons[1][3] : icons[0][3]}
+              Максимумы
+            </div>
+          </button>
           <div className="relative">
             <AnimatePresence mode="wait">
               {downloadError.length !== 0 && (
@@ -473,7 +543,7 @@ const file = ({ loaderData }: Route.ComponentProps) => {
             >
               <div className="flex items-center gap-1">
                 Отчет
-                {icons[0][3]}
+                {icons[0][icons[0].length - 1]}
               </div>
             </button>
           </div>

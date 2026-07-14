@@ -91,7 +91,7 @@ const profile = () => {
           <div className="flex flex-col lg:flex-row mx-7 gap-5 justify-between">
             <div className="flex flex-col bg-white rounded-[15px] px-6 py-5 gap-3 pb-6 w-full">
               <h2 className="text-primary-500 text-base lg:text-lg">Email</h2>
-              <p className="text-grey-800 font-bold text-lg lg:text-xl overflow-x-scroll">
+              <p className="text-grey-800 font-bold text-lg lg:text-xl">
                 {email}
               </p>
             </div>
