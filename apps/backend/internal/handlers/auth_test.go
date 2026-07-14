@@ -24,8 +24,8 @@ func (m *mockAuthService) Register(ctx context.Context, username, password strin
 	return nil, nil
 }
 
-func (m *mockAuthService) Login(ctx context.Context, username, password string) (string, error) {
-	return "", nil
+func (m *mockAuthService) Login(ctx context.Context, username, password string) (string, *models.User, error) {
+	return "", nil, nil
 }
 
 func (m *mockAuthService) ValidateToken(tokenStr string) (*services.Claims, error) {
@@ -37,6 +37,18 @@ func (m *mockAuthService) GetUserByID(ctx context.Context, id int) (*models.User
 		return nil, m.err
 	}
 	return m.userByID[id], nil
+}
+
+func (m *mockAuthService) IssueRefreshToken(ctx context.Context, userID int) (string, error) {
+	return "", nil
+}
+
+func (m *mockAuthService) RefreshSession(ctx context.Context, rawToken string) (string, string, error) {
+	return "", "", nil
+}
+
+func (m *mockAuthService) RevokeRefreshToken(ctx context.Context, rawToken string) error {
+	return nil
 }
 
 type mockMeasurementRepo struct {

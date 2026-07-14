@@ -111,6 +111,21 @@ func (User) TableName() string {
 	return "users"
 }
 
+type RefreshToken struct {
+	ID        int        `gorm:"column:id;type:integer;primaryKey;autoIncrement"`
+	UserID    int        `gorm:"column:user_id;type:integer;not null"`
+	TokenHash string     `gorm:"column:token_hash;type:varchar(64);not null;unique"`
+	ExpiresAt time.Time  `gorm:"column:expires_at;type:timestamptz;not null"`
+	CreatedAt time.Time  `gorm:"column:created_at;type:timestamptz;not null;default:now()"`
+	RevokedAt *time.Time `gorm:"column:revoked_at;type:timestamptz"`
+
+	User User `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+}
+
+func (RefreshToken) TableName() string {
+	return "refresh_tokens"
+}
+
 type Device struct {
 	ID           int       `gorm:"column:id;type:integer;primaryKey;autoIncrement"`
 	DeviceTypeID int       `gorm:"column:device_type_id;type:integer;not null"`
