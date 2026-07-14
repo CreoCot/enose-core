@@ -78,6 +78,7 @@ class PDFGenerator:
         self._build_header(story, report)
         self._build_chart(story, report)
         story.append(PageBreak())
+        self._build_fingerprint(story, report)
         self._build_feature_table(story, report)
 
         if report.interpretation:
@@ -224,7 +225,7 @@ class PDFGenerator:
 
     def _build_feature_table(self, story, report: ReportRequest):
         intro = [
-            self._section_heading("02", "Calculated features"),
+            self._section_heading("03", "Calculated features"),
             Paragraph(
                 "Signal descriptors calculated from baseline-corrected values (Δf).",
                 self.styles["SectionLead"],
@@ -303,10 +304,77 @@ class PDFGenerator:
         )
         story.append(KeepTogether(intro))
 
+    def _build_fingerprint(self, story, report: ReportRequest):
+        story.append(self._section_heading("02", "Response fingerprint"))
+        story.append(
+            Paragraph(
+                "Maximum absolute frequency shift at each sensor's signal extremum.",
+                self.styles["SectionLead"],
+            )
+        )
+        story.append(Spacer(1, 2 * mm))
+
+        sensor_features = [
+            calculate_features(report.timestamps, sensor.initial, sensor.values)
+            for sensor in report.sensors
+        ]
+        peaks = [features.get("max_abs", 0.0) for features in sensor_features]
+
+        if peaks:
+            strongest_index = max(range(len(peaks)), key=peaks.__getitem__)
+            strongest_sensor = report.sensors[strongest_index].name
+            strongest_peak = self._format_number(peaks[strongest_index])
+            response_range = (
+                f"{self._format_number(min(peaks))} to "
+                f"{self._format_number(max(peaks))} Hz"
+            )
+        else:
+            strongest_sensor = "—"
+            strongest_peak = "—"
+            response_range = "—"
+
+        radar = self.chart_generator.generate_radar(report)
+        details = [
+            self._fingerprint_metric("STRONGEST RESPONSE", strongest_sensor),
+            self._fingerprint_metric("PEAK MAGNITUDE", f"{strongest_peak} Hz"),
+            self._fingerprint_metric("RESPONSE RANGE", response_range),
+            Paragraph(
+                "The shape provides a compact sensor-array signature for comparing "
+                "measurements at a glance.",
+                self.styles["FingerprintNote"],
+            ),
+        ]
+        card = Table(
+            [[Image(BytesIO(radar), width=72 * mm, height=58.5 * mm), details]],
+            colWidths=[82 * mm, self.CONTENT_WIDTH - 82 * mm],
+            rowHeights=[64 * mm],
+        )
+        card.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), self.SURFACE),
+                    ("BOX", (0, 0), (-1, -1), 0.7, self.LINE),
+                    ("LINEAFTER", (0, 0), (0, 0), 0.6, self.LINE),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("ALIGN", (0, 0), (0, 0), "CENTER"),
+                    ("LEFTPADDING", (0, 0), (0, 0), 4),
+                    ("RIGHTPADDING", (0, 0), (0, 0), 4),
+                    ("TOPPADDING", (0, 0), (0, 0), 4),
+                    ("BOTTOMPADDING", (0, 0), (0, 0), 4),
+                    ("LEFTPADDING", (1, 0), (1, 0), 14),
+                    ("RIGHTPADDING", (1, 0), (1, 0), 14),
+                    ("TOPPADDING", (1, 0), (1, 0), 12),
+                    ("BOTTOMPADDING", (1, 0), (1, 0), 10),
+                ]
+            )
+        )
+        story.append(card)
+        story.append(Spacer(1, 7 * mm))
+
     def _build_interpretation(self, story, report: ReportRequest):
         story.append(Spacer(1, 9 * mm))
         content = [
-            Paragraph("03  ·  INTERPRETATION", self.styles["InterpretationLabel"]),
+            Paragraph("04  ·  INTERPRETATION", self.styles["InterpretationLabel"]),
             Spacer(1, 2 * mm),
             Paragraph(
                 escape(report.interpretation.text), self.styles["InterpretationBody"]
@@ -363,6 +431,13 @@ class PDFGenerator:
             f"<font color='#FFFFFF' size='15'>{escape(value)}</font><br/>"
             f"<font color='#94A3B8' size='6.5'>{label}</font>",
             self.styles["Summary"],
+        )
+
+    def _fingerprint_metric(self, label: str, value: str) -> Paragraph:
+        return Paragraph(
+            f"<font color='#64748B' size='6.5'>{label}</font><br/>"
+            f"<font color='#0F172A' size='10'>{escape(str(value))}</font>",
+            self.styles["FingerprintMetric"],
         )
 
     @staticmethod
@@ -497,6 +572,26 @@ class PDFGenerator:
                 fontSize=6.8,
                 leading=10,
                 textColor=self.MUTED,
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="FingerprintMetric",
+                fontName="DejaVu",
+                fontSize=9,
+                leading=14,
+                textColor=self.NAVY,
+                spaceAfter=6,
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="FingerprintNote",
+                fontName="DejaVu",
+                fontSize=7.2,
+                leading=10.5,
+                textColor=self.MUTED,
+                spaceBefore=2,
             )
         )
         styles.add(

@@ -11,3 +11,13 @@ def test_generate_chart():
     assert isinstance(chart, bytes)
     assert chart.startswith(b"\x89PNG")
     assert len(chart) > 1000
+
+
+def test_generate_radar_chart():
+    report = create_report()
+
+    chart = ChartGenerator().generate_radar(report)
+
+    assert isinstance(chart, bytes)
+    assert chart.startswith(b"\x89PNG")
+    assert len(chart) > 1000

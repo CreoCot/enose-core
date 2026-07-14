@@ -8,6 +8,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from app.features import calculate_features
 from app.schemas import ReportRequest
 
 
@@ -72,6 +73,88 @@ class ChartGenerator:
 
         fig.subplots_adjust(left=0.085, right=0.985, bottom=0.14, top=0.84)
 
+        buffer = BytesIO()
+        fig.savefig(
+            buffer,
+            format="png",
+            dpi=self.DPI,
+            facecolor=fig.get_facecolor(),
+        )
+        plt.close(fig)
+
+        buffer.seek(0)
+        return buffer.getvalue()
+
+    def generate_radar(self, report: ReportRequest) -> bytes:
+        """Render the legacy MAG-soft maximum-response diagram.
+
+        Each axis represents a sensor and its radius is the absolute frequency
+        shift at that sensor's extremum (the ``max_abs`` report feature).
+        """
+        labels = [sensor.name for sensor in report.sensors]
+        values = [
+            calculate_features(report.timestamps, sensor.initial, sensor.values).get(
+                "max_abs", 0.0
+            )
+            for sensor in report.sensors
+        ]
+
+        fig = plt.figure(figsize=(6.4, 5.2), facecolor="white")
+        ax = fig.add_subplot(111, polar=True)
+        ax.set_facecolor("#F8FAFC")
+
+        if labels:
+            angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False)
+            closed_angles = np.append(angles, angles[0])
+            closed_values = np.append(values, values[0])
+            upper_limit = max(values) * 1.15 if max(values) > 0 else 1.0
+
+            ax.plot(
+                closed_angles,
+                closed_values,
+                color="#2563EB",
+                linewidth=2.2,
+                marker="o",
+                markersize=4.5,
+                markerfacecolor="#0F766E",
+                markeredgecolor="white",
+                markeredgewidth=1,
+            )
+            ax.fill(closed_angles, closed_values, color="#2563EB", alpha=0.16)
+            ax.set_xticks(angles)
+            ax.set_xticklabels(labels, color="#334155", fontsize=8.5)
+            ax.set_ylim(0, upper_limit)
+        else:
+            ax.set_xticks([])
+            ax.set_ylim(0, 1)
+            ax.text(
+                0.5,
+                0.5,
+                "No sensor data",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                color="#64748B",
+                fontsize=10,
+            )
+
+        ax.set_theta_zero_location("N")
+        ax.set_theta_direction(-1)
+        ax.grid(color="#CBD5E1", linewidth=0.7, alpha=0.85)
+        ax.spines["polar"].set_color("#DCE4EE")
+        ax.spines["polar"].set_linewidth(0.8)
+        ax.tick_params(axis="x", pad=8)
+        ax.tick_params(axis="y", colors="#64748B", labelsize=7)
+        ax.set_rlabel_position(18)
+        ax.set_title(
+            "Peak response by sensor, Hz",
+            color="#0F172A",
+            fontsize=11,
+            fontweight="bold",
+            pad=18,
+        )
+
+        fig.subplots_adjust(left=0.15, right=0.85, bottom=0.12, top=0.84)
         buffer = BytesIO()
         fig.savefig(
             buffer,
