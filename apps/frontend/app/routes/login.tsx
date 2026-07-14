@@ -25,7 +25,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     } else if (error instanceof Error) {
       return { error: error.message };
     } else {
-      return "Что-то пошло не так";
+      return { error: "Что-то пошло не так" };
     }
   }
 }

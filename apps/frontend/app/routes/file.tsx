@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Head from "../components/Head";
 import MeasurementsTable from "../components/MeasurementsTable";
 import Plots from "../components/Plots";
@@ -7,7 +7,7 @@ import axios from "../axios";
 import { isAxiosError } from "axios";
 import type { Route } from "./+types/file";
 import { AnimatePresence, motion, type Variants } from "motion/react";
-import { Link, useFetcher } from "react-router";
+import { Link } from "react-router";
 
 const tableIcon = (
   <svg

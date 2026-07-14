@@ -240,7 +240,7 @@ const signup = () => {
             </div>
             <div className="flex gap-2 text-grey-600">
               <input
-                disabled
+                // disabled
                 name="remember_me"
                 className="bg-white cursor-not-allowed"
                 type="checkbox"
