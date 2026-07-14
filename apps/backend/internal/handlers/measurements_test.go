@@ -1,10 +1,106 @@
 package handlers
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/CreoCot/enose-core/backend/internal/models"
+	"github.com/CreoCot/enose-core/backend/internal/repository"
+	"github.com/CreoCot/enose-core/backend/internal/services"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
+
+// mockDeleteRepo мокает только методы, нужные для Delete-хендлера.
+type mockDeleteRepo struct {
+	repository.MeasurementRepository
+	byID      map[int]*models.Measurement
+	deletedID int
+}
+
+func (m *mockDeleteRepo) GetByID(ctx context.Context, id int) (*models.Measurement, error) {
+	if mm, ok := m.byID[id]; ok {
+		return mm, nil
+	}
+	return nil, gorm.ErrRecordNotFound
+}
+
+func (m *mockDeleteRepo) Delete(ctx context.Context, id int) error {
+	m.deletedID = id
+	return nil
+}
+
+func performDelete(t *testing.T, repo *mockDeleteRepo, id string, claims *services.Claims) *httptest.ResponseRecorder {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/v1/delete/"+id, nil)
+	c.Params = gin.Params{{Key: "id", Value: id}}
+	c.Set("claims", claims)
+
+	h := NewMeasurementsHandler(&repository.Registry{Measurements: repo}, nil, nil)
+	h.Delete(c)
+	// В юнит-тесте нет gin-движка, который флашит статус без тела (204) — делаем это явно.
+	c.Writer.WriteHeaderNow()
+	return w
+}
+
+func intPtr(v int) *int { return &v }
+
+func TestDelete_AdminDeletesAny(t *testing.T) {
+	repo := &mockDeleteRepo{byID: map[int]*models.Measurement{
+		5: {ID: 5, UserID: intPtr(2)},
+	}}
+
+	w := performDelete(t, repo, "5", &services.Claims{UserID: 1, Role: services.RoleAdmin})
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	assert.Equal(t, 5, repo.deletedID)
+}
+
+func TestDelete_OperatorDeletesOwn(t *testing.T) {
+	repo := &mockDeleteRepo{byID: map[int]*models.Measurement{
+		7: {ID: 7, UserID: intPtr(3)},
+	}}
+
+	w := performDelete(t, repo, "7", &services.Claims{UserID: 3, Role: services.RoleOperator})
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	assert.Equal(t, 7, repo.deletedID)
+}
+
+func TestDelete_OperatorForeignMeasurementForbidden(t *testing.T) {
+	repo := &mockDeleteRepo{byID: map[int]*models.Measurement{
+		7: {ID: 7, UserID: intPtr(3)},
+	}}
+
+	w := performDelete(t, repo, "7", &services.Claims{UserID: 4, Role: services.RoleOperator})
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+	assert.Equal(t, 0, repo.deletedID) // Delete не вызывался
+}
+
+func TestDelete_UnknownIDReturns404(t *testing.T) {
+	repo := &mockDeleteRepo{byID: map[int]*models.Measurement{}}
+
+	w := performDelete(t, repo, "99", &services.Claims{UserID: 1, Role: services.RoleAdmin})
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Equal(t, 0, repo.deletedID)
+}
+
+func TestDelete_InvalidIDReturns400(t *testing.T) {
+	repo := &mockDeleteRepo{byID: map[int]*models.Measurement{}}
+
+	w := performDelete(t, repo, "abc", &services.Claims{UserID: 1, Role: services.RoleAdmin})
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
 
 func TestDownsampleIndices_ReturnsAllWhenUnderCap(t *testing.T) {
 	idx := downsampleIndices(5, 5000)

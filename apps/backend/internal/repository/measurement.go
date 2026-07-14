@@ -20,6 +20,7 @@ type MeasurementRepository interface {
 	GetAll(ctx context.Context, userID *int) ([]models.Measurement, error)
 	GetByID(ctx context.Context, id int) (*models.Measurement, error)
 	CountByUserID(ctx context.Context, userID int) (int64, error)
+	Delete(ctx context.Context, id int) error
 	GetSensorDataPoints(
 		ctx context.Context,
 		measurementID int,
@@ -130,6 +131,12 @@ func (r *measurementRepository) CountByUserID(ctx context.Context, userID int) (
 		Where("user_id = ?", userID).
 		Count(&count).Error
 	return count, err
+}
+
+// Delete удаляет измерение. Параметры датчиков и точки временного ряда
+// удаляются на уровне БД через ON DELETE CASCADE (см. миграцию init).
+func (r *measurementRepository) Delete(ctx context.Context, id int) error {
+	return r.db.WithContext(ctx).Delete(&models.Measurement{}, id).Error
 }
 
 // GetReportSeries собирает серии всех сенсоров измерения с именами (label → fallback на имя сенсора),

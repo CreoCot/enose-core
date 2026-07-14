@@ -1,823 +1,941 @@
 {
-  "schemes": ["http"],
-  "swagger": "2.0",
-  "info": {
-    "description": "API for e-nose system",
-    "title": "Enose Core API",
-    "termsOfService": "http://swagger.io/terms/",
-    "contact": {
-      "name": "Enose Core Team",
-      "email": "dev@enose-core.local"
+    "schemes": [
+        "http"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "API for e-nose system",
+        "title": "Enose Core API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "Enose Core Team",
+            "email": "dev@enose-core.local"
+        },
+        "license": {
+            "name": "Proprietary",
+            "url": "http://swagger.io/licenses/"
+        },
+        "version": "1.0.0"
     },
-    "license": {
-      "name": "Proprietary",
-      "url": "http://swagger.io/licenses/"
-    },
-    "version": "1.0.0"
-  },
-  "host": "localhost:8080",
-  "basePath": "/",
-  "paths": {
-    "/api/v1/auth/login": {
-      "post": {
-        "consumes": ["application/json"],
-        "produces": ["application/json"],
-        "tags": ["Auth"],
-        "summary": "Вход в систему",
-        "parameters": [
-          {
-            "description": "Логин и пароль",
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/handlers.loginRequest"
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/auth/login": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Вход в систему",
+                "parameters": [
+                    {
+                        "description": "Логин и пароль",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.loginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.messageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
             }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/handlers.messageResponse"
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Выход из системы",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.messageResponse"
+                        }
+                    }
+                }
             }
-          },
-          "400": {
-            "description": "Bad Request",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
+        },
+        "/api/v1/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Информация о текущем пользователе",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.profileResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
             }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
+        },
+        "/api/v1/auth/register": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Регистрация нового пользователя",
+                "parameters": [
+                    {
+                        "description": "Данные пользователя",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.registerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.userResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
             }
-          }
+        },
+        "/api/v1/delete/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Удаляет измерение; параметры датчиков и точки данных удаляются каскадно",
+                "tags": [
+                    "Measurements"
+                ],
+                "summary": "Удалить измерение",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID измерения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Измерение удалено"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/entries": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает массив {id, name, start_time}",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Measurements"
+                ],
+                "summary": "Список измерений",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.MeasurementsItem"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/features/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Считает признаки кривых сенсоров через ML-сервис и возвращает их",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Measurements"
+                ],
+                "summary": "Признаки измерения",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID измерения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.MLAnalyzeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/health": {
+            "get": {
+                "description": "Возвращает статус сервиса, версию, время работы и состояние БД.\nИспользуется для liveness/readiness probes и мониторинга.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Heartbeat"
+                ],
+                "summary": "Проверка работоспособности бэкенда",
+                "responses": {
+                    "200": {
+                        "description": "Сервер работает",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.HealthResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/plots/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает временные ряды каждого сенсора измерения для построения графиков",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Measurements"
+                ],
+                "summary": "Графики данных измерения",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID измерения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PlotResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/report/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Собирает данные измерения, отправляет их в report-сервис и возвращает готовый PDF",
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "Measurements"
+                ],
+                "summary": "PDF-отчёт по измерению",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID измерения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF-файл отчёта",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/table": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает матрицу временных рядов от пьезосенсоров для визуализации.\nКаждая строка матрицы — данные одного сенсора.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Data"
+                ],
+                "summary": "Получить демо-таблицу данных сенсоров",
+                "responses": {
+                    "200": {
+                        "description": "Пример ответа",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.TableResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка генерации данных",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/table/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает данные сенсоров измерения в табличном виде: каждая строка — момент времени, первый столбец — время, остальные — значения сенсоров",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Measurements"
+                ],
+                "summary": "Таблица данных измерения",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID измерения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.TableResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/upload": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Принимает файл (CSV, XML, XLSX), отправляет в parser-сервис и возвращает распарсенные данные",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Measurements"
+                ],
+                "summary": "Загрузить файл измерения",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Файл измерения (CSV, XML или XLSX)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.ParsedMeasurement"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
-      }
     },
-    "/api/v1/auth/logout": {
-      "post": {
-        "produces": ["application/json"],
-        "tags": ["Auth"],
-        "summary": "Выход из системы",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/handlers.messageResponse"
+    "definitions": {
+        "handlers.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "internal_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Something went wrong"
+                }
             }
-          }
+        },
+        "handlers.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "database": {
+                    "description": "Статус подключения к БД",
+                    "type": "string",
+                    "example": "ok"
+                },
+                "status": {
+                    "description": "Общий статус приложения",
+                    "type": "string",
+                    "example": "OK"
+                },
+                "timestamp": {
+                    "description": "Время генерации ответа",
+                    "type": "string",
+                    "example": "Sun, 14 Jun 2026 16:25:56 UTC"
+                },
+                "uptime": {
+                    "description": "Время работы с момента запуска",
+                    "type": "string",
+                    "example": "55.332075718s"
+                },
+                "version": {
+                    "description": "Версия сборки",
+                    "type": "string",
+                    "example": "1.0.0-mvp"
+                }
+            }
+        },
+        "handlers.MeasurementsItem": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.PlotResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "number",
+                            "format": "float64"
+                        }
+                    }
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "timestamps": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                }
+            }
+        },
+        "handlers.TableResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "number",
+                            "format": "float64"
+                        }
+                    }
+                },
+                "size": {
+                    "description": "Массив временных рядов (каждая строка — один сенсор)",
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "handlers.loginRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.messageResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.profileResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.registerRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "role": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 3
+                }
+            }
+        },
+        "handlers.userResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.FlexibleTime": {
+            "type": "object",
+            "properties": {
+                "time.Time": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.MLAnalyzeResponse": {
+            "type": "object",
+            "properties": {
+                "computed_at": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.MLFeatureItem"
+                    }
+                }
+            }
+        },
+        "services.MLFeatureItem": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "sensor_id": {
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "services.ParsedDataPoint": {
+            "type": "object",
+            "properties": {
+                "sensor_position": {
+                    "type": "integer"
+                },
+                "time_offset_s": {
+                    "type": "number"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "services.ParsedMeasurement": {
+            "type": "object",
+            "properties": {
+                "data_points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.ParsedDataPoint"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "device_serial": {
+                    "type": "string"
+                },
+                "device_type_code": {
+                    "type": "string"
+                },
+                "interval_ms": {
+                    "type": "integer"
+                },
+                "measurement_name": {
+                    "type": "string"
+                },
+                "measurement_object": {
+                    "type": "string"
+                },
+                "sensors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.ParsedSensor"
+                    }
+                },
+                "start_time": {
+                    "$ref": "#/definitions/services.FlexibleTime"
+                }
+            }
+        },
+        "services.ParsedSensor": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
         }
-      }
     },
-    "/api/v1/auth/me": {
-      "get": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "produces": ["application/json"],
-        "tags": ["Auth"],
-        "summary": "Информация о текущем пользователе",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/handlers.profileResponse"
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          }
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "JWT-token (TBA)",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
-      }
-    },
-    "/api/v1/auth/register": {
-      "post": {
-        "consumes": ["application/json"],
-        "produces": ["application/json"],
-        "tags": ["Auth"],
-        "summary": "Регистрация нового пользователя",
-        "parameters": [
-          {
-            "description": "Данные пользователя",
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/handlers.registerRequest"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created",
-            "schema": {
-              "$ref": "#/definitions/handlers.userResponse"
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/entries": {
-      "get": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "description": "Возвращает массив {id, name, start_time}",
-        "produces": ["application/json"],
-        "tags": ["Measurements"],
-        "summary": "Список измерений",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/handlers.MeasurementsItem"
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/features/{id}": {
-      "get": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "description": "Считает признаки кривых сенсоров через ML-сервис и возвращает их",
-        "produces": ["application/json"],
-        "tags": ["Measurements"],
-        "summary": "Признаки измерения",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "ID измерения",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/services.MLAnalyzeResponse"
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "422": {
-            "description": "Unprocessable Entity",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/health": {
-      "get": {
-        "description": "Возвращает статус сервиса, версию, время работы и состояние БД.\nИспользуется для liveness/readiness probes и мониторинга.",
-        "consumes": ["application/json"],
-        "produces": ["application/json"],
-        "tags": ["Heartbeat"],
-        "summary": "Проверка работоспособности бэкенда",
-        "responses": {
-          "200": {
-            "description": "Сервер работает",
-            "schema": {
-              "$ref": "#/definitions/handlers.HealthResponse"
-            }
-          },
-          "500": {
-            "description": "Внутренняя ошибка",
-            "schema": {
-              "$ref": "#/definitions/handlers.HealthResponse"
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/plots/{id}": {
-      "get": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "description": "Возвращает временные ряды каждого сенсора измерения для построения графиков",
-        "produces": ["application/json"],
-        "tags": ["Measurements"],
-        "summary": "Графики данных измерения",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "ID измерения",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/handlers.PlotResponse"
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/report/{id}": {
-      "get": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "description": "Собирает данные измерения, отправляет их в report-сервис и возвращает готовый PDF",
-        "produces": ["application/pdf"],
-        "tags": ["Measurements"],
-        "summary": "PDF-отчёт по измерению",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "ID измерения",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "PDF-файл отчёта",
-            "schema": {
-              "type": "file"
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "422": {
-            "description": "Unprocessable Entity",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/table": {
-      "get": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "description": "Возвращает матрицу временных рядов от пьезосенсоров для визуализации.\nКаждая строка матрицы — данные одного сенсора.",
-        "consumes": ["application/json"],
-        "produces": ["application/json"],
-        "tags": ["Data"],
-        "summary": "Получить демо-таблицу данных сенсоров",
-        "responses": {
-          "200": {
-            "description": "Пример ответа",
-            "schema": {
-              "$ref": "#/definitions/handlers.TableResponse"
-            }
-          },
-          "500": {
-            "description": "Ошибка генерации данных",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/table/{id}": {
-      "get": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "description": "Возвращает данные сенсоров измерения в табличном виде: каждая строка — момент времени, первый столбец — время, остальные — значения сенсоров",
-        "produces": ["application/json"],
-        "tags": ["Measurements"],
-        "summary": "Таблица данных измерения",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "ID измерения",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/handlers.TableResponse"
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/upload": {
-      "post": {
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "description": "Принимает файл (CSV, XML, XLSX), отправляет в parser-сервис и возвращает распарсенные данные",
-        "consumes": ["multipart/form-data"],
-        "produces": ["application/json"],
-        "tags": ["Measurements"],
-        "summary": "Загрузить файл измерения",
-        "parameters": [
-          {
-            "type": "file",
-            "description": "Файл измерения (CSV, XML или XLSX)",
-            "name": "file",
-            "in": "formData",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/services.ParsedMeasurement"
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "422": {
-            "description": "Unprocessable Entity",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          }
-        }
-      }
     }
-  },
-  "definitions": {
-    "handlers.ErrorResponse": {
-      "type": "object",
-      "properties": {
-        "error": {
-          "type": "string",
-          "example": "internal_error"
-        },
-        "message": {
-          "type": "string",
-          "example": "Something went wrong"
-        }
-      }
-    },
-    "handlers.HealthResponse": {
-      "type": "object",
-      "properties": {
-        "database": {
-          "description": "Статус подключения к БД",
-          "type": "string",
-          "example": "ok"
-        },
-        "status": {
-          "description": "Общий статус приложения",
-          "type": "string",
-          "example": "OK"
-        },
-        "timestamp": {
-          "description": "Время генерации ответа",
-          "type": "string",
-          "example": "Sun, 14 Jun 2026 16:25:56 UTC"
-        },
-        "uptime": {
-          "description": "Время работы с момента запуска",
-          "type": "string",
-          "example": "55.332075718s"
-        },
-        "version": {
-          "description": "Версия сборки",
-          "type": "string",
-          "example": "1.0.0-mvp"
-        }
-      }
-    },
-    "handlers.MeasurementsItem": {
-      "type": "object",
-      "properties": {
-        "date": {
-          "type": "string"
-        },
-        "id": {
-          "type": "integer"
-        },
-        "name": {
-          "type": "string"
-        }
-      }
-    },
-    "handlers.PlotResponse": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "number",
-              "format": "float64"
-            }
-          }
-        },
-        "size": {
-          "type": "integer"
-        },
-        "timestamps": {
-          "type": "array",
-          "items": {
-            "type": "number"
-          }
-        }
-      }
-    },
-    "handlers.TableResponse": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "number",
-              "format": "float64"
-            }
-          }
-        },
-        "size": {
-          "description": "Массив временных рядов (каждая строка — один сенсор)",
-          "type": "integer",
-          "example": 2
-        }
-      }
-    },
-    "handlers.loginRequest": {
-      "type": "object",
-      "required": ["password", "username"],
-      "properties": {
-        "password": {
-          "type": "string"
-        },
-        "username": {
-          "type": "string"
-        }
-      }
-    },
-    "handlers.messageResponse": {
-      "type": "object",
-      "properties": {
-        "message": {
-          "type": "string"
-        }
-      }
-    },
-    "handlers.profileResponse": {
-      "type": "object",
-      "properties": {
-        "count": {
-          "type": "integer"
-        },
-        "created_at": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string"
-        },
-        "full_name": {
-          "type": "string"
-        },
-        "id": {
-          "type": "integer"
-        },
-        "role": {
-          "type": "string"
-        },
-        "username": {
-          "type": "string"
-        }
-      }
-    },
-    "handlers.registerRequest": {
-      "type": "object",
-      "required": ["password", "username"],
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "full_name": {
-          "type": "string"
-        },
-        "password": {
-          "type": "string",
-          "minLength": 8
-        },
-        "role": {
-          "type": "string"
-        },
-        "username": {
-          "type": "string",
-          "maxLength": 64,
-          "minLength": 3
-        }
-      }
-    },
-    "handlers.userResponse": {
-      "type": "object",
-      "properties": {
-        "created_at": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string"
-        },
-        "full_name": {
-          "type": "string"
-        },
-        "id": {
-          "type": "integer"
-        },
-        "role": {
-          "type": "string"
-        },
-        "username": {
-          "type": "string"
-        }
-      }
-    },
-    "services.FlexibleTime": {
-      "type": "object",
-      "properties": {
-        "time.Time": {
-          "type": "string"
-        }
-      }
-    },
-    "services.MLAnalyzeResponse": {
-      "type": "object",
-      "properties": {
-        "computed_at": {
-          "type": "string"
-        },
-        "features": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/services.MLFeatureItem"
-          }
-        }
-      }
-    },
-    "services.MLFeatureItem": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "sensor_id": {
-          "type": "integer"
-        },
-        "value": {
-          "type": "number"
-        }
-      }
-    },
-    "services.ParsedDataPoint": {
-      "type": "object",
-      "properties": {
-        "sensor_position": {
-          "type": "integer"
-        },
-        "time_offset_s": {
-          "type": "number"
-        },
-        "value": {
-          "type": "number"
-        }
-      }
-    },
-    "services.ParsedMeasurement": {
-      "type": "object",
-      "properties": {
-        "data_points": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/services.ParsedDataPoint"
-          }
-        },
-        "description": {
-          "type": "string"
-        },
-        "device_serial": {
-          "type": "string"
-        },
-        "device_type_code": {
-          "type": "string"
-        },
-        "interval_ms": {
-          "type": "integer"
-        },
-        "measurement_name": {
-          "type": "string"
-        },
-        "measurement_object": {
-          "type": "string"
-        },
-        "sensors": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/services.ParsedSensor"
-          }
-        },
-        "start_time": {
-          "$ref": "#/definitions/services.FlexibleTime"
-        }
-      }
-    },
-    "services.ParsedSensor": {
-      "type": "object",
-      "properties": {
-        "label": {
-          "type": "string"
-        },
-        "position": {
-          "type": "integer"
-        },
-        "unit": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  "securityDefinitions": {
-    "BearerAuth": {
-      "description": "JWT-token (TBA)",
-      "type": "apiKey",
-      "name": "Authorization",
-      "in": "header"
-    }
-  }
 }
