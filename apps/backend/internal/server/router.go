@@ -35,7 +35,7 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 		r.GET("/swagger/*any", ginSwagger.CustomWrapHandler(&swaggerConfig, swaggerFiles.Handler))
 	}
 
-	authSvc := services.NewAuthService(reg.Users, cfg.JWTSecret)
+	authSvc := services.NewAuthService(reg.Users, reg.RefreshTokens, cfg.JWTSecret)
 
 	uploadHandler := handlers.NewUploadHandler(parser, reg)
 	measurementsHandler := handlers.NewMeasurementsHandler(reg, report, ml)
@@ -51,6 +51,9 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/logout", authHandler.Logout)
+			// Публичный: должен работать даже когда access-токен уже истёк —
+			// это и есть его смысл. Валидируется отдельным refresh_token cookie.
+			auth.POST("/refresh", authHandler.Refresh)
 		}
 
 		// Requires valid JWT

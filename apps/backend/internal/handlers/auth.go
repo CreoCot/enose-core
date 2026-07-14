@@ -10,7 +10,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const cookieName = "jwt"
+const (
+	cookieName         = "jwt"
+	refreshCookieName  = "refresh_token"
+	accessCookieMaxAge = 86400 // 24h — не связан с "remember me", см. auth.go
+
+	// refreshCookieMaxAge — 30 дней, синхронизировано с refreshTokenTTL в services/auth.go.
+	refreshCookieMaxAge = 30 * 24 * 3600
+	// refreshCookiePath ограничивает refresh-cookie только auth-эндпоинтами —
+	// в остальных запросах браузер её не отправляет (меньше поверхность атаки).
+	refreshCookiePath = "/api/v1/auth"
+)
 
 type AuthHandler struct {
 	auth         services.AuthService
@@ -33,6 +43,9 @@ type registerRequest struct {
 type loginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
+	// RememberMe — если true, дополнительно выдаётся refresh-токен (30 дней).
+	// Отсутствует в запросе → false, поведение логина не меняется (как раньше).
+	RememberMe bool `json:"remember_me"`
 }
 
 type userResponse struct {
@@ -112,7 +125,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.auth.Login(c.Request.Context(), req.Username, req.Password)
+	token, user, err := h.auth.Login(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidPassword) || errors.Is(err, services.ErrUserNotFound) {
 			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized", Message: "invalid username or password"})
@@ -127,7 +140,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(cookieName, token, 86400, "/", "", h.secureCookie, true)
+	c.SetCookie(cookieName, token, accessCookieMaxAge, "/", "", h.secureCookie, true)
+
+	if req.RememberMe {
+		raw, err := h.auth.IssueRefreshToken(c.Request.Context(), user.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "internal_error", Message: "failed to issue refresh token"})
+			return
+		}
+		c.SetCookie(refreshCookieName, raw, refreshCookieMaxAge, refreshCookiePath, "", h.secureCookie, true)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
 
@@ -138,8 +161,46 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Success      200 {object} messageResponse
 // @Router       /api/v1/auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
+	if raw, err := c.Cookie(refreshCookieName); err == nil && raw != "" {
+		// Лучшая попытка: не найден/уже отозван — не ошибка, всё равно чистим куки.
+		_ = h.auth.RevokeRefreshToken(c.Request.Context(), raw)
+	}
+
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(cookieName, "", -1, "/", "", h.secureCookie, true)
+	c.SetCookie(refreshCookieName, "", -1, refreshCookiePath, "", h.secureCookie, true)
+	c.JSON(http.StatusOK, gin.H{"message": "ok"})
+}
+
+// Refresh godoc
+// @Summary      Обновить access-токен по refresh-токену
+// @Description  Требует refresh_token cookie (выдаётся при login с remember_me=true). Ротирует refresh-токен.
+// @Tags         Auth
+// @Produce      json
+// @Success      200 {object} messageResponse
+// @Failure      401 {object} ErrorResponse
+// @Router       /api/v1/auth/refresh [post]
+func (h *AuthHandler) Refresh(c *gin.Context) {
+	raw, err := c.Cookie(refreshCookieName)
+	if err != nil || raw == "" {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized", Message: "no refresh token"})
+		return
+	}
+
+	accessToken, newRaw, err := h.auth.RefreshSession(c.Request.Context(), raw)
+	if err != nil {
+		// Невалидный/просроченный/переиспользованный токен — принудительно
+		// заканчиваем сессию, чтобы фронтенд однозначно ушёл на /login.
+		c.SetSameSite(http.SameSiteLaxMode)
+		c.SetCookie(cookieName, "", -1, "/", "", h.secureCookie, true)
+		c.SetCookie(refreshCookieName, "", -1, refreshCookiePath, "", h.secureCookie, true)
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized", Message: "invalid or expired refresh token"})
+		return
+	}
+
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(cookieName, accessToken, accessCookieMaxAge, "/", "", h.secureCookie, true)
+	c.SetCookie(refreshCookieName, newRaw, refreshCookieMaxAge, refreshCookiePath, "", h.secureCookie, true)
 	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
 

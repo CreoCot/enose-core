@@ -75,6 +75,11 @@ definitions:
     properties:
       password:
         type: string
+      remember_me:
+        description: |-
+          RememberMe — если true, дополнительно выдаётся refresh-токен (30 дней).
+          Отсутствует в запросе → false, поведение логина не меняется (как раньше).
+        type: boolean
       username:
         type: string
     required:
@@ -277,6 +282,24 @@ paths:
       security:
       - BearerAuth: []
       summary: Информация о текущем пользователе
+      tags:
+      - Auth
+  /api/v1/auth/refresh:
+    post:
+      description: Требует refresh_token cookie (выдаётся при login с remember_me=true).
+        Ротирует refresh-токен.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.messageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Обновить access-токен по refresh-токену
       tags:
       - Auth
   /api/v1/auth/register:

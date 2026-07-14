@@ -123,6 +123,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/refresh": {
+            "post": {
+                "description": "Требует refresh_token cookie (выдаётся при login с remember_me=true). Ротирует refresh-токен.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Обновить access-токен по refresh-токену",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.messageResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/register": {
             "post": {
                 "consumes": [
@@ -740,6 +766,10 @@ const docTemplate = `{
             "properties": {
                 "password": {
                     "type": "string"
+                },
+                "remember_me": {
+                    "description": "RememberMe — если true, дополнительно выдаётся refresh-токен (30 дней).\nОтсутствует в запросе → false, поведение логина не меняется (как раньше).",
+                    "type": "boolean"
                 },
                 "username": {
                     "type": "string"

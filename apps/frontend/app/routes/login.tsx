@@ -87,14 +87,15 @@ const login = () => {
                 Зарегистрируйтесь
               </Link>
             </div>
-            <div className="flex gap-2 text-grey-600">
+            {/* "Remember me" — not implemented on the frontend yet, hidden until #115 */}
+            {/* <div className="flex gap-2 text-grey-600">
               <input
                 className="bg-white cursor-not-allowed"
                 type="checkbox"
                 disabled
               />
-              Запомнить меня&lt;not done&gt;
-            </div>
+              Запомнить меня
+            </div> */}
 
             <motion.button
               onClick={() => setError(null)}
