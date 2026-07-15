@@ -133,3 +133,171 @@ func TestPickFloat_SelectsByIndex(t *testing.T) {
 	// Индексы вне границ пропускаются.
 	assert.Equal(t, []float64{40}, pickFloat(src, []int{3, 99}))
 }
+
+type mockFullMeasRepo struct {
+	repository.MeasurementRepository
+	measurements []models.Measurement
+	series       []repository.ReportSensorSeries
+	timestamps   []float64
+}
+
+func (m *mockFullMeasRepo) GetAll(ctx context.Context, userID *int) ([]models.Measurement, error) {
+	if userID == nil {
+		return m.measurements, nil // Admin видит всё
+	}
+	var res []models.Measurement
+	for _, meas := range m.measurements {
+		if meas.UserID != nil && *meas.UserID == *userID {
+			res = append(res, meas) // Operator видит только свои
+		}
+	}
+	return res, nil
+}
+
+func (m *mockFullMeasRepo) GetByID(ctx context.Context, id int) (*models.Measurement, error) {
+	for _, meas := range m.measurements {
+		if meas.ID == id {
+			return &meas, nil
+		}
+	}
+	return nil, gorm.ErrRecordNotFound
+}
+
+func (m *mockFullMeasRepo) GetReportSeries(ctx context.Context, measurementID int) ([]repository.ReportSensorSeries, []float64, error) {
+	return m.series, m.timestamps, nil
+}
+
+// --- Тесты GetAll ---
+
+func TestGetAll_RoleFiltering(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &mockFullMeasRepo{
+		measurements: []models.Measurement{
+			{ID: 1, Name: "Admin Meas", UserID: intPtr(1)},
+			{ID: 2, Name: "Operator Meas", UserID: intPtr(2)},
+		},
+	}
+	h := NewMeasurementsHandler(&repository.Registry{Measurements: repo}, nil, nil)
+
+	t.Run("Admin sees all", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("GET", "/api/v1/entries", nil)
+		c.Set("claims", &services.Claims{UserID: 1, Role: services.RoleAdmin})
+
+		h.GetAll(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), "Admin Meas")
+		assert.Contains(t, w.Body.String(), "Operator Meas")
+	})
+
+	t.Run("Operator sees only own", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("GET", "/api/v1/entries", nil)
+		c.Set("claims", &services.Claims{UserID: 2, Role: services.RoleOperator})
+
+		h.GetAll(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.NotContains(t, w.Body.String(), "Admin Meas")
+		assert.Contains(t, w.Body.String(), "Operator Meas")
+	})
+}
+
+// --- Тесты GetReport ---
+
+func TestGetReport_Forbidden403(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &mockFullMeasRepo{
+		measurements: []models.Measurement{{ID: 1, UserID: intPtr(2)}}, // Владелец: 2
+	}
+	h := NewMeasurementsHandler(&repository.Registry{Measurements: repo}, nil, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/api/v1/report/1", nil)
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+	
+	// Пытаемся зайти под юзером 3 (не владелец)
+	c.Set("claims", &services.Claims{UserID: 3, Role: services.RoleOperator})
+
+	h.GetReport(c)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestGetReport_DownstreamError502(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	// Мокаем Report Service, который падает с 500
+	mockReport := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer mockReport.Close()
+
+	repo := &mockFullMeasRepo{
+		measurements: []models.Measurement{{ID: 1, UserID: intPtr(2)}},
+		series:       []repository.ReportSensorSeries{{SensorID: 1, Values: []float64{1.0, 2.0}}},
+		timestamps:   []float64{0.0, 1.0},
+	}
+	reportClient := services.NewReportClient(mockReport.URL, "fake-key")
+	h := NewMeasurementsHandler(&repository.Registry{Measurements: repo}, reportClient, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/api/v1/report/1", nil)
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+	c.Set("claims", &services.Claims{UserID: 2, Role: services.RoleOperator})
+
+	h.GetReport(c)
+	
+	assert.Equal(t, http.StatusBadGateway, w.Code)
+	assert.Contains(t, w.Body.String(), "report_service_error")
+}
+
+// --- Тесты GetFeatures ---
+
+func TestGetFeatures_Forbidden403(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &mockFullMeasRepo{
+		measurements: []models.Measurement{{ID: 1, UserID: intPtr(2)}},
+	}
+	h := NewMeasurementsHandler(&repository.Registry{Measurements: repo}, nil, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/api/v1/features/1", nil)
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+	c.Set("claims", &services.Claims{UserID: 3, Role: services.RoleOperator})
+
+	h.GetFeatures(c)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestGetFeatures_DownstreamError502(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	// Мокаем ML Service, который падает с 500
+	mockML := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer mockML.Close()
+
+	repo := &mockFullMeasRepo{
+		measurements: []models.Measurement{{ID: 1, UserID: intPtr(2)}},
+		series:       []repository.ReportSensorSeries{{SensorID: 1, Values: []float64{1.0, 2.0}}},
+		timestamps:   []float64{0.0, 1.0},
+	}
+	mlClient := services.NewMLClient(mockML.URL, "fake-key")
+	h := NewMeasurementsHandler(&repository.Registry{Measurements: repo}, nil, mlClient)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/api/v1/features/1", nil)
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+	c.Set("claims", &services.Claims{UserID: 2, Role: services.RoleOperator})
+
+	h.GetFeatures(c)
+	
+	assert.Equal(t, http.StatusBadGateway, w.Code)
+	assert.Contains(t, w.Body.String(), "ml_service_error")
+}
