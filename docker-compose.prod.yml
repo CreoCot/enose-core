@@ -1,54 +1,18 @@
 services:
   postgres:
-    image: postgres:15-alpine
     container_name: enose-postgres-prod
-    environment:
-      POSTGRES_USER: ${DATABASE_USER:-postgres}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
-      POSTGRES_DB: ${DATABASE_NAME:-enose}
     ports:
       - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
     restart: always
 
   migrate:
     container_name: enose-migrate-prod
-    image: migrate/migrate:v4.19.1
-    environment:
-      DATABASE_HOST: postgres
-      DATABASE_PORT: "5432"
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
-      DATABASE_NAME: ${DATABASE_NAME:-enose}
-      DATABASE_SSLMODE: disable
-    volumes:
-      - ./apps/backend/database/migrations:/migrations
-    depends_on:
-      postgres:
-        condition: service_healthy
-    command:
-      - -path=/migrations
-      - -database=postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable
-      - up
 
   backend:
     image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/enose-core-backend:latest
     container_name: enose-backend-prod
     environment:
-      PORT: "8080"
       ENV: staging
-      DATABASE_HOST: postgres
-      DATABASE_PORT: "5432"
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
-      DATABASE_NAME: ${DATABASE_NAME:-enose}
-      DATABASE_SSLMODE: disable
       JWT_SECRET: enose-jwt-prod-secret-2025
       ALLOWED_ORIGINS: http://10.93.27.29
       PARSER_URL: http://parser:8001
@@ -58,15 +22,9 @@ services:
       ML_URL: http://ml:8003
       ML_API_KEY: enose-ml-secret
     depends_on:
-      postgres:
-        condition: service_healthy
       migrate:
         condition: service_completed_successfully
       parser:
-        condition: service_healthy
-      report:
-        condition: service_healthy
-      ml:
         condition: service_healthy
     restart: always
 
@@ -75,11 +33,6 @@ services:
     container_name: enose-parser-prod
     environment:
       PARSER_API_KEY: enose-parser-secret
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
     restart: always
 
   report:
@@ -87,11 +40,6 @@ services:
     container_name: enose-report-prod
     environment:
       REPORT_API_KEY: enose-report-secret
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
     restart: always
 
   ml:
@@ -99,18 +47,25 @@ services:
     container_name: enose-ml-prod
     environment:
       ML_API_KEY: enose-ml-secret
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
     restart: always
 
   frontend:
     image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/enose-core-frontend:latest
     container_name: enose-frontend-prod
-    depends_on:
-      - backend
+    restart: always
+
+  victoriametrics:
+    container_name: enose-victoriametrics-prod
+    restart: always
+
+  grafana:
+    container_name: enose-grafana-prod
+    restart: always
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-super_secret_change_me}
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
 
   proxy:
     image: nginx:alpine
@@ -122,7 +77,5 @@ services:
     depends_on:
       - frontend
       - backend
+      - grafana
     restart: always
-
-volumes:
-  postgres_data:

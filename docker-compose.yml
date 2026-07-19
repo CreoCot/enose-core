@@ -1,40 +1,19 @@
 services:
-  # PostgreSQL
   postgres:
     image: postgres:15-alpine
-    container_name: enose-postgres
     environment:
       POSTGRES_USER: ${DATABASE_USER:-postgres}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
       POSTGRES_DB: ${DATABASE_NAME:-enose}
-    ports:
-      - "${DATABASE_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # pgAdmin
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: enose-pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
-    ports:
-      - "${PGADMIN_PORT:-5050}:80"
-    volumes:
-      - ./infra/pgadmin/servers.json:/pgadmin4/servers.json:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # Go Backend
   migrate:
-    container_name: enose-migrate-prod
     image: migrate/migrate:v4.19.1
     environment:
       DATABASE_HOST: postgres
@@ -48,31 +27,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-
     command:
       - -path=/migrations
       - -database=postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-enose}?sslmode=disable
       - up
 
   backend:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
-      target: development
-    container_name: enose-backend
-    volumes:
-      - ./apps/backend:/app
-      - /app/tmp
-    env_file:
-      - .env
     environment:
-      # Docker-network-specific overrides — must win over values from .env
       PORT: "8080"
       DATABASE_HOST: postgres
       DATABASE_PORT: "5432"
       DATABASE_SSLMODE: disable
-    ports:
-      - "${BACKEND_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -81,71 +46,51 @@ services:
       ml:
         condition: service_healthy
 
-  # React Frontend
   frontend:
-    build:
-      context: ./apps/frontend
-      dockerfile: Dockerfile
-      target: development
-    container_name: enose-frontend
-    volumes:
-      - ./apps/frontend:/app
-      - /app/node_modules
-      - /app/.react-router
-    environment:
-      VITE_API_URL: http://localhost:8080
-    ports:
-      - "${FRONTEND_PORT:-5173}:5173"
     depends_on:
       - backend
 
   parser:
-    build:
-      context: ./apps/parser
-      dockerfile: Dockerfile
-    container_name: enose-parser
-    restart: unless-stopped
-    env_file:
-      - .env
-    ports:
-      - "${PARSER_PORT:-8001}:8001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
+      interval: 15s
       timeout: 5s
       retries: 3
 
   report:
-    build:
-      context: ./apps/report
-      dockerfile: Dockerfile
-    container_name: enose-report
-    restart: unless-stopped
-    env_file:
-      - .env
-    ports:
-      - "${REPORT_PORT:-8002}:8002"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
-      interval: 30s
+      interval: 15s
       timeout: 5s
       retries: 3
 
   ml:
-    build:
-      context: ./apps/ml
-      dockerfile: Dockerfile
-    container_name: enose-ml
-    restart: unless-stopped
-    env_file:
-      - .env
-    ports:
-      - "${ML_PORT:-8003}:8003"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
-      interval: 30s
+      interval: 15s
       timeout: 5s
       retries: 3
 
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.101.0
+    command:
+      - "-promscrape.config=/prometheus.yml"
+      - "-retentionPeriod=14d"
+    volumes:
+      - ./infra/victoriametrics/prometheus.yml:/prometheus.yml:ro
+      - vm_data:/victoria-metrics-data
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    depends_on:
+      - victoriametrics
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+
 volumes:
   postgres_data:
+  vm_data:
+    name: enose-core_vm_data
+  grafana_data:
+    name: enose-core_grafana_data

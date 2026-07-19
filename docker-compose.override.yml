@@ -1,0 +1,89 @@
+services:
+  postgres:
+    container_name: enose-postgres
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: enose-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - ./infra/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  migrate:
+    container_name: enose-migrate
+
+  backend:
+    build:
+      context: ./apps/backend
+      target: development
+    container_name: enose-backend
+    volumes:
+      - ./apps/backend:/app
+      - /app/tmp
+    env_file:
+      - .env
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      target: development
+    container_name: enose-frontend
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+      - /app/.react-router
+    environment:
+      VITE_API_URL: http://localhost:8080
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+
+  parser:
+    build:
+      context: ./apps/parser
+    container_name: enose-parser
+    env_file:
+      - .env
+    ports:
+      - "${PARSER_PORT:-8001}:8001"
+
+  report:
+    build:
+      context: ./apps/report
+    container_name: enose-report
+    env_file:
+      - .env
+    ports:
+      - "${REPORT_PORT:-8002}:8002"
+
+  ml:
+    build:
+      context: ./apps/ml
+    container_name: enose-ml
+    env_file:
+      - .env
+    ports:
+      - "${ML_PORT:-8003}:8003"
+
+  victoriametrics:
+    container_name: enose-victoriametrics
+    ports:
+      - "8428:8428"
+
+  grafana:
+    container_name: enose-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin

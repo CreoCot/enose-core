@@ -36,7 +36,6 @@ apps/ml/data/
 
 # Infra / Local env
 .env
-docker-compose.override.yml
 .task
 .ansible
 
