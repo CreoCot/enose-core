@@ -9,10 +9,13 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
   const username = formData.get("username") as string;
   const password = formData.get("password") as string;
+  const rememberMe = formData.get("remember_me") !== null;
   try {
     await api.post("/api/v1/auth/login", {
       username,
       password,
+      remember_me: rememberMe,
+      
     });
     return redirect("/data");
   } catch (error) {
@@ -87,15 +90,14 @@ const login = () => {
                 Зарегистрируйтесь
               </Link>
             </div>
-            {/* "Remember me" — not implemented on the frontend yet, hidden until #115 */}
-            {/* <div className="flex gap-2 text-grey-600">
+            <div className="flex gap-2 text-grey-600">
               <input
-                className="bg-white cursor-not-allowed"
+                className="bg-white disabled:cursor-not-allowed"
+                name="remember_me"
                 type="checkbox"
-                disabled
               />
               Запомнить меня
-            </div> */}
+            </div>
 
             <motion.button
               onClick={() => setError(null)}
