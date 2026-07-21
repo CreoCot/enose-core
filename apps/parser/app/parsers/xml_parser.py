@@ -37,10 +37,24 @@ def parse_xml(content: bytes) -> ParsedMeasurement:
     if not start_str:
         raise ValueError("В XML отсутствует тег <start>")
 
-    try:
-        start_time = datetime.strptime(start_str, "%d.%m.%Y %H:%M:%S")
-    except ValueError as e:
-        raise ValueError(f"Некорректный формат времени <start>: {start_str}") from e
+    time_formats = [
+        "%d.%m.%Y %H:%M:%S",
+        "%m/%d/%Y %I:%M:%S %p",
+    ]
+
+    start_time = None
+    for fmt in time_formats:
+        try:
+            start_time = datetime.strptime(start_str, fmt)
+            break
+        except ValueError:
+            continue
+
+    if start_time is None:
+        raise ValueError(
+            f"Некорректный формат времени <start>: '{start_str}'. "
+            f"Ожидался один из форматов: {time_formats}"
+        )
 
     device_serial = "MAG8-LEGACY"
     device_type_code = "MAG8"

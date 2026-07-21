@@ -46,7 +46,7 @@ async def parse_measurement_file(
             parsed: ParsedMeasurement = parse_csv(content)
         elif ext == ".xml":
             parsed: ParsedMeasurement = parse_xml(content)
-        elif ext == ".xlsx":
+        elif ext in (".xlsx", ".xls"):
             parsed: ParsedMeasurement = parse_xlsx(content)
         else:
             raise HTTPException(400, f"Неподдерживаемый формат файла: {ext}")

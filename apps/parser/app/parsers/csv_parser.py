@@ -4,80 +4,118 @@ import csv
 import io
 from datetime import datetime
 
-# ИЗМЕНЕНО: Локальные импорты
 from .common import finalize
 from ..schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
 
-REQUIRED_META = ("device_serial", "device_type", "name", "start_time", "interval_ms")
-
 
 def parse_csv(content: bytes) -> ParsedMeasurement:
-    text = content.decode("utf-8-sig")
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = content.decode("windows-1251")
+
+    lines = text.splitlines()
     meta: dict[str, str] = {}
-    data_lines: list[str] = []
+    idx = 0
 
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped:
+    while idx < len(lines):
+        line = lines[idx].strip()
+        if not line:
+            idx += 1
             continue
-        if stripped.startswith("#"):
-            key_value = stripped.lstrip("#").strip()
-            if ":" in key_value:
-                key, value = key_value.split(":", 1)
-                meta[key.strip().lower()] = value.strip()
-        else:
-            data_lines.append(line)
+        if line.startswith("Sensors;"):
+            break
+        if ";" in line:
+            key, value = line.split(";", 1)
+            meta[key.strip().lower()] = value.strip()
+        idx += 1
 
-    missing = [k for k in REQUIRED_META if k not in meta]
-    if missing:
-        raise ValueError(
-            f"В CSV отсутствуют обязательные метаданные: {', '.join(missing)}"
-        )
+    sensors_line = None
+    units_line = None
 
-    if not data_lines:
-        raise ValueError("В CSV нет строк с данными")
+    while idx < len(lines):
+        line = lines[idx].strip()
+        if line.startswith("Sensors;"):
+            sensors_line = line
+        elif line.startswith("Time;"):
+            units_line = line
+            idx += 1
+            break
+        idx += 1
 
-    unit = meta.get("unit", "Hz")
+    if not sensors_line:
+        raise ValueError("В CSV не найдена строка с сенсорами ('Sensors;')")
 
-    reader = csv.reader(io.StringIO("\n".join(data_lines)))
-    header = next(reader)
-    sensor_labels = [h.strip() for h in header[1:]]
+    sensor_labels = [s.strip() for s in sensors_line.split(";")[1:]]
     if not sensor_labels:
         raise ValueError("В CSV не найдено ни одной колонки сенсоров")
 
-    sensors = [
-        ParsedSensor(position=i + 1, label=label, unit=unit)
-        for i, label in enumerate(sensor_labels)
-    ]
+    units = []
+    if units_line:
+        units = [u.strip() for u in units_line.split(";")[1:]]
+    else:
+        units = ["Hz"] * len(sensor_labels)
+
+    sensors = []
+    for i, (label, unit) in enumerate(zip(sensor_labels, units)):
+        if unit == "?F":
+            unit = "ΔF"
+        sensors.append(ParsedSensor(position=i + 1, label=label, unit=unit))
 
     data_points: list[ParsedDataPoint] = []
-    for row_num, row in enumerate(reader, start=2):
+    times: list[float] = []
+    
+    reader = csv.reader(lines[idx:], delimiter=";")
+    for row_num, row in enumerate(reader, start=idx + 1):
         if not row or all(not c.strip() for c in row):
             continue
-        if len(row) != len(header):
-            raise ValueError(
-                f"Строка {row_num}: ожидалось {len(header)} колонок, получено {len(row)}"
-            )
-
-        time_offset_s = float(row[0])
+            
+        try:
+            time_offset_s = float(row[0].replace(",", "."))
+            times.append(time_offset_s)
+        except ValueError:
+            continue
+            
         for i, raw_value in enumerate(row[1:]):
-            data_points.append(
-                ParsedDataPoint(
-                    time_offset_s=time_offset_s,
-                    sensor_position=i + 1,
-                    value=float(raw_value),
+            if not raw_value.strip():
+                continue
+            try:
+                val = float(raw_value.replace(",", "."))
+                data_points.append(
+                    ParsedDataPoint(
+                        time_offset_s=time_offset_s,
+                        sensor_position=i + 1,
+                        value=val,
+                    )
                 )
-            )
+            except ValueError:
+                pass
+
+    if not data_points:
+        raise ValueError("В CSV нет корректных строк с данными")
+
+    interval_ms = 1000
+    if len(times) >= 2:
+        interval_ms = int(round(abs(times[1] - times[0]) * 1000))
+
+    start_time_str = meta.get("start")
+    start_time = datetime.now()
+    if start_time_str:
+        try:
+            start_time = datetime.strptime(start_time_str, "%m/%d/%Y %I:%M:%S %p")
+        except ValueError:
+            pass
 
     parsed = ParsedMeasurement(
-        device_serial=meta["device_serial"],
-        device_type_code=meta["device_type"].upper(),
-        measurement_name=meta["name"],
+        device_serial=meta.get("device_serial", "UNKNOWN"),
+        device_type_code=meta.get("device_type", "UNKNOWN"),
+        measurement_name=meta.get("title", "Unknown"),
         measurement_object=meta.get("object"),
-        start_time=datetime.fromisoformat(meta["start_time"]),
-        interval_ms=int(meta["interval_ms"]),
-        description=meta.get("description"),
+        start_time=start_time,
+        interval_ms=interval_ms,
+        description=f"Duration: {meta.get('duration', 'N/A')}s, Type: {meta.get('type', 'N/A')}",
         sensors=sensors,
         data_points=data_points,
     )
+    
     return finalize(parsed)
