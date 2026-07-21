@@ -9,6 +9,7 @@ import { isAxiosError } from "axios";
 import type { Route } from "./+types/file";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import { Link, useLoaderData } from "react-router";
+import SensorSummary from "~/components/SensorSummary";
 
 const tableIcon = (
   <svg
@@ -152,6 +153,36 @@ const selectedMaxRadarIcon = (
     />
   </svg>
 );
+const summaryIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="size-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+    />
+  </svg>
+);
+const selectedSummaryIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className="size-6"
+  >
+    <path
+      fillRule="evenodd"
+      d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 0 1 .67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 1 1-.671-1.34l.041-.022ZM12 9a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const fileId = Number(params.fileId);
@@ -181,7 +212,13 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   }
   let plots: number[][] = [],
     plotTimestamps: number[] = [],
-    plotError: string = "";
+    plotError: string = "",
+    summaryData: {
+      baseFrequency: number;
+      minDelta: [number, number];
+      maxDelta: [number, number];
+      absMax: [number, number];
+    }[] = [];
   try {
     const plotResponse = await axios.get(`/api/v1/plots/${fileId}`);
     if (
@@ -203,6 +240,35 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     plots = plots.map((item) => {
       return item.slice(1, item.length);
     });
+    for (let i = 0; i < plots.length; i++) {
+      let mx = -Infinity,
+        mxel: [number, number] = [0, 0],
+        mn = Infinity,
+        mnel: [number, number] = [0, 0],
+        absmx = -Infinity,
+        absmxel: [number, number] = [0, 0];
+      for (let j = 0; j < plots[i].length; j++) {
+        if (plots[i][j] > mx) {
+          mx = plots[i][j];
+          mxel = [j, mx];
+        }
+        if (plots[i][j] < mn) {
+          console.log(plots[i][j]);
+          mn = plots[i][j];
+          mnel = [j, mn];
+        }
+        if (Math.abs(plots[i][j]) > absmx) {
+          absmx = Math.abs(plots[i][j]);
+          absmxel = [j, absmx];
+        }
+      }
+      summaryData.push({
+        baseFrequency: plots[i][0],
+        minDelta: mnel,
+        maxDelta: mxel,
+        absMax: absmxel,
+      });
+    }
 
     if (sensorSize === 0) sensorSize = plotResponse.data.size;
   } catch (error) {
@@ -225,6 +291,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     plots,
     plotTimestamps,
     plotError,
+    summaryData,
     fileId,
   };
 }
@@ -352,6 +419,7 @@ const file = () => {
     plots = [],
     plotTimestamps = [],
     plotError = "",
+    summaryData = [],
     fileId = -1,
   } = loaderData || {};
   const [renderedPlotIds, setRenderedPlotIds] = useState<
@@ -375,12 +443,20 @@ const file = () => {
   const [downloadError, setDownloadError] = useState("");
   const icons = useMemo(() => {
     return [
-      [tableIcon, plotIcon, multiPlotIcon, maxRadarIcon, downloadIcon],
+      [
+        tableIcon,
+        plotIcon,
+        multiPlotIcon,
+        maxRadarIcon,
+        summaryIcon,
+        downloadIcon,
+      ],
       [
         selectedTableIcon,
         selectedPlotIcon,
         selectedMultiPlotIcon,
         selectedMaxRadarIcon,
+        selectedSummaryIcon,
         downloadIcon,
       ],
     ];
@@ -466,6 +542,16 @@ const file = () => {
         </motion.div>
       );
     }, [plots, plotError, sensorSize, renderedPlotIds]),
+    useMemo(() => {
+      return (
+        <SensorSummary
+          data={summaryData}
+          error={plotError}
+          renderedPlotIds={renderedPlotIds}
+          handleCheckboxClick={handleCheckboxClick}
+        />
+      );
+    }, [plots, plotError, sensorSize, renderedPlotIds]),
   ];
   return (
     <div className="w-full overflow-hidden bg-grey-50 pb-5">
@@ -545,6 +631,17 @@ const file = () => {
               </div>
             )}
           </div>
+          <button
+            className={`${
+              open === 0 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
+            onClick={() => setOpen(4)}
+          >
+            <div className="flex items-center gap-1">
+              {open === 0 ? icons[1][4] : icons[0][4]}
+              Сводная информация
+            </div>
+          </button>
           <div className="relative">
             <AnimatePresence mode="wait">
               {downloadError.length !== 0 && (
