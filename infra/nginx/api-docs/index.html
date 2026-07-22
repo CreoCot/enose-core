@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>enose-core — API docs</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"
+    />
+    <style>
+      body { margin: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+      window.onload = () => {
+        window.ui = SwaggerUIBundle({
+          urls: [
+            { url: "/swagger/doc.json", name: "Backend (Go, public API)" },
+            { url: "/api-docs/parser.json", name: "Parser (internal)" },
+            { url: "/api-docs/report.json", name: "Report (internal)" },
+            { url: "/api-docs/ml.json", name: "ML (internal)" },
+          ],
+          "urls.primaryName": "Backend (Go, public API)",
+          dom_id: "#swagger-ui",
+          presets: [SwaggerUIBundle.presets.apis],
+        });
+      };
+    </script>
+  </body>
+</html>

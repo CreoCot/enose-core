@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -21,7 +22,12 @@ type Config struct {
 	MLURL          string
 	MLAPI          string
 	JWTSecret      string
-	Database       DatabaseConfig
+	// EnableSwagger — независимый от Env флаг: показывать /swagger/*. Раньше
+	// был жёстко завязан на "cfg.Env != production", из-за чего на проде
+	// Swagger включался/выключался как случайный побочный эффект значения ENV
+	// (например, ENV=staging). Теперь это осознанное, явное решение.
+	EnableSwagger bool
+	Database      DatabaseConfig
 }
 
 type DatabaseConfig struct {
@@ -40,6 +46,21 @@ func getEnv(key, fallback string) string {
 
 	slog.Warn("CONFIG: default value used for", "key", key, "fallback", fallback)
 	return fallback
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	val := os.Getenv(key)
+	if val == "" {
+		slog.Warn("CONFIG: default value used for", "key", key, "fallback", fallback)
+		return fallback
+	}
+
+	parsed, err := strconv.ParseBool(val)
+	if err != nil {
+		slog.Warn("CONFIG: invalid bool value, using fallback", "key", key, "value", val, "fallback", fallback)
+		return fallback
+	}
+	return parsed
 }
 
 // loadDotEnv loads the given .env file into the process environment without
@@ -71,9 +92,11 @@ func NewConfig() (*Config, error) {
 		origins = append(origins, strings.TrimSpace(o))
 	}
 
+	env := getEnv("ENV", "development")
+
 	cfg := &Config{
 		Port:           getEnv("PORT", "8080"),
-		Env:            getEnv("ENV", "development"),
+		Env:            env,
 		AllowedOrigins: origins,
 		ParserURL:      getEnv("PARSER_URL", "http://localhost:8001"),
 		ParserAPI:      getEnv("PARSER_API_KEY", "nothing"),
@@ -82,6 +105,9 @@ func NewConfig() (*Config, error) {
 		MLURL:          getEnv("ML_URL", "http://localhost:8003"),
 		MLAPI:          getEnv("ML_API_KEY", "example_api_key"),
 		JWTSecret:      getEnv("JWT_SECRET", "change-me-in-production"),
+		// Дефолт сохраняет прежнее поведение (скрыт только в "чистом" production),
+		// но ENABLE_SWAGGER всегда может явно переопределить его в любую сторону.
+		EnableSwagger: getEnvBool("ENABLE_SWAGGER", env != "production"),
 		Database: DatabaseConfig{
 			Host:     getEnv("DATABASE_HOST", "localhost"),
 			Port:     getEnv("DATABASE_PORT", "5432"),
