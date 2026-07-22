@@ -1,28 +1,25 @@
 import { LineChart } from "@mui/x-charts";
 import { hsla } from "motion/react";
 import React, { useMemo, useState } from "react";
+import SensorList from "./SensorList";
 
 interface Props {
   timestamps: number[];
   sensorData: number[][];
   sensorSize: number;
   error: string;
+  renderedPlotIds: Record<string, boolean>;
+  handleCheckboxClick: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const MultiPlot = ({ timestamps, sensorData, sensorSize, error }: Props) => {
-  const [renderedPlotIds, setRenderedPlotIds] = useState<
-    Record<string, boolean>
-  >(() =>
-    Object.fromEntries(
-      Array.from({ length: sensorSize }, (_, i) => [i.toString(), false]),
-    ),
-  );
-  const handleCheckboxClick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRenderedPlotIds((prev) => ({
-      ...prev,
-      [e.target.id]: e.target.checked,
-    }));
-  };
+const MultiPlot = ({
+  timestamps,
+  sensorData,
+  sensorSize,
+  error,
+  renderedPlotIds,
+  handleCheckboxClick,
+}: Props) => {
   const generateColors = (count: number): string[] => {
     const colors: string[] = [];
     for (let i = 0; i < count; i++) {
@@ -68,20 +65,12 @@ const MultiPlot = ({ timestamps, sensorData, sensorSize, error }: Props) => {
         </div>
       )}
       {error.length === 0 && (
-        <div className="flex bg-grey-100 md:mx-8 my-4 rounded-[10px] shadow-md shadow-accent-200 border border-accent-300">
-          <div className="flex flex-col justify-between p-5 lg:p-6 gap-6">
-            {Array.from({ length: sensorSize }, (_, i) => (
-              <div className="text-grey-800 font-semibold text-lg lg:gap-2 flex">
-                <input
-                  type="checkbox"
-                  onChange={handleCheckboxClick}
-                  key={`checkbox_${i + 1}`}
-                  id={`${i}`}
-                />
-                <span className="hidden sm:flex">Сенсор {i + 1}</span>
-              </div>
-            ))}
-          </div>
+        <div className="flex bg-grey-100 md:mx-8 my-4 lg:py-5 px-4 md:px-5 2xl:px-6 rounded-[10px] shadow-md shadow-accent-200 border border-accent-300">
+          <SensorList
+            renderedPlotIds={renderedPlotIds}
+            handleCheckboxClick={handleCheckboxClick}
+          />
+          <div className=""></div>
           {plots}
         </div>
       )}

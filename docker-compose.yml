@@ -43,8 +43,8 @@ services:
         condition: service_healthy
       report:
         condition: service_healthy
-      ml:
-        condition: service_healthy
+      # ml:
+      #   condition: service_healthy
 
   frontend:
     depends_on:

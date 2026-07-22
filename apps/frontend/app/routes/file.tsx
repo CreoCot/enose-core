@@ -8,7 +8,7 @@ import axios from "../axios";
 import { isAxiosError } from "axios";
 import type { Route } from "./+types/file";
 import { AnimatePresence, motion, type Variants } from "motion/react";
-import { Link } from "react-router";
+import { Link, useLoaderData } from "react-router";
 
 const tableIcon = (
   <svg
@@ -197,7 +197,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
     for (let i = 0; i < plots.length; i++) {
       for (let j = 1; j < plots[i].length; j++) {
-        plots[i][j] -= plots[i][0];
+        plots[i][j] = plots[i][0] - plots[i][j];
       }
     }
     plots = plots.map((item) => {
@@ -343,7 +343,8 @@ const handleDownload = async (
   }
 };
 
-const file = ({ loaderData }: Route.ComponentProps) => {
+const file = () => {
+  const loaderData = useLoaderData<Awaited<ReturnType<typeof clientLoader>>>();
   const {
     sensorSize = 0,
     table = [],
@@ -353,6 +354,23 @@ const file = ({ loaderData }: Route.ComponentProps) => {
     plotError = "",
     fileId = -1,
   } = loaderData || {};
+  const [renderedPlotIds, setRenderedPlotIds] = useState<
+    Record<string, boolean>
+  >(() =>
+    Object.fromEntries(
+      Array.from({ length: sensorSize }, (_, i) => [i.toString(), false]),
+    ),
+  );
+  const renderedLength = Object.entries(renderedPlotIds).filter(
+    ([_, v]) => v === true,
+  ).length;
+  const handleCheckboxClick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRenderedPlotIds((prev) => ({
+      ...prev,
+      [e.target.id]: e.target.checked,
+    }));
+  };
+
   const [open, setOpen] = useState(1);
   const [downloadError, setDownloadError] = useState("");
   const icons = useMemo(() => {
@@ -381,10 +399,12 @@ const file = ({ loaderData }: Route.ComponentProps) => {
             table={table}
             sensorSize={sensorSize}
             error={tableError}
+            renderedPlotIds={renderedPlotIds}
+            handleCheckboxClick={handleCheckboxClick}
           />
         </motion.div>
       );
-    }, [table, tableError, sensorSize]),
+    }, [table, tableError, sensorSize, renderedPlotIds]),
     useMemo(() => {
       return (
         <motion.div
@@ -399,10 +419,12 @@ const file = ({ loaderData }: Route.ComponentProps) => {
             timestamps={plotTimestamps}
             sensorSize={sensorSize}
             error={plotError}
+            renderedPlotIds={renderedPlotIds}
+            handleCheckboxClick={handleCheckboxClick}
           />
         </motion.div>
       );
-    }, [plots, plotTimestamps, plotError, sensorSize]),
+    }, [plots, plotTimestamps, plotError, sensorSize, renderedPlotIds]),
     useMemo(() => {
       return (
         <motion.div
@@ -417,10 +439,12 @@ const file = ({ loaderData }: Route.ComponentProps) => {
             sensorData={plots}
             sensorSize={sensorSize}
             error={plotError}
+            renderedPlotIds={renderedPlotIds}
+            handleCheckboxClick={handleCheckboxClick}
           />
         </motion.div>
       );
-    }, [plots, plotTimestamps, plotError, sensorSize]),
+    }, [plots, plotTimestamps, plotError, sensorSize, renderedPlotIds]),
     useMemo(() => {
       const maxArray = plots.map((item) => Math.max(...item));
       return (
@@ -435,12 +459,14 @@ const file = ({ loaderData }: Route.ComponentProps) => {
             maxArray={maxArray}
             sensorSize={sensorSize}
             error={plotError}
+            renderedPlotIds={renderedPlotIds}
+            handleCheckboxClick={handleCheckboxClick}
+            handleLessThanTwo={() => setOpen(0)}
           />
         </motion.div>
       );
-    }, [plots, plotError, sensorSize]),
+    }, [plots, plotError, sensorSize, renderedPlotIds]),
   ];
-
   return (
     <div className="w-full overflow-hidden bg-grey-50 pb-5">
       <Head>{`Запись №${fileId}`}</Head>
@@ -500,17 +526,25 @@ const file = ({ loaderData }: Route.ComponentProps) => {
               Таблица
             </div>
           </button>
-          <button
-            className={`${
-              open === 3 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
-            onClick={() => setOpen(3)}
-          >
-            <div className="flex items-center gap-1">
-              {open === 3 ? icons[1][3] : icons[0][3]}
-              Максимумы
-            </div>
-          </button>
+          <div className="relative group">
+            <button
+              className={`${
+                open === 3 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              } hover:bg-grey-200 relative hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 disabled:cursor-not-allowed disabled:outline disabled:outline-red-600`}
+              onClick={() => setOpen(3)}
+              disabled={renderedLength <= 2}
+            >
+              <div className="flex items-center gap-1">
+                {open === 3 ? icons[1][3] : icons[0][3]}
+                Максимумы
+              </div>
+            </button>
+            {renderedLength <= 2 && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-100 text-red-800 border border-red-800 rounded-[10px] text-base whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                Нужно выбрать минимум 3 сенсора
+              </div>
+            )}
+          </div>
           <div className="relative">
             <AnimatePresence mode="wait">
               {downloadError.length !== 0 && (
@@ -519,7 +553,7 @@ const file = ({ loaderData }: Route.ComponentProps) => {
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: -20, opacity: 0 }}
                   transition={{ duration: 0.15, ease: "easeIn" }}
-                  className="absolute my-2 -top-1/2 rounded-[15px] p-2 right-1/2 translate-x-1/2 -translate-y-full text-lg text-red-600 bg-red-100 border border-red-800 w-max"
+                  className="absolute my-2 -top-1/2 rounded-[15px] p-2 right-1/2 translate-x-1/2 -translate-y-full text-lg text-red-800 bg-red-100 border border-red-800 w-max"
                 >
                   {downloadError}
                   <button
@@ -538,7 +572,7 @@ const file = ({ loaderData }: Route.ComponentProps) => {
                 handleDownload(fileId, setDownloadError);
               }}
               className={`bg-grey-600 hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 ${
-                downloadError.length !== 0 ? "outline outline-red-700" : ""
+                downloadError.length !== 0 ? "outline outline-red-600" : ""
               }`}
             >
               <div className="flex items-center gap-1">
@@ -548,7 +582,14 @@ const file = ({ loaderData }: Route.ComponentProps) => {
             </button>
           </div>
         </div>
-        <AnimatePresence mode="wait">{items[open]}</AnimatePresence>
+        <div>
+          <div className="flex">
+            <div className="flex flex-col"></div>
+            <div className="w-full">
+              <AnimatePresence mode="wait">{items[open]}</AnimatePresence>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
