@@ -26,4 +26,4 @@ tasks:
     cmds:
       - |
         printf "\n\033[1;97;45m TS \033[0m \033[1;35mFrontend Suite\033[0m\n\n"
-        npm run test -- --coverage --coverageReporters="text"
+        npm run test -- --coverage --coverage.reporter="text"

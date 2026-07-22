@@ -22,18 +22,16 @@ docker compose up --build
 
 `docker-compose.yml` is the shared base; `docker-compose.override.yml` is auto-merged for local dev (build from source, bind-mounted hot reload). Production uses `docker-compose.prod.yml` instead (pinned images, no bind mounts) — see `deploy.yml`.
 
-> ⚠️ `task start`/`task stop` currently don't do this (see [known issues](#known-issues)) — use `docker compose up --build` / `docker compose down` directly for now.
-
-| Service     | URL                            |
-| ----------- | ------------------------------- |
-| Frontend    | http://localhost:5173           |
-| Backend API | http://localhost:8080           |
+| Service     | URL                                      |
+| ----------- | ---------------------------------------- |
+| Frontend    | http://localhost:5173                    |
+| Backend API | http://localhost:8080                    |
 | Swagger UI  | http://localhost:8080/swagger/index.html |
-| Parser      | http://localhost:8001           |
-| Report      | http://localhost:8002           |
-| ML          | http://localhost:8003           |
-| pgAdmin     | http://localhost:5050            |
-| Grafana     | http://localhost:3000            |
+| Parser      | http://localhost:8001                    |
+| Report      | http://localhost:8002                    |
+| ML          | http://localhost:8003                    |
+| pgAdmin     | http://localhost:5050                    |
+| Grafana     | http://localhost:3000                    |
 
 **Local dev without Docker:** `task backend:run`, `task frontend:run`, `task report:run`. The ML service has no `run` task yet — start it with `cd apps/ml && uv run uvicorn app.main:app --port 8003`.
 
@@ -49,19 +47,19 @@ docker compose up --build
 
 ### Key endpoints (`/api/v1`)
 
-| Method | Path             | Auth | Description                                       |
-| ------ | ---------------- | ---- | -------------------------------------------------- |
-| POST   | `/auth/register` | —    | Register a user                                    |
-| POST   | `/auth/login`    | —    | Login (httpOnly JWT cookie; `remember_me` issues a refresh token) |
-| POST   | `/auth/refresh`  | —    | Rotate refresh token → new access token             |
-| POST   | `/auth/logout`   | —    | Logout, revokes refresh token                       |
-| GET    | `/auth/me`       | JWT  | Current user + profile                              |
-| GET    | `/entries`       | JWT  | List measurements (admin: all, operator: own)       |
-| POST   | `/upload`        | JWT  | Upload a measurement file (CSV/XML/XLSX)            |
-| DELETE | `/delete/:id`    | JWT  | Delete a measurement                                |
-| GET    | `/table/:id`, `/plots/:id` | JWT | Table / time-series view                    |
-| GET    | `/report/:id`    | JWT  | Generate a PDF report (proxies the report service)  |
-| GET    | `/features/:id`  | JWT  | Sensor curve features (proxies the ML service)      |
+| Method | Path                       | Auth | Description                                                       |
+| ------ | -------------------------- | ---- | ----------------------------------------------------------------- |
+| POST   | `/auth/register`           | —    | Register a user                                                   |
+| POST   | `/auth/login`              | —    | Login (httpOnly JWT cookie; `remember_me` issues a refresh token) |
+| POST   | `/auth/refresh`            | —    | Rotate refresh token → new access token                           |
+| POST   | `/auth/logout`             | —    | Logout, revokes refresh token                                     |
+| GET    | `/auth/me`                 | JWT  | Current user + profile                                            |
+| GET    | `/entries`                 | JWT  | List measurements (admin: all, operator: own)                     |
+| POST   | `/upload`                  | JWT  | Upload a measurement file (CSV/XML/XLSX)                          |
+| DELETE | `/delete/:id`              | JWT  | Delete a measurement                                              |
+| GET    | `/table/:id`, `/plots/:id` | JWT  | Table / time-series view                                          |
+| GET    | `/report/:id`              | JWT  | Generate a PDF report (proxies the report service)                |
+| GET    | `/features/:id`            | JWT  | Sensor curve features (proxies the ML service)                    |
 
 The backend is the only service with DB access; parser/report/ML are stateless and called internally over HTTP with an `X-API-Key`.
 
@@ -132,15 +130,10 @@ enose-core/
 
 ---
 
-## Known Issues
-
-- **`task start` / `task stop` are broken** — their `cmds:` don't run `docker compose up`/`down` at all (they curl `/auth/login`, likely a bad merge). Use `docker compose up --build` / `docker compose down` directly until fixed.
-
----
-
 ## Troubleshooting
 
 **`connection refused` when the backend calls parser/report/ml:** the backend caches env vars at container creation. After editing `.env`, `docker compose restart` is not enough — recreate the container:
+
 ```bash
 docker compose up -d --force-recreate backend
 ```
@@ -148,6 +141,7 @@ docker compose up -d --force-recreate backend
 **Port already in use:** change the port in root `.env` (e.g. `BACKEND_PORT=8081`), then `docker compose down && docker compose up --build`.
 
 **Database connection failed:**
+
 ```bash
 docker exec -i enose-postgres psql -U postgres -d enose -c "SELECT 1"
 ```
