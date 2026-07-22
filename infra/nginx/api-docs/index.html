@@ -14,6 +14,7 @@
   <body>
     <div id="swagger-ui"></div>
     <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
     <script>
       window.onload = () => {
         window.ui = SwaggerUIBundle({
@@ -25,7 +26,13 @@
           ],
           "urls.primaryName": "Backend (Go, public API)",
           dom_id: "#swagger-ui",
-          presets: [SwaggerUIBundle.presets.apis],
+          deepLinking: true,
+          // Дропдаун-переключатель между несколькими urls рендерится только
+          // StandaloneLayout — без него SwaggerUIBundle не знает, какую из
+          // спек показать по умолчанию, и рисует "No API definition provided."
+          presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+          plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+          layout: "StandaloneLayout",
         });
       };
     </script>
