@@ -26,12 +26,12 @@ const Plots = ({
         </div>
       )}
       {error.length === 0 && (
-        <div className="flex bg-grey-100 md:mx-8 my-4 rounded-[10px] shadow-md shadow-accent-200 border border-accent-300 lg:py-5 px-4 md:px-5 2xl:px-6">
+        <div className="flex gap-5 bg-grey-100 md:mx-8 my-4 rounded-[10px] shadow-md shadow-accent-200 border border-accent-300 lg:py-5 px-4 md:px-5 2xl:px-6">
           <SensorList
             renderedPlotIds={renderedPlotIds}
             handleCheckboxClick={handleCheckboxClick}
           />
-          <div className="w-full grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-x-8 px-2 gap-y-6 py-6">
+          <div className="w-full grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-x-8 px-2 gap-y-6 py-4">
             {Array.from({ length: sensorSize }, (_, i) => {
               if (renderedPlotIds[i])
                 return (

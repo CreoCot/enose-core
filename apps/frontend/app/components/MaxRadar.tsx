@@ -63,7 +63,7 @@ const MaxRadar = ({
           />
           <RadarChart
             colors={[plotColor]}
-            className="m-8 rounded-[10px] shadow-sm shadow-primary-200 border border-primary-200"
+            className="mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border border-primary-200"
             height={768}
             series={[{ data: renderedArray, fillArea: true }]}
             radar={{

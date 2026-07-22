@@ -5,11 +5,11 @@ interface Props {
 
 const SensorList = ({ renderedPlotIds, handleCheckboxClick }: Props) => {
   return (
-    <div className="flex flex-col justify-between p-5 lg:p-6 gap-6">
+    <div className="flex flex-col justify-between px-5 lg:px-6 ">
       {Object.entries(renderedPlotIds).map(([k, v], i) => (
         <div
           key={`SensorList_div_${i}`}
-          className="text-grey-800 font-semibold text-lg lg:gap-2 flex"
+          className="text-grey-800 font-semibold text-lg lg:gap-2 flex items-baseline py-4 h-full"
         >
           <input
             type="checkbox"
@@ -18,7 +18,7 @@ const SensorList = ({ renderedPlotIds, handleCheckboxClick }: Props) => {
             id={`${i}`}
             checked={renderedPlotIds[i]}
           />
-          <span className="hidden sm:flex">Сенсор {i + 1}</span>
+          <span className="hidden sm:flex text-nowrap">Сенсор {i + 1}</span>
         </div>
       ))}
     </div>

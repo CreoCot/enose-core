@@ -262,8 +262,9 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
           absmxel = [j, absmx];
         }
       }
+      console.log(table[1]);
       summaryData.push({
-        baseFrequency: plots[i][0],
+        baseFrequency: table[0][i + 1],
         minDelta: mnel,
         maxDelta: mxel,
         absMax: absmxel,
@@ -426,7 +427,7 @@ const file = () => {
     Record<string, boolean>
   >(() =>
     Object.fromEntries(
-      Array.from({ length: sensorSize }, (_, i) => [i.toString(), false]),
+      Array.from({ length: sensorSize }, (_, i) => [i.toString(), true]),
     ),
   );
   const renderedLength = Object.entries(renderedPlotIds).filter(
@@ -574,7 +575,6 @@ const file = () => {
             d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
           />
         </svg>
-
         <span>Назад</span>
       </Link>
       <div className="flex flex-col pt-3 text-xl lg:text-2xl px-6">
@@ -616,7 +616,7 @@ const file = () => {
             <button
               className={`${
                 open === 3 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-              } hover:bg-grey-200 relative hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 disabled:cursor-not-allowed disabled:outline disabled:outline-red-600`}
+              } hover:bg-grey-200 relative hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 disabled:cursor-not-allowed disabled:outline disabled:outline-red-600 w-full h-full`}
               onClick={() => setOpen(3)}
               disabled={renderedLength <= 2}
             >
@@ -633,46 +633,41 @@ const file = () => {
           </div>
           <button
             className={`${
-              open === 0 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              open === 4 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
             } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
             onClick={() => setOpen(4)}
           >
             <div className="flex items-center gap-1">
-              {open === 0 ? icons[1][4] : icons[0][4]}
+              {open === 4 ? icons[1][4] : icons[0][4]}
               Сводная информация
             </div>
           </button>
-          <div className="relative">
-            <AnimatePresence mode="wait">
-              {downloadError.length !== 0 && (
-                <motion.p
-                  initial={{ y: -20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -20, opacity: 0 }}
-                  transition={{ duration: 0.15, ease: "easeIn" }}
-                  className="absolute my-2 -top-1/2 rounded-[15px] p-2 right-1/2 translate-x-1/2 -translate-y-full text-lg text-red-800 bg-red-100 border border-red-800 w-max"
+          <div className="relative group">
+            {downloadError.length !== 0 && (
+              <motion.p
+                transition={{ duration: 0.15, ease: "easeIn" }}
+                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-base text-red-800 bg-red-100 border border-red-800 w-max rounded-[10px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
+              >
+                {downloadError}
+                <button
+                  className="text-grey-600 pl-2 font-light cursor-pointer"
+                  onClick={() => setDownloadError("")}
                 >
-                  {downloadError}
-                  <button
-                    className="text-grey-600 pl-2 font-light cursor-pointer"
-                    onClick={() => setDownloadError("")}
-                  >
-                    X
-                  </button>
-                </motion.p>
-              )}
-            </AnimatePresence>
+                  X
+                </button>
+              </motion.p>
+            )}
             <button
               id="download"
               onClick={() => {
                 setDownloadError("");
                 handleDownload(fileId, setDownloadError);
               }}
-              className={`bg-grey-600 hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 ${
+              className={`bg-grey-600 hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 w-full h-full ${
                 downloadError.length !== 0 ? "outline outline-red-600" : ""
               }`}
             >
-              <div className="flex items-center gap-1">
+              <div className="flex justify-center gap-1">
                 Отчет
                 {icons[0][icons[0].length - 1]}
               </div>
