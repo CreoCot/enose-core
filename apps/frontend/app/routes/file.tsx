@@ -523,7 +523,11 @@ const file = () => {
       );
     }, [plots, plotTimestamps, plotError, sensorSize, renderedPlotIds]),
     useMemo(() => {
-      const maxArray = plots.map((item) => Math.max(...item));
+      const maxArray = plots
+        .map((item) => {
+          return item.map((i) => Math.abs(i));
+        })
+        .map((item) => Math.max(...item));
       return (
         <motion.div
           key="maxRadar"
