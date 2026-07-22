@@ -53,3 +53,35 @@ func TestGetEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestEnableSwagger(t *testing.T) {
+	tests := []struct {
+		name          string
+		env           string
+		enableSwagger string // "" = unset, use default
+		want          bool
+	}{
+		{name: "production default hides swagger", env: "production", enableSwagger: "", want: false},
+		{name: "development default shows swagger", env: "development", enableSwagger: "", want: true},
+		{name: "explicit true overrides production default", env: "production", enableSwagger: "true", want: true},
+		{name: "explicit false overrides development default", env: "development", enableSwagger: "false", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("ENV", tt.env)
+			defer os.Unsetenv("ENV")
+
+			if tt.enableSwagger == "" {
+				os.Unsetenv("ENABLE_SWAGGER")
+			} else {
+				os.Setenv("ENABLE_SWAGGER", tt.enableSwagger)
+				defer os.Unsetenv("ENABLE_SWAGGER")
+			}
+
+			cfg, err := config.NewConfig()
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, cfg.EnableSwagger)
+		})
+	}
+}

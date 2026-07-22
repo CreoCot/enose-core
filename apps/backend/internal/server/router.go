@@ -26,7 +26,7 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 	r.Use(gin.Recovery())
 	r.Use(middleware.CORSConfig(cfg.AllowedOrigins))
 
-	if cfg.Env != "production" {
+	if cfg.EnableSwagger {
 		swaggerConfig := ginSwagger.Config{
 			URL:          "/swagger/doc.json",
 			DeepLinking:  true,

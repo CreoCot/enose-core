@@ -13,6 +13,7 @@ services:
     container_name: enose-backend-prod
     environment:
       ENV: staging
+      ENABLE_SWAGGER: "true"
       JWT_SECRET: enose-jwt-prod-secret-2025
       ALLOWED_ORIGINS: http://10.93.27.29
       PARSER_URL: http://parser:8001
@@ -74,6 +75,7 @@ services:
       - "80:80"
     volumes:
       - ./infra/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/nginx/api-docs:/usr/share/nginx/api-docs:ro
     depends_on:
       - frontend
       - backend
