@@ -15,7 +15,6 @@ interface Props {
 const MultiPlot = ({
   timestamps,
   sensorData,
-  sensorSize,
   error,
   renderedPlotIds,
   handleCheckboxClick,

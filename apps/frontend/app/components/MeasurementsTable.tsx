@@ -84,7 +84,7 @@ const MeasurementsTable = ({
         renderedPlotIds={renderedPlotIds}
         handleCheckboxClick={handleCheckboxClick}
       />
-      <div className="min-w-0  rounded-[10px] overflow-hidden border border-primary-200 m-4">
+      <div className="h-fit rounded-[10px] overflow-hidden border border-primary-200 m-4">
         <div className="flex overflow-x-auto overscroll-x-none">
           <Table className="w-full h-full table-auto border-collapse">
             <TableHeader>

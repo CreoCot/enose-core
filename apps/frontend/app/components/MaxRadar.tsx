@@ -56,14 +56,14 @@ const MaxRadar = ({
       )}
 
       {error.length === 0 && (
-        <div className="flex flex md:mx-8 my-4 bg-grey-100 lg:py-5 px-4 md:px-5 2xl:px-6 rounded-[10px] shadow-md shadow-primary-200 border border-primary-300">
+        <div className="flex md:mx-8 my-4 bg-grey-100 lg:py-5 px-4 md:px-5 2xl:px-6 rounded-[10px] shadow-md shadow-primary-200 border border-primary-300">
           <SensorList
             renderedPlotIds={renderedPlotIds}
             handleCheckboxClick={handleCheckboxClick}
           />
           <RadarChart
             colors={[plotColor]}
-            className="m-8 rounded-[10px] shadow-sm shadow-primary-200 border border-primary-200"
+            className="mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border border-primary-200"
             height={768}
             series={[{ data: renderedArray, fillArea: true }]}
             radar={{
