@@ -5,22 +5,22 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi>=0.139.2",
+    "fastapi>=0.141.1",
     "matplotlib>=3.11.1",
-    "numpy>=2.5.1",
-    "pandas>=3.0.3",
+    "numpy>=2.5.2",
+    "pandas>=3.0.5",
     "pytest-cov>=7.1.0",
     "scikit-learn>=1.9.0",
-    "scipy>=1.18.0",
+    "scipy>=1.18.1",
     "seaborn>=0.13.2",
-    "uvicorn[standard]>=0.51.0",
+    "uvicorn[standard]>=0.52.4",
 ]
 
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
     "jupyter>=1.1.1",
-    "nbformat>=5.10.4",
+    "nbformat>=5.11.1",
     "pytest>=9.1.1",
 ]
 
