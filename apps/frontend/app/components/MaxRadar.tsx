@@ -1,5 +1,5 @@
-import { RadarChart } from "@mui/x-charts/RadarChart";
-import { useEffect, useMemo } from "react";
+import { RadarAxis, RadarChart } from "@mui/x-charts/RadarChart";
+import { useEffect, useMemo, useState } from "react";
 import SensorList from "./SensorList";
 
 interface Props {
@@ -23,8 +23,8 @@ const MaxRadar = ({
     0,
     ...maxArray.filter((val) => typeof val === "number"),
   );
+  const [plotMax, setPlotMax] = useState(globalMax);
   const plotColor = "#4b4bc3";
-
   useEffect(() => {
     const activeCount = Object.values(renderedPlotIds).filter(Boolean).length;
     if (activeCount <= 2) {
@@ -46,7 +46,7 @@ const MaxRadar = ({
       Object.entries(truePlotIds).map(([k, _]) => `Сенсор ${Number(k) + 1}`),
     [truePlotIds],
   );
-
+  const firstMetric = metrics[0];
   return (
     <>
       {error.length !== 0 && (
@@ -62,15 +62,43 @@ const MaxRadar = ({
             handleCheckboxClick={handleCheckboxClick}
           />
           <RadarChart
+            key={metrics.length}
             colors={[plotColor]}
-            className="mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border border-primary-200"
-            height={768}
+            className="mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border-2 border-primary-200"
+            height={640}
             series={[{ data: renderedArray, fillArea: true }]}
             radar={{
-              max: globalMax,
+              max: plotMax,
               metrics: metrics,
             }}
-          />
+          >
+            <RadarAxis
+              metric={firstMetric}
+              divisions={plotMax / 2}
+              labelOrientation="horizontal"
+              angle={0}
+            />
+          </RadarChart>
+          <div className="flex flex-col justify-start p-5 h-full">
+            <div className="flex flex-col p-6 gap-5 border-2 border-primary-200 rounded-[10px] shadow-sm shadow-primary-200">
+              <p className="text-primary-800 font-semibold">Масштаб</p>
+              <div className="flex justify-between">
+                <button
+                  disabled={plotMax <= 4}
+                  onClick={() => setPlotMax((prev) => prev - prev / 10)}
+                  className="p-4 border border-primary-300 rounded-[10px] text-primary-600 cursor-pointer disabled:cursor-not-allowed disabled:border-primary-200"
+                >
+                  -
+                </button>
+                <button
+                  onClick={() => setPlotMax((prev) => prev + prev / 10)}
+                  className="p-4 border border-primary-300 rounded-[10px] text-primary-600 cursor-pointer"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </>
