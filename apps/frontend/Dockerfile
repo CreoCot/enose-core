@@ -38,6 +38,8 @@ USER node
 COPY --chown=node:node package.json package-lock.json* ./
 RUN npm ci --omit=dev --no-audit --no-fund
 
+RUN mkdir -p /app/.react-router/types && chown -R node:node /app/.react-router
+
 COPY --chown=node:node --from=builder /app/build ./build
 
 ENV NODE_ENV=production
