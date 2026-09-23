@@ -1,6 +1,7 @@
 import { RadarAxis, RadarChart } from "@mui/x-charts/RadarChart";
 import { useEffect, useMemo, useState } from "react";
 import SensorList from "./SensorList";
+import { radarArea } from "../lib/masks";
 
 interface Props {
   maxArray: number[];
@@ -42,6 +43,9 @@ const MaxRadar = ({
     const value = maxArray[Number(k)];
     return typeof value === "number" ? value : 0;
   });
+
+  // Площадь диаграммы по формуле MAG-soft; значения отсчитываются от минимума оси
+  const area = radarArea(renderedArray.map((v) => Math.max(0, v - plotMin)));
 
   const metrics = useMemo(
     () =>
@@ -126,6 +130,10 @@ const MaxRadar = ({
                   />
                 </label>
               </div>
+            </div>
+            <div className="mt-5 flex flex-col gap-1 rounded-[10px] border-2 border-primary-200 p-6 shadow-sm shadow-primary-200">
+              <p className="text-primary-800 font-semibold text-2xl">Площадь</p>
+              <p className="text-primary-700 text-xl">{area.toFixed(2)}</p>
             </div>
           </div>
         </div>

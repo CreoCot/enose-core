@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Head from "../components/Head";
 import MeasurementsTable from "../components/MeasurementsTable";
 import Plots from "../components/Plots";
@@ -10,6 +10,14 @@ import type { Route } from "./+types/file";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import { Link, useLoaderData } from "react-router";
 import SensorSummary from "~/components/SensorSummary";
+import MaskPicker from "~/components/MaskPicker";
+import {
+  applyMask,
+  maxDiagramValues,
+  summarizeMasked,
+  type Mask,
+} from "~/lib/masks";
+import { fetchDefaultMaskId, fetchMasks } from "~/lib/masksApi";
 
 const tableIcon = (
   <svg
@@ -283,6 +291,18 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
       plotError = "Что-то пошло не так";
     }
   }
+  // Маски необязательны: если API недоступен, страница работает без них.
+  let masks: Mask[] = [];
+  let defaultMaskId: number | null = null;
+  try {
+    [masks, defaultMaskId] = await Promise.all([
+      fetchMasks(),
+      fetchDefaultMaskId(fileId),
+    ]);
+  } catch {
+    masks = [];
+    defaultMaskId = null;
+  }
   return {
     sensorSize,
     table,
@@ -292,6 +312,8 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     plotError,
     summaryData,
     fileId,
+    masks,
+    defaultMaskId,
   };
 }
 const HydrationText = () => {
@@ -415,12 +437,47 @@ const file = () => {
     sensorSize = 0,
     table = [],
     tableError = "",
-    plots = [],
-    plotTimestamps = [],
+    plots: rawPlots = [],
+    plotTimestamps: rawTimestamps = [],
     plotError = "",
-    summaryData = [],
+    summaryData: rawSummary = [],
     fileId = -1,
+    masks = [],
+    defaultMaskId = null,
   } = loaderData || {};
+
+  // Маска времени (как в MAG-soft): графики, диаграмма максимумов и сводка
+  // считаются только по её точкам.
+  const initialMaskId = masks.some((m) => m.id === defaultMaskId)
+    ? defaultMaskId
+    : null;
+  const [maskList, setMaskList] = useState<Mask[]>(masks);
+  const [maskId, setMaskId] = useState<number | null>(initialMaskId);
+  const [savedMaskId, setSavedMaskId] = useState<number | null>(defaultMaskId);
+  useEffect(() => {
+    setMaskList(masks);
+    setMaskId(initialMaskId);
+    setSavedMaskId(defaultMaskId);
+  }, [fileId]);
+  const activeMask = maskList.find((m) => m.id === maskId) ?? null;
+  const { plots, plotTimestamps, summaryData } = useMemo(() => {
+    if (!activeMask) {
+      return {
+        plots: rawPlots,
+        plotTimestamps: rawTimestamps,
+        summaryData: rawSummary,
+      };
+    }
+    const masked = applyMask(rawPlots, activeMask.points);
+    return {
+      plots: masked.deltas,
+      plotTimestamps: masked.times,
+      summaryData: summarizeMasked(
+        rawSummary.map((s) => s.baseFrequency),
+        masked,
+      ),
+    };
+  }, [activeMask, rawPlots, rawTimestamps, rawSummary]);
   const [renderedPlotIds, setRenderedPlotIds] = useState<
     Record<string, boolean>
   >(() =>
@@ -521,11 +578,7 @@ const file = () => {
       );
     }, [plots, plotTimestamps, plotError, sensorSize, renderedPlotIds]),
     useMemo(() => {
-      const maxArray = plots
-        .map((item) => {
-          return item.map((i) => Math.abs(i));
-        })
-        .map((item) => Math.max(...item));
+      const maxArray = maxDiagramValues(plots);
       return (
         <motion.div
           key="maxRadar"
@@ -535,6 +588,7 @@ const file = () => {
           transition={{ duration: 0.15 }}
         >
           <MaxRadar
+            key={maskId ?? "no-mask"}
             maxArray={maxArray}
             sensorSize={sensorSize}
             error={plotError}
@@ -579,6 +633,15 @@ const file = () => {
         </svg>
         <span>Назад</span>
       </Link>
+      <MaskPicker
+        entryId={fileId}
+        masks={maskList}
+        selectedId={maskId}
+        defaultId={savedMaskId}
+        onSelect={setMaskId}
+        onMasksChange={setMaskList}
+        onDefaultChange={setSavedMaskId}
+      />
       <div className="flex flex-col pt-3 text-xl lg:text-2xl px-6">
         <div className="flex flex-col lg:flex-row w-fit bg-grey-600 justify-between gap-1 p-2 lg:p-1 rounded-[15px] lg:rounded-full sm:mx-7 text-grey-100">
           <button
