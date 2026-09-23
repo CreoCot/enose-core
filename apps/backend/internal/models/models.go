@@ -144,9 +144,22 @@ func (Device) TableName() string {
 }
 
 type Sensor struct {
-	ID          int     `gorm:"column:id;type:integer;primaryKey;autoIncrement"`
-	DeviceID    int     `gorm:"column:device_id;type:integer;not null;uniqueIndex:idx_sensors_device_position"`
-	Position    int     `gorm:"column:position;type:integer;not null;uniqueIndex:idx_sensors_device_position"`
+	ID       int `gorm:"column:id;type:integer;primaryKey;autoIncrement"`
+	DeviceID int `gorm:"column:device_id;type:integer;not null;index:idx_sensors_device_sid,priority:1"`
+	// Position — позиция (канал), на которой сенсор был впервые замечен.
+	// Информационное поле, НЕ идентичность: физический сенсор (см. SID)
+	// может занимать разные позиции в разных профилях/измерениях —
+	// авторитетная позиция для конкретного измерения хранится в
+	// MeasurementParameter.Position.
+	Position int `gorm:"column:position;type:integer;not null"`
+	// SID — физический идентификатор сенсора с устройства (аналог legacy
+	// Sensors.SID из MAG-soft), например "SID0001". Nullable: не все
+	// форматы/устройства его сообщают. Когда есть — это единственный
+	// надёжный ключ поиска "тот же физический сенсор"; см.
+	// idx_sensors_device_sid (частичный уникальный индекс WHERE sid IS NOT
+	// NULL, задан в миграции — GORM-тег ниже не уникальный, т.к. частичные
+	// индексы не выражаются тегами).
+	SID         *string `gorm:"column:sid;type:varchar(64);index:idx_sensors_device_sid,priority:2"`
 	Name        string  `gorm:"column:name;type:varchar(128);not null"`
 	CoatingID   *int    `gorm:"column:coating_id;type:integer"`
 	CellConfig  JSONB   `gorm:"column:cell_config;type:jsonb;not null;default:'{}'::jsonb"`

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 
 	"github.com/CreoCot/enose-core/backend/internal/models"
 	"github.com/CreoCot/enose-core/backend/internal/repository"
@@ -12,6 +13,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+// sidPattern вытаскивает физический идентификатор сенсора (SID) из ярлыка,
+// который присылает parser-сервис. Формат ярлыка отличается по источнику:
+// XML-парсер кладёт туда голый sid ("SID0001"), CSV/XLSX — "Название
+// [SID0001]". В обоих случаях сам токен ищется одинаково; не найден —
+// значит источник не сообщает SID, и резолвинг сенсора падает обратно на
+// позицию (см. saveToDB).
+var sidPattern = regexp.MustCompile(`SID[A-Za-z0-9_-]+`)
+
+func extractSID(label string) *string {
+	sid := sidPattern.FindString(label)
+	if sid == "" {
+		return nil
+	}
+	return &sid
+}
 
 type UploadHandler struct {
 	ParserClient *services.ParserClient
@@ -115,9 +132,23 @@ func (h *UploadHandler) saveToDB(ctx context.Context, parsed *services.ParsedMea
 
 	sensorIDs := make([]int, len(parsed.Sensors))
 	for i, ps := range parsed.Sensors {
-		sensor, err := h.Registry.Sensors.GetByDeviceAndPosition(ctx, device.ID, ps.Position)
+		sid := extractSID(ps.Label)
+
+		var sensor *models.Sensor
+		if sid != nil {
+			// SID — надёжная идентичность физического сенсора: один и тот же
+			// сенсор может занимать разные позиции в разных измерениях (см.
+			// комментарий к Sensor.SID в models.go), поэтому это первичный
+			// путь резолвинга, когда источник его сообщает.
+			sensor, err = h.Registry.Sensors.GetByDeviceAndSID(ctx, device.ID, *sid)
+		} else {
+			// Источник не сообщает SID (например, старый CSV без метки) —
+			// откатываемся к позиции, как раньше.
+			sensor, err = h.Registry.Sensors.GetByDeviceAndPosition(ctx, device.ID, ps.Position)
+		}
+
 		if err == gorm.ErrRecordNotFound {
-			sensor, err = h.Registry.Sensors.CreateForDevice(ctx, device.ID, ps.Position, ps.Label)
+			sensor, err = h.Registry.Sensors.CreateForDevice(ctx, device.ID, ps.Position, ps.Label, sid)
 			if err != nil {
 				return 0, err
 			}

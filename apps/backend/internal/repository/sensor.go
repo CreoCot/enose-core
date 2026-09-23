@@ -12,7 +12,11 @@ type SensorRepository interface {
 	GetOrCreateSensor(ctx context.Context, name string, coatingID *int) (*models.Sensor, error)
 	GetAllSensors(ctx context.Context) ([]models.Sensor, error)
 	GetByDeviceAndPosition(ctx context.Context, deviceID int, position int) (*models.Sensor, error)
-	CreateForDevice(ctx context.Context, deviceID int, position int, name string) (*models.Sensor, error)
+	// GetByDeviceAndSID ищет сенсор по его физическому идентификатору (SID)
+	// в рамках устройства — надёжный ключ идентичности, в отличие от
+	// позиции (см. комментарий к Sensor.SID в models.go).
+	GetByDeviceAndSID(ctx context.Context, deviceID int, sid string) (*models.Sensor, error)
+	CreateForDevice(ctx context.Context, deviceID int, position int, name string, sid *string) (*models.Sensor, error)
 }
 
 type sensorRepository struct {
@@ -67,11 +71,23 @@ func (r *sensorRepository) GetByDeviceAndPosition(ctx context.Context, deviceID 
 	return &s, nil
 }
 
-func (r *sensorRepository) CreateForDevice(ctx context.Context, deviceID int, position int, name string) (*models.Sensor, error) {
+func (r *sensorRepository) GetByDeviceAndSID(ctx context.Context, deviceID int, sid string) (*models.Sensor, error) {
+	var s models.Sensor
+	err := r.db.WithContext(ctx).
+		Where("device_id = ? AND sid = ?", deviceID, sid).
+		First(&s).Error
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (r *sensorRepository) CreateForDevice(ctx context.Context, deviceID int, position int, name string, sid *string) (*models.Sensor, error) {
 	s := models.Sensor{
 		DeviceID: deviceID,
 		Position: position,
 		Name:     name,
+		SID:      sid,
 	}
 	if err := r.db.WithContext(ctx).Create(&s).Error; err != nil {
 		return nil, err
