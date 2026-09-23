@@ -46,6 +46,7 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 
 	uploadHandler := handlers.NewUploadHandler(parser, reg)
 	measurementsHandler := handlers.NewMeasurementsHandler(reg, report, ml)
+	masksHandler := handlers.NewMasksHandler(reg)
 	authHandler := handlers.NewAuthHandler(authSvc, reg.Measurements, cfg.Env == "production")
 
 	v1 := r.Group("api/v1")
@@ -73,6 +74,12 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 			protected.GET("/plots", handlers.Plots)
 			protected.GET("/plots/:id", measurementsHandler.GetPlots)
 			protected.GET("/entries", measurementsHandler.GetAll)
+			protected.GET("/entries/:id", measurementsHandler.GetEntry)
+			protected.PUT("/entries/:id/mask", measurementsHandler.SetEntryMask)
+			protected.GET("/masks", masksHandler.List)
+			protected.POST("/masks", masksHandler.Create)
+			protected.PUT("/masks/:id", masksHandler.Update)
+			protected.DELETE("/masks/:id", masksHandler.Delete)
 			protected.GET("/report/:id", measurementsHandler.GetReport)
 			protected.GET("/features/:id", measurementsHandler.GetFeatures)
 			protected.DELETE("/delete/:id", measurementsHandler.Delete)

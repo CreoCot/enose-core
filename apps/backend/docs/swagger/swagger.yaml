@@ -1,5 +1,17 @@
 basePath: /
 definitions:
+  handlers.EntryDetails:
+    properties:
+      default_mask_id:
+        description: DefaultMaskID — маска по умолчанию (null, если не задана).
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      start_time:
+        type: string
+    type: object
   handlers.ErrorResponse:
     properties:
       error:
@@ -32,6 +44,40 @@ definitions:
         example: 1.0.0-mvp
         type: string
     type: object
+  handlers.MaskRequest:
+    properties:
+      name:
+        example: Базовая 60 с
+        type: string
+      points:
+        example:
+        - 0
+        - 10
+        - 20
+        - 30
+        - 60
+        items:
+          type: number
+        type: array
+    type: object
+  handlers.MaskResponse:
+    properties:
+      created_by:
+        type: integer
+      editable:
+        description: |-
+          Editable — может ли текущий пользователь менять/удалять маску
+          (создатель или admin).
+        type: boolean
+      id:
+        type: integer
+      name:
+        type: string
+      points:
+        items:
+          type: number
+        type: array
+    type: object
   handlers.MeasurementsItem:
     properties:
       date:
@@ -56,6 +102,11 @@ definitions:
         items:
           type: number
         type: array
+    type: object
+  handlers.SetEntryMaskRequest:
+    properties:
+      mask_id:
+        type: integer
     type: object
   handlers.TableResponse:
     properties:
@@ -386,6 +437,88 @@ paths:
       summary: Список измерений
       tags:
       - Measurements
+  /api/v1/entries/{id}:
+    get:
+      description: Возвращает имя, время старта и маску по умолчанию
+      parameters:
+      - description: ID измерения
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.EntryDetails'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Детали измерения
+      tags:
+      - Measurements
+  /api/v1/entries/{id}/mask:
+    put:
+      consumes:
+      - application/json
+      description: Запоминает маску по умолчанию для измерения (mask_id = null — снять)
+      parameters:
+      - description: ID измерения
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Маска
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SetEntryMaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.EntryDetails'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Маска измерения по умолчанию
+      tags:
+      - Measurements
   /api/v1/features/{id}:
     get:
       description: Считает признаки кривых сенсоров через ML-сервис и возвращает их
@@ -452,6 +585,145 @@ paths:
       summary: Проверка работоспособности бэкенда
       tags:
       - Heartbeat
+  /api/v1/masks:
+    get:
+      description: Возвращает все маски времени с точками (маски общие для всех пользователей)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.MaskResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список масок
+      tags:
+      - Masks
+    post:
+      consumes:
+      - application/json
+      description: 'Создаёт маску времени: имя уникально, минимум 2 различные точки
+        (секунды, >= 0)'
+      parameters:
+      - description: Маска
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.MaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.MaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать маску
+      tags:
+      - Masks
+  /api/v1/masks/{id}:
+    delete:
+      description: Удаляет маску; у измерений, где она была маской по умолчанию, привязка
+        снимается. Доступно создателю и admin
+      parameters:
+      - description: ID маски
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Маска удалена
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удалить маску
+      tags:
+      - Masks
+    put:
+      consumes:
+      - application/json
+      description: Заменяет имя и точки маски. Доступно создателю маски и admin
+      parameters:
+      - description: ID маски
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Маска
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.MaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Изменить маску
+      tags:
+      - Masks
   /api/v1/plots/{id}:
     get:
       description: Возвращает временные ряды каждого сенсора измерения для построения
