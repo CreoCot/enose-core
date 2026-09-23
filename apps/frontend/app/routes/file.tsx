@@ -253,7 +253,6 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
           mxel = [j, mx];
         }
         if (plots[i][j] < mn) {
-          console.log(plots[i][j]);
           mn = plots[i][j];
           mnel = [j, mn];
         }
@@ -262,7 +261,6 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
           absmxel = [j, absmx];
         }
       }
-      console.log(table[1]);
       summaryData.push({
         baseFrequency: table[0][i + 1],
         minDelta: mnel,

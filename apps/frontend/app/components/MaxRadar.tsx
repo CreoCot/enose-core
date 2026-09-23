@@ -1,5 +1,5 @@
-import { RadarChart } from "@mui/x-charts/RadarChart";
-import { useEffect, useMemo } from "react";
+import { RadarAxis, RadarChart } from "@mui/x-charts/RadarChart";
+import { useEffect, useMemo, useState } from "react";
 import SensorList from "./SensorList";
 
 interface Props {
@@ -23,8 +23,10 @@ const MaxRadar = ({
     0,
     ...maxArray.filter((val) => typeof val === "number"),
   );
+  const initialPlotMax = Math.max(globalMax, 1);
+  const [plotMin, setPlotMin] = useState(0);
+  const [plotMax, setPlotMax] = useState(initialPlotMax);
   const plotColor = "#4b4bc3";
-
   useEffect(() => {
     const activeCount = Object.values(renderedPlotIds).filter(Boolean).length;
     if (activeCount <= 2) {
@@ -43,10 +45,13 @@ const MaxRadar = ({
 
   const metrics = useMemo(
     () =>
-      Object.entries(truePlotIds).map(([k, _]) => `Сенсор ${Number(k) + 1}`),
-    [truePlotIds],
+      Object.entries(truePlotIds).map(([k, _]) => ({
+        name: `Сенсор ${Number(k) + 1}`,
+        min: plotMin,
+        max: plotMax,
+      })),
+    [plotMax, plotMin, truePlotIds],
   );
-
   return (
     <>
       {error.length !== 0 && (
@@ -62,15 +67,67 @@ const MaxRadar = ({
             handleCheckboxClick={handleCheckboxClick}
           />
           <RadarChart
+            key={metrics.length}
             colors={[plotColor]}
-            className="mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border border-primary-200"
-            height={768}
+            className="mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border-2 border-primary-200"
+            height={640}
             series={[{ data: renderedArray, fillArea: true }]}
             radar={{
-              max: globalMax,
+              max: plotMax,
               metrics: metrics,
             }}
-          />
+          >
+            <RadarAxis
+              metric={metrics[0]?.name}
+              divisions={Math.max(1, Math.ceil((plotMax - plotMin) / 2))}
+              labelOrientation="horizontal"
+              angle={0}
+            />
+          </RadarChart>
+          <div className="flex flex-col justify-start p-5 h-full">
+            <div className="flex flex-col p-6 gap-5 border-2 border-primary-200 rounded-[10px] shadow-sm shadow-primary-200">
+              <p className="text-primary-800 font-semibold text-2xl">Масштаб</p>
+              <div className="flex flex-col gap-3">
+                <label className="flex flex-col gap-2 text-primary-700 text-xl">
+                  Минимум
+                  <input
+                    type="number"
+                    min={0}
+                    max={plotMax}
+                    step="any"
+                    value={plotMin}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      if (
+                        Number.isFinite(value) &&
+                        value >= 0 &&
+                        value < plotMax
+                      ) {
+                        setPlotMin(value);
+                      }
+                    }}
+                    className="w-10 border border-primary-300 rounded-[10px] px-3 py-1 text-primary-600 text-lg"
+                  />
+                </label>
+                <label className="flex flex-col gap-2 text-primary-700 text-xl">
+                  Максимум
+                  <input
+                    type="number"
+                    min={plotMin}
+                    step="any"
+                    value={plotMax}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      if (Number.isFinite(value) && value > plotMin) {
+                        setPlotMax(value);
+                      }
+                    }}
+                    className="w-10 border border-primary-300 rounded-[10px] px-3 py-1 text-primary-600 text-lg"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </>
