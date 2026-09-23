@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
@@ -25,6 +26,12 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 	r.Use(middleware.StructuredLogger())
 	r.Use(gin.Recovery())
 	r.Use(middleware.CORSConfig(cfg.AllowedOrigins))
+	r.Use(middleware.Metrics())
+
+	// Публичный эндпоинт для сбора метрик VictoriaMetrics/Prometheus (scrape).
+	// Вне /api/v1 и без авторизации, как /swagger — тот же прецедент для
+	// инфраструктурных путей.
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	if cfg.EnableSwagger {
 		swaggerConfig := ginSwagger.Config{
