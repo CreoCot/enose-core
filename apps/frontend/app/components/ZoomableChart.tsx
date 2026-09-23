@@ -204,6 +204,7 @@ const ZoomableChart = ({
           data: s.data,
           label: s.label,
           showMark: false,
+          curve: "linear",
         }))}
         hideLegend={hideLegend}
         height={height}
