@@ -1,6 +1,12 @@
 import { RadarAxis, RadarChart } from "@mui/x-charts/RadarChart";
 import { useEffect, useMemo, useState } from "react";
 import SensorList from "./SensorList";
+import {
+  RADAR_MAX_DIVISIONS,
+  niceCeil,
+  niceStep,
+  zoomRadarMax,
+} from "../lib/zoom";
 
 interface Props {
   maxArray: number[];
@@ -23,7 +29,7 @@ const MaxRadar = ({
     0,
     ...maxArray.filter((val) => typeof val === "number"),
   );
-  const initialPlotMax = Math.max(globalMax, 1);
+  const initialPlotMax = niceCeil(0, Math.max(globalMax, 1));
   const [plotMin, setPlotMin] = useState(0);
   const [plotMax, setPlotMax] = useState(initialPlotMax);
   const plotColor = "#4b4bc3";
@@ -79,7 +85,13 @@ const MaxRadar = ({
           >
             <RadarAxis
               metric={metrics[0]?.name}
-              divisions={Math.max(1, Math.ceil((plotMax - plotMin) / 2))}
+              divisions={Math.max(
+                1,
+                Math.round(
+                  (plotMax - plotMin) /
+                    niceStep(plotMax - plotMin, RADAR_MAX_DIVISIONS),
+                ),
+              )}
               labelOrientation="horizontal"
               angle={0}
             />
@@ -106,7 +118,7 @@ const MaxRadar = ({
                         setPlotMin(value);
                       }
                     }}
-                    className="w-10 border border-primary-300 rounded-[10px] px-3 py-1 text-primary-600 text-lg"
+                    className="w-28 border border-primary-300 rounded-[10px] px-3 py-1 text-primary-600 text-lg"
                   />
                 </label>
                 <label className="flex flex-col gap-2 text-primary-700 text-xl">
@@ -122,9 +134,44 @@ const MaxRadar = ({
                         setPlotMax(value);
                       }
                     }}
-                    className="w-10 border border-primary-300 rounded-[10px] px-3 py-1 text-primary-600 text-lg"
+                    className="w-28 border border-primary-300 rounded-[10px] px-3 py-1 text-primary-600 text-lg"
                   />
                 </label>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPlotMax((m) => zoomRadarMax(plotMin, m, "in"))
+                    }
+                    className="rounded-full bg-primary-100 px-3 py-1 text-lg text-primary-800 transition-colors hover:bg-primary-200"
+                    title="Приблизить: уменьшить максимум оси"
+                  >
+                    Приблизить
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPlotMax((m) => zoomRadarMax(plotMin, m, "out"))
+                    }
+                    className="rounded-full bg-primary-100 px-3 py-1 text-lg text-primary-800 transition-colors hover:bg-primary-200"
+                    title="Отдалить: увеличить максимум оси"
+                  >
+                    Отдалить
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlotMin(0);
+                    setPlotMax(initialPlotMax);
+                  }}
+                  className="rounded-full bg-accent-100 px-3 py-1 text-lg text-accent-800 transition-colors hover:bg-accent-200"
+                  title="Сбросить масштаб по максимальному значению"
+                >
+                  Авто
+                </button>
               </div>
             </div>
           </div>

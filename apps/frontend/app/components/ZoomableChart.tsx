@@ -51,52 +51,64 @@ const SelectionOverlay = ({ autoY, onZoom, onReset }: OverlayProps) => {
   const xScale = useXScale<"linear">();
   const yScale = useYScale<"linear">();
   const [sel, setSel] = useState<Selection | null>(null);
-  const drag = useRef(false);
+  const selRef = useRef<Selection | null>(null);
 
-  const local = (e: React.PointerEvent<SVGRectElement>) => {
-    const svg = e.currentTarget.ownerSVGElement;
-    const box = (svg ?? e.currentTarget).getBoundingClientRect();
-    return {
-      x: Math.min(Math.max(e.clientX - box.left, left), left + width),
-      y: Math.min(Math.max(e.clientY - box.top, top), top + height),
-    };
+  const update = (next: Selection | null) => {
+    selRef.current = next;
+    setSel(next);
   };
 
   const onDown = (e: React.PointerEvent<SVGRectElement>) => {
     if (e.button !== 0) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const p = local(e);
-    drag.current = true;
-    setSel({
-      x0: p.x,
-      y0: autoY ? top : p.y,
-      x1: p.x,
-      y1: autoY ? top + height : p.y,
+    const svg = e.currentTarget.ownerSVGElement;
+    if (!svg) return;
+
+    const toLocal = (clientX: number, clientY: number) => {
+      const box = svg.getBoundingClientRect();
+      return {
+        x: Math.min(Math.max(clientX - box.left, left), left + width),
+        y: Math.min(Math.max(clientY - box.top, top), top + height),
+      };
+    };
+    const yTop = top;
+    const yBottom = top + height;
+
+    const start = toLocal(e.clientX, e.clientY);
+    update({
+      x0: start.x,
+      y0: autoY ? yTop : start.y,
+      x1: start.x,
+      y1: autoY ? yBottom : start.y,
     });
-  };
 
-  const onMove = (e: React.PointerEvent<SVGRectElement>) => {
-    if (!drag.current) return;
-    const p = local(e);
-    setSel((s) => (s ? { ...s, x1: p.x, y1: autoY ? top + height : p.y } : s));
-  };
+    // Слушатели на window: выделение продолжается и заканчивается, даже если
+    // курсор ушёл за пределы графика.
+    const move = (ev: PointerEvent) => {
+      const p = toLocal(ev.clientX, ev.clientY);
+      const cur = selRef.current;
+      if (cur) update({ ...cur, x1: p.x, y1: autoY ? yBottom : p.y });
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      const done = selRef.current;
+      update(null);
+      if (!done) return;
 
-  const onUp = (e: React.PointerEvent<SVGRectElement>) => {
-    if (!drag.current || !sel) return;
-    drag.current = false;
-    e.currentTarget.releasePointerCapture(e.pointerId);
-    const done = sel;
-    setSel(null);
+      const wide = Math.abs(done.x1 - done.x0) > MIN_SELECTION_PX;
+      const tall = autoY || Math.abs(done.y1 - done.y0) > MIN_SELECTION_PX;
+      if (!wide || !tall) return;
 
-    const wide = Math.abs(done.x1 - done.x0) > MIN_SELECTION_PX;
-    const tall = autoY || Math.abs(done.y1 - done.y0) > MIN_SELECTION_PX;
-    if (!wide || !tall) return;
-
-    const x = normalizeRange(xScale.invert(done.x0), xScale.invert(done.x1));
-    const y = autoY
-      ? null
-      : normalizeRange(yScale.invert(done.y0), yScale.invert(done.y1));
-    onZoom(x, y);
+      const x = normalizeRange(xScale.invert(done.x0), xScale.invert(done.x1));
+      const y = autoY
+        ? null
+        : normalizeRange(yScale.invert(done.y0), yScale.invert(done.y1));
+      onZoom(x, y);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
   };
 
   return (
@@ -109,8 +121,6 @@ const SelectionOverlay = ({ autoY, onZoom, onReset }: OverlayProps) => {
         fill="transparent"
         style={{ cursor: "crosshair", touchAction: "none" }}
         onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
         onDoubleClick={onReset}
       />
       {sel && (
@@ -187,6 +197,9 @@ const ZoomableChart = ({
           Сброс
         </button>
       </div>
+      <p className="px-3 text-xs text-grey-600">
+        Тяните мышью по графику, чтобы приблизить
+      </p>
       <LineChart
         className="-ml-3 -mb-3 -mr-1"
         colors={colors}
