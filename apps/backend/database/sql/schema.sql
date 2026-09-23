@@ -55,17 +55,25 @@ CREATE TABLE devices (
 -- Аналог legacy-таблицы Sensors (SID, Name, Description, Settings),
 -- но привязан к конкретному устройству и расширен под разные типы
 -- "ячеек" через JSONB (полиморфизм cell_config без зоопарка таблиц).
+--
+-- sid — физический идентификатор сенсора с устройства (как в MAG-soft),
+-- единственный надёжный ключ идентичности; position — только позиция,
+-- на которой сенсор впервые замечен (информационно), т.к. один физический
+-- сенсор может занимать разные позиции в разных профилях/измерениях —
+-- авторитетная позиция для конкретного измерения в measurement_parameters.
 
 CREATE TABLE sensors (
     id          SERIAL PRIMARY KEY,
     device_id   INTEGER      NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
-    position    INTEGER      NOT NULL,             -- номер канала на устройстве (1..N)
+    position    INTEGER      NOT NULL,             -- номер канала на устройстве (1..N), см. выше
+    sid         VARCHAR(64),                        -- физический ID сенсора, если источник его сообщает
     name        VARCHAR(128) NOT NULL,
     coating_id  INTEGER      REFERENCES coatings(id),
     cell_config JSONB        NOT NULL DEFAULT '{}'::jsonb,
-    description TEXT,
-    UNIQUE (device_id, position)
+    description TEXT
 );
+
+CREATE UNIQUE INDEX idx_sensors_device_sid ON sensors (device_id, sid) WHERE sid IS NOT NULL;
 
 -- ---------------------------------------------------------------------
 -- Объекты измерения (образцы/вещества)
