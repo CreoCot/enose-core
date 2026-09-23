@@ -1,7 +1,6 @@
-import { LineChart } from "@mui/x-charts";
-import { hsla } from "motion/react";
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import SensorList from "./SensorList";
+import ZoomableChart from "./ZoomableChart";
 
 interface Props {
   timestamps: number[];
@@ -40,22 +39,15 @@ const MultiPlot = ({
       .filter((item): item is NonNullable<typeof item> => item !== null);
 
     return (
-      <LineChart
-        className="-ml-5 -mb-3 -mr-1"
-        colors={generateColors(
-          Object.values(renderedPlotIds).filter((value) => value === true)
-            .length,
-        )}
-        xAxis={[
-          {
-            data: timestamps,
-          },
-        ]}
+      <ZoomableChart
+        className="w-full"
+        colors={generateColors(activeSeries.length)}
+        timestamps={timestamps}
         series={activeSeries}
         height={384}
       />
     );
-  }, [renderedPlotIds]);
+  }, [renderedPlotIds, sensorData, timestamps]);
   return (
     <div className="flex flex-col gap-3 w-full h-full">
       {error.length !== 0 && (

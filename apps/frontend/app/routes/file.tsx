@@ -10,6 +10,7 @@ import type { Route } from "./+types/file";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import { Link, useLoaderData } from "react-router";
 import SensorSummary from "~/components/SensorSummary";
+import { buildDeltaModel, type SensorSummaryData } from "~/lib/kinetics";
 
 const tableIcon = (
   <svg
@@ -213,12 +214,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   let plots: number[][] = [],
     plotTimestamps: number[] = [],
     plotError: string = "",
-    summaryData: {
-      baseFrequency: number;
-      minDelta: [number, number];
-      maxDelta: [number, number];
-      absMax: [number, number];
-    }[] = [];
+    summaryData: SensorSummaryData[] = [];
   try {
     const plotResponse = await axios.get(`/api/v1/plots/${fileId}`);
     if (
@@ -227,46 +223,15 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
       !plotResponse.data.timestamps
     ) {
       plotError = "Ошибка API";
-      return;
-    }
-    plotTimestamps = plotResponse.data.timestamps;
-    plots = plotResponse.data.data;
-
-    for (let i = 0; i < plots.length; i++) {
-      for (let j = 1; j < plots[i].length; j++) {
-        plots[i][j] = plots[i][0] - plots[i][j];
-      }
-    }
-    plots = plots.map((item) => {
-      return item.slice(1, item.length);
-    });
-    for (let i = 0; i < plots.length; i++) {
-      let mx = -Infinity,
-        mxel: [number, number] = [0, 0],
-        mn = Infinity,
-        mnel: [number, number] = [0, 0],
-        absmx = -Infinity,
-        absmxel: [number, number] = [0, 0];
-      for (let j = 0; j < plots[i].length; j++) {
-        if (plots[i][j] > mx) {
-          mx = plots[i][j];
-          mxel = [j, mx];
-        }
-        if (plots[i][j] < mn) {
-          mn = plots[i][j];
-          mnel = [j, mn];
-        }
-        if (Math.abs(plots[i][j]) > absmx) {
-          absmx = Math.abs(plots[i][j]);
-          absmxel = [j, absmx];
-        }
-      }
-      summaryData.push({
-        baseFrequency: table[0][i + 1],
-        minDelta: mnel,
-        maxDelta: mxel,
-        absMax: absmxel,
-      });
+    } else {
+      // Абсолютные частоты -> ΔF = F0 - F (логика MAG-soft, см. lib/kinetics)
+      const model = buildDeltaModel(
+        plotResponse.data.timestamps,
+        plotResponse.data.data,
+      );
+      plotTimestamps = model.timestamps;
+      plots = model.deltas;
+      summaryData = model.summary;
     }
 
     if (sensorSize === 0) sensorSize = plotResponse.data.size;
