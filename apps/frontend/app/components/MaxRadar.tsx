@@ -75,18 +75,25 @@ const MaxRadar = ({
             colors={[plotColor]}
             className="mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border-2 border-primary-200"
             height={640}
+            sx={{
+              "& text": {
+                fontFamily: '"Times New Roman", Times, serif !important',
+                fontSize: "19px !important",
+              },
+              "& .MuiRadarChart-seriesArea": { fillOpacity: 1 },
+            }}
             series={[{ data: renderedArray, fillArea: true }]}
             radar={{
               max: plotMax,
               metrics: metrics,
             }}
           >
-            <RadarAxis
+            {/* <RadarAxis
               metric={metrics[0]?.name}
               divisions={Math.max(1, Math.ceil((plotMax - plotMin) / 2))}
               labelOrientation="horizontal"
               angle={0}
-            />
+            /> */}
           </RadarChart>
           <div className="flex flex-col justify-start p-5 h-full">
             <div className="flex flex-col p-6 gap-5 border-2 border-primary-200 rounded-[10px] shadow-sm shadow-primary-200">

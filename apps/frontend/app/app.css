@@ -206,6 +206,23 @@ body {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+.article-view {
+  color: #000;
+  background: #fff;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.article-view :not(svg):not(svg *) {
+  color: #000 !important;
+  background-color: #fff !important;
+  border-color: #000 !important;
+}
+
+.article-view svg text {
+  fill: #000;
+  font-family: "Times New Roman", Times, serif;
+}
+
 @utility font-mono {
   font-optical-sizing: auto;
 }

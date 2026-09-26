@@ -742,7 +742,7 @@ const file = () => {
         <div>
           <div className="flex">
             <div className="flex flex-col"></div>
-            <div className="w-full">
+            <div className="article-view w-full">
               <AnimatePresence mode="wait">{items[open]}</AnimatePresence>
             </div>
           </div>
