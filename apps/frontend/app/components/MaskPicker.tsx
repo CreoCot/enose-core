@@ -59,7 +59,7 @@ const MaskPicker = ({
       <button
         type="button"
         onClick={() => setEditorOpen(true)}
-        className="rounded-full bg-accent-100 px-4 py-1 text-accent-800 transition-colors hover:bg-accent-200"
+        className="rounded-full bg-accent-100 px-4 py-1 text-accent-700 transition-colors duration-300 hover:bg-accent-200 border border-primary-300"
       >
         Маски…
       </button>
@@ -67,7 +67,7 @@ const MaskPicker = ({
         <button
           type="button"
           onClick={saveDefault}
-          className="rounded-full bg-primary-100 px-4 py-1 text-primary-800 transition-colors hover:bg-primary-200"
+          className="rounded-full bg-primary-100 px-4 py-1 text-primary-600 transition-colors duration-300 hover:bg-primary-200 border border-primary-300"
         >
           {selectedId === null ? "Снять маску записи" : "Сделать маской записи"}
         </button>

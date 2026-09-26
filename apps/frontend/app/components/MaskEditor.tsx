@@ -137,10 +137,10 @@ const MaskEditor = ({
             <button
               type="button"
               onClick={() => choose(null)}
-              className={`rounded-[10px] border px-3 py-1.5 text-left ${
+              className={`rounded-[10px] border px-3 py-1.5 text-left transition-all duration-300 ${
                 editingId === null
-                  ? "border-accent-500 bg-accent-100"
-                  : "border-accent-300 hover:bg-accent-100"
+                  ? "border-accent-500 bg-accent-100 font-semibold text-accent-700"
+                  : "border-accent-300 hover:bg-accent-100 text-accent-700 hover:text-accent-600"
               }`}
             >
               + Новая маска
@@ -151,14 +151,22 @@ const MaskEditor = ({
                   key={m.id}
                   type="button"
                   onClick={() => choose(m)}
-                  className={`rounded-[10px] border px-3 py-1.5 text-left ${
+                  className={`rounded-[10px] border px-3 py-1.5 text-left transition-all duration-300 text-grey-500 ${
                     editingId === m.id
-                      ? "border-primary-500 bg-primary-100"
-                      : "border-grey-100 bg-grey-100 hover:bg-primary-100"
+                      ? "border-primary-500 bg-primary-100 text-primary-500 hover:text-primary-600"
+                      : "border-grey-100 bg-grey-100 hover:bg-primary-100 hover:text-primary-500"
                   }`}
                 >
-                  {m.name}
-                  <span className="block text-sm text-grey-600">
+                  <p
+                    className={`${
+                      editingId === m.id
+                        ? "text-primary-600 font-semibold transition-all duration-300"
+                        : ""
+                    }`}
+                  >
+                    {m.name}
+                  </p>
+                  <span className={`block text-sm`}>
                     {m.points.length} точек
                   </span>
                 </button>
@@ -216,7 +224,7 @@ const MaskEditor = ({
                 type="button"
                 disabled={busy || !canOverwrite}
                 onClick={save}
-                className="rounded-full bg-primary-600 px-4 py-1.5 text-white hover:bg-primary-500 disabled:opacity-40"
+                className="rounded-full bg-primary-200 px-4 py-1.5 text-primary-500 font-semibold border-2 border-primary-400 hover:bg-primary-300 cursor-pointer transition-colors duration-300 disabled:opacity-40"
               >
                 Сохранить
               </button>
@@ -224,7 +232,7 @@ const MaskEditor = ({
                 type="button"
                 disabled={busy}
                 onClick={saveAsNew}
-                className="rounded-full bg-accent-500 px-4 py-1.5 text-white hover:bg-accent-400 disabled:opacity-40"
+                className="rounded-full bg-accent-200 px-4 py-1.5 text-accent-600 font-semibold border border-accent-500 hover:bg-accent-300 cursor-pointer transition-colors duration-300 disabled:opacity-40"
               >
                 Сохранить как новую
               </button>
@@ -232,7 +240,7 @@ const MaskEditor = ({
                 type="button"
                 disabled={busy || !editing || !editing.editable}
                 onClick={remove}
-                className="rounded-full bg-red-100 px-4 py-1.5 text-red-800 hover:bg-red-200 disabled:opacity-40"
+                className="rounded-full bg-red-200 px-4 py-1.5 text-red-700 hover:bg-red-100 transition-colors duration-300 cursor-pointer font-light border border-red-400 disabled:opacity-40"
               >
                 Удалить
               </button>
