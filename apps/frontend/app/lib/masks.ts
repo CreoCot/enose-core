@@ -4,6 +4,8 @@
 // здесь так же: индекс = floor(t). Маска отсортирована; как только момент
 // выходит за пределы данных, остальные (они больше) тоже отбрасываются.
 
+import { summarizeSeries, type SummaryItem } from "./utils";
+
 export interface Mask {
   id: number;
   name: string;
@@ -19,14 +21,8 @@ export interface MaskedSeries {
   deltas: number[][];
 }
 
-export interface SummaryItem {
-  baseFrequency: number;
-  /** [время, ΔF] */
-  minDelta: [number, number];
-  maxDelta: [number, number];
-  /** [время, |ΔF|] */
-  absMax: [number, number];
-}
+// Сводка по кривой одинаковая и с маской, и без неё — тип и расчёт общие.
+export type { SummaryItem };
 
 const EPS = 1e-9;
 
@@ -85,24 +81,9 @@ export function summarizeMasked(
   baseFrequencies: number[],
   masked: MaskedSeries,
 ): SummaryItem[] {
-  return masked.deltas.map((d, i) => {
-    let minIdx = -1;
-    let maxIdx = -1;
-    let absIdx = -1;
-    for (let k = 0; k < d.length; k++) {
-      if (minIdx < 0 || d[k] < d[minIdx]) minIdx = k;
-      if (maxIdx < 0 || d[k] > d[maxIdx]) maxIdx = k;
-      if (absIdx < 0 || Math.abs(d[k]) > Math.abs(d[absIdx])) absIdx = k;
-    }
-    const at = (idx: number, abs = false): [number, number] =>
-      idx < 0 ? [0, 0] : [masked.times[idx], abs ? Math.abs(d[idx]) : d[idx]];
-    return {
-      baseFrequency: baseFrequencies[i] ?? 0,
-      minDelta: at(minIdx),
-      maxDelta: at(maxIdx),
-      absMax: at(absIdx, true),
-    };
-  });
+  return masked.deltas.map((d, i) =>
+    summarizeSeries(baseFrequencies[i] ?? 0, masked.times, d),
+  );
 }
 
 /** |ΔF| экстремума на каждом сенсоре — значения «диаграммы максимумов». */
