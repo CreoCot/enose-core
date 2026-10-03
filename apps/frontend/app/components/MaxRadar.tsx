@@ -73,7 +73,7 @@ const MaxRadar = ({
           <RadarChart
             key={metrics.length}
             colors={[plotColor]}
-            className="mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border-2 border-primary-200"
+            className="download-image mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border-2 border-primary-200"
             height={640}
             sx={{
               "& text": {

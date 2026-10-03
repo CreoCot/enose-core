@@ -18,6 +18,7 @@ import {
   type Mask,
 } from "~/lib/masks";
 import { fetchDefaultMaskId, fetchMasks } from "~/lib/masksApi";
+import { toPng } from "html-to-image";
 
 const tableIcon = (
   <svg
@@ -110,6 +111,22 @@ const downloadIcon = (
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="size-5 lg:size-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+    />
+  </svg>
+);
+const smallDownloadIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 26 26"
     strokeWidth={1.5}
     stroke="currentColor"
     className="size-5 lg:size-6"
@@ -431,6 +448,14 @@ const handleDownload = async (
   }
 };
 
+function downloadImage(dataUrl: string) {
+  const a = document.createElement("a");
+
+  a.setAttribute("download", "downloadedImage.png");
+  a.setAttribute("href", dataUrl);
+  a.click();
+}
+
 const file = () => {
   const loaderData = useLoaderData<Awaited<ReturnType<typeof clientLoader>>>();
   const {
@@ -493,6 +518,20 @@ const file = () => {
       ...prev,
       [e.target.id]: e.target.checked,
     }));
+  };
+  const onItemDownload = () => {
+    const target = document.querySelector(".download-image");
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const imageWidth = target.scrollWidth;
+    const imageHeight = target.scrollHeight;
+
+    toPng(target, {
+      backgroundColor: "FFFFFF",
+      width: imageWidth,
+      height: imageHeight,
+    }).then(downloadImage);
   };
 
   const [open, setOpen] = useState(1);
@@ -643,7 +682,7 @@ const file = () => {
         onDefaultChange={setSavedMaskId}
       />
       <div className="flex flex-col pt-3 text-xl lg:text-2xl px-6">
-        <div className="flex flex-col lg:flex-row w-fit bg-grey-600 justify-between gap-1 p-2 lg:p-1 rounded-[15px] lg:rounded-full sm:mx-7 text-grey-100">
+        <div className="flex flex-col lg:flex-row w-fit bg-grey-600 justify-between gap-1 p-2 lg:p-1 rounded-[15px] lg:rounded-full sm:mx-7 text-grey-100 mb-2">
           <button
             className={`${
               open === 2 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
@@ -740,6 +779,15 @@ const file = () => {
           </div>
         </div>
         <div>
+          <div className="sm:mx-7">
+            <button
+              className="lg:text-xl m-1 font-medium flex gap-2 text-grey-700 hover:text-grey-600 transition-colors duration-200 cursor-pointer"
+              onClick={onItemDownload}
+            >
+              <span>Скачать</span>
+              {smallDownloadIcon}
+            </button>
+          </div>
           <div className="flex">
             <div className="flex flex-col"></div>
             <div className="article-view w-full">
