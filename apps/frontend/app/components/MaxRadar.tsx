@@ -2,6 +2,7 @@ import { RadarAxis, RadarChart } from "@mui/x-charts/RadarChart";
 import { useEffect, useMemo, useState } from "react";
 import SensorList from "./SensorList";
 import { radarArea } from "../lib/masks";
+import { niceCeil, zoomRadarMax } from "../lib/utils";
 
 interface Props {
   maxArray: number[];
@@ -24,7 +25,9 @@ const MaxRadar = ({
     0,
     ...maxArray.filter((val) => typeof val === "number"),
   );
-  const initialPlotMax = Math.max(globalMax, 1);
+  // Округляем верх оси до «красивого» значения, чтобы подписи делений
+  // оставались круглыми (иначе после зума получаются дроби вида 30.5785…)
+  const initialPlotMax = niceCeil(0, Math.max(globalMax, 1));
   const [plotMin, setPlotMin] = useState(0);
   const [plotMax, setPlotMax] = useState(initialPlotMax);
   const plotColor = "#4b4bc3";
@@ -133,9 +136,39 @@ const MaxRadar = ({
                         setPlotMax(value);
                       }
                     }}
-                    className="w-10 border border-primary-300 rounded-[10px] px-3 py-1 text-primary-600 text-lg"
+                    className="w-20 border border-primary-300 rounded-[10px] px-3 py-1 text-primary-600 text-lg"
                   />
                 </label>
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPlotMax((m) => zoomRadarMax(plotMin, m, "in"))
+                  }
+                  className="rounded-full bg-primary-200 px-4 py-1.5 text-primary-500 font-semibold border-2 border-primary-400 hover:bg-primary-300 cursor-pointer transition-colors duration-300"
+                >
+                  Приблизить
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPlotMax((m) => zoomRadarMax(plotMin, m, "out"))
+                  }
+                  className="rounded-full bg-primary-200 px-4 py-1.5 text-primary-500 font-semibold border-2 border-primary-400 hover:bg-primary-300 cursor-pointer transition-colors duration-300"
+                >
+                  Отдалить
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlotMin(0);
+                    setPlotMax(initialPlotMax);
+                  }}
+                  className="rounded-full bg-accent-200 px-4 py-1.5 text-accent-600 font-semibold border border-accent-500 hover:bg-accent-300 cursor-pointer transition-colors duration-300"
+                >
+                  Авто
+                </button>
               </div>
             </div>
             <div className="mt-5 flex flex-col gap-1 rounded-[10px] border-2 border-primary-200 p-6 shadow-sm shadow-primary-200">
