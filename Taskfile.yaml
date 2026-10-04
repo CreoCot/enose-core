@@ -117,3 +117,4 @@ tasks:
       - task: backend:test
       - task: ml:test
       - task: frontend:test
+      - task: report:test

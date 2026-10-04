@@ -16,6 +16,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
       ml: ${{ steps.filter.outputs.ml }}
+      report: ${{ steps.filter.outputs.report }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -36,6 +37,9 @@ jobs:
               - '.github/workflows/test.yml'
             ml:
               - 'apps/ml/**'
+              - '.github/workflows/test.yml'
+            report:
+              - 'apps/report/**'
               - '.github/workflows/test.yml'
 
   test-frontend:
@@ -140,3 +144,25 @@ jobs:
           files: apps/ml/coverage.xml
           flags: ml
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  test-report:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.report == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/report
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run report tests
+        run: pytest -q
