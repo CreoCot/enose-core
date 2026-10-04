@@ -1,11 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
   applyMask,
+  axisMinFor,
+  fingerprintRadii,
   maxDiagramValues,
   normalizePoints,
   parseMaskInput,
   radarArea,
   summarizeMasked,
+  timeDiagramValues,
 } from "./masks";
 
 describe("parseMaskInput", () => {
@@ -89,5 +92,75 @@ describe("radarArea", () => {
   });
   it("меньше трёх осей — 0", () => {
     expect(radarArea([1, 2])).toBe(0);
+  });
+});
+
+describe("timeDiagramValues", () => {
+  // Два сенсора, два момента: оси идут time-major, как в MAG-soft
+  const deltas = [
+    [1, 2],
+    [-1, 1],
+  ];
+
+  it("разворачивает оси как (время, сенсор)", () => {
+    expect(timeDiagramValues(deltas)).toEqual([1, -1, 2, 1]);
+  });
+
+  it("обрезается по самому короткому сенсору", () => {
+    expect(timeDiagramValues([[1, 2, 3], [4]])).toEqual([1, 4]);
+  });
+
+  it("не падает на пустых данных", () => {
+    expect(timeDiagramValues([])).toEqual([]);
+    expect(timeDiagramValues([[], []])).toEqual([]);
+  });
+});
+
+describe("axisMinFor", () => {
+  it("для модуля минимум оси равен нулю", () => {
+    expect(axisMinFor([1, -1, 2, 1], "abs")).toBe(0);
+  });
+  it("для знакового режима берёт минимум по осям", () => {
+    expect(axisMinFor([1, -1, 2, 1], "signed")).toBe(-1);
+  });
+  it("не падает на пустом списке", () => {
+    expect(axisMinFor([], "signed")).toBe(0);
+  });
+});
+
+describe("fingerprintRadii", () => {
+  it("в режиме abs берёт модуль и вычитает минимум оси", () => {
+    expect(fingerprintRadii([1, -1, 2, 1], "abs", 0)).toEqual([1, 1, 2, 1]);
+    expect(fingerprintRadii([3, -5, 2], "abs", 2)).toEqual([1, 3, 0]);
+  });
+
+  it("в режиме signed вычитает минимум оси, как AxeMinVal в MAG-soft", () => {
+    expect(fingerprintRadii([1, -1, 2, 1], "signed", -1)).toEqual([2, 0, 3, 2]);
+  });
+
+  it("не падает на пустом списке", () => {
+    expect(fingerprintRadii([], "signed", 0)).toEqual([]);
+    expect(fingerprintRadii([], "abs", 0)).toEqual([]);
+  });
+});
+
+describe("площадь кинетического отпечатка", () => {
+  it("канонический пример: оси [1,-1,2,1] со знаком дают 5", () => {
+    const values = timeDiagramValues([
+      [1, 2],
+      [-1, 1],
+    ]);
+    const radii = fingerprintRadii(
+      values,
+      "signed",
+      axisMinFor(values, "signed"),
+    );
+    expect(radii).toEqual([2, 0, 3, 2]);
+    expect(radarArea(radii)).toBe(5);
+  });
+
+  it("эталон для сверки с Python (apps/report/app/areas.py)", () => {
+    // Этот литерал продублирован в test_areas.py — менять только вместе
+    expect(radarArea([1.5, 2.25, 0.75, 3.0, 2.0])).toBe(7.757054711032346);
   });
 });

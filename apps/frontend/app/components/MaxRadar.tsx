@@ -1,7 +1,12 @@
 import { RadarAxis, RadarChart } from "@mui/x-charts/RadarChart";
 import { useEffect, useMemo, useState } from "react";
 import SensorList from "./SensorList";
-import { radarArea } from "../lib/masks";
+import {
+  fingerprintRadii,
+  radarArea,
+  timeDiagramValues,
+  type AreaMode,
+} from "../lib/masks";
 import { niceCeil, zoomRadarMax } from "../lib/utils";
 
 interface Props {
@@ -11,6 +16,15 @@ interface Props {
   renderedPlotIds: Record<string, boolean>;
   handleCheckboxClick: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleLessThanTwo: () => void;
+  /**
+   * "max" — диаграмма максимумов: ось = сенсор, радиус = max|ΔF|.
+   * "time" — временная диаграмма MAG-soft: оси = (момент времени × сенсор),
+   * радиус = ΔF со знаком. Нужны deltas и times.
+   */
+  kind?: "max" | "time";
+  /** deltas[i][k] — ΔF i-го сенсора в момент times[k]; только для kind="time" */
+  deltas?: number[][];
+  times?: number[];
 }
 
 const MaxRadar = ({
@@ -20,15 +34,49 @@ const MaxRadar = ({
   renderedPlotIds,
   handleCheckboxClick,
   handleLessThanTwo,
+  kind = "max",
+  deltas = [],
+  times = [],
 }: Props) => {
-  const globalMax = Math.max(
-    0,
-    ...maxArray.filter((val) => typeof val === "number"),
-  );
+  const isTime = kind === "time";
+  const [areaMode, setAreaMode] = useState<AreaMode>(isTime ? "signed" : "abs");
+  const visibleSensors = Object.entries(renderedPlotIds)
+    .filter(([_, v]) => v === true)
+    .map(([k]) => Number(k));
+
+  // Радиусы осей: у диаграммы максимумов это max|ΔF| по сенсорам, у временной —
+  // ΔF со знаком, развёрнутые time-major (ось = момент времени × сенсор).
+  const renderedArray = useMemo(() => {
+    if (!isTime) {
+      return visibleSensors.map((i) =>
+        typeof maxArray[i] === "number" ? maxArray[i] : 0,
+      );
+    }
+    return timeDiagramValues(visibleSensors.map((i) => deltas[i] ?? []));
+  }, [isTime, maxArray, deltas, renderedPlotIds]);
+
+  // Подписи осей. У временной диаграммы MAG-soft подписывает только первую ось
+  // каждой временной группы, иначе 2400 подписей сливаются в кашу; полное имя
+  // остаётся в тултипе.
+  const axisNames = useMemo(() => {
+    if (!isTime) {
+      return visibleSensors.map((i) => `Сенсор ${i + 1}`);
+    }
+    const n = visibleSensors.length;
+    return renderedArray.map((_, j) => {
+      const t = times[Math.floor(j / n)];
+      return `Сенсор ${visibleSensors[j % n] + 1} · ${t ?? "?"} с`;
+    });
+  }, [isTime, renderedArray, times, renderedPlotIds]);
+
+  const autoMin = isTime
+    ? Math.min(0, Math.floor(Math.min(...renderedArray, 0)))
+    : 0;
+  const globalMax = Math.max(autoMin, ...renderedArray.filter(Number.isFinite));
   // Округляем верх оси до «красивого» значения, чтобы подписи делений
   // оставались круглыми (иначе после зума получаются дроби вида 30.5785…)
-  const initialPlotMax = niceCeil(0, Math.max(globalMax, 1));
-  const [plotMin, setPlotMin] = useState(0);
+  const initialPlotMax = niceCeil(autoMin, Math.max(globalMax, autoMin + 1));
+  const [plotMin, setPlotMin] = useState(autoMin);
   const [plotMax, setPlotMax] = useState(initialPlotMax);
   const plotColor = "#4b4bc3";
   useEffect(() => {
@@ -38,27 +86,40 @@ const MaxRadar = ({
     }
   }, [renderedPlotIds, handleLessThanTwo]);
 
-  const truePlotIds = Object.fromEntries(
-    Object.entries(renderedPlotIds).filter(([_, v]) => v === true),
+  // Площадь по формуле MAG-soft. В режиме «со знаком» радиусы отсчитываются от
+  // минимума оси (AxeMinVal), в режиме «по модулю» — от нуля.
+  const area = radarArea(
+    fingerprintRadii(renderedArray, areaMode, areaMode === "abs" ? 0 : plotMin),
   );
-
-  const renderedArray = Object.entries(truePlotIds).map(([k, _]) => {
-    const value = maxArray[Number(k)];
-    return typeof value === "number" ? value : 0;
-  });
-
-  // Площадь диаграммы по формуле MAG-soft; значения отсчитываются от минимума оси
-  const area = radarArea(renderedArray.map((v) => Math.max(0, v - plotMin)));
 
   const metrics = useMemo(
     () =>
-      Object.entries(truePlotIds).map(([k, _]) => ({
-        name: `Сенсор ${Number(k) + 1}`,
+      axisNames.map((name) => ({
+        name,
         min: plotMin,
         max: plotMax,
       })),
-    [plotMax, plotMin, truePlotIds],
+    [plotMax, plotMin, axisNames],
   );
+
+  // Подписи делений на самой окружности. Оси и площадь считаются по всем
+  // точкам, но подписываем только первый сенсор временной группы и не чаще
+  // MAX_TICKS раз по кругу: без маски групп бывает 300+, и подписи сливаются
+  // в сплошное кольцо. Полное имя оси остаётся в тултипе.
+  const MAX_TICKS = 12;
+  const tickByName = useMemo(() => {
+    const map: Record<string, string> = {};
+    const n = visibleSensors.length;
+    if (!isTime || n === 0) return map;
+    const groups = Math.ceil(renderedArray.length / n);
+    const step = Math.max(1, Math.ceil(groups / MAX_TICKS));
+    axisNames.forEach((name, j) => {
+      const group = Math.floor(j / n);
+      map[name] =
+        j % n === 0 && group % step === 0 ? `${times[group] ?? "?"} с` : "";
+    });
+    return map;
+  }, [isTime, axisNames, renderedArray, times]);
   return (
     <>
       {error.length !== 0 && (
@@ -78,17 +139,24 @@ const MaxRadar = ({
             colors={[plotColor]}
             className="download-image mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border-2 border-primary-200"
             height={640}
+            skipAnimation={isTime}
             sx={{
               "& text": {
                 fontFamily: '"Times New Roman", Times, serif !important',
-                fontSize: "19px !important",
+                fontSize: isTime ? "13px !important" : "19px !important",
               },
               "& .MuiRadarChart-seriesArea": { fillOpacity: 1 },
             }}
-            series={[{ data: renderedArray, fillArea: true }]}
+            series={[{ data: renderedArray, fillArea: true, hideMark: isTime }]}
             radar={{
               max: plotMax,
               metrics: metrics,
+              // На окружности подписываем только первый сенсор каждой
+              // временной группы (как в MAG-soft), в тултипе — полное имя.
+              labelFormatter: (name, { location }) =>
+                !isTime || location === "tooltip"
+                  ? name
+                  : tickByName[name] ?? "",
             }}
           >
             {/* <RadarAxis
@@ -171,9 +239,32 @@ const MaxRadar = ({
                 </button>
               </div>
             </div>
-            <div className="mt-5 flex flex-col gap-1 rounded-[10px] border-2 border-primary-200 p-6 shadow-sm shadow-primary-200">
+            <div className="mt-5 flex flex-col gap-3 rounded-[10px] border-2 border-primary-200 p-6 shadow-sm shadow-primary-200">
               <p className="text-primary-800 font-semibold text-2xl">Площадь</p>
-              <p className="text-primary-700 text-xl">{area.toFixed(2)}</p>
+              <p className="text-primary-700 text-xl">{area.toFixed(2)} Гц²</p>
+              <div className="flex flex-col gap-2 text-primary-700 text-lg">
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="radio"
+                    name={`area-mode-${kind}`}
+                    checked={areaMode === "abs"}
+                    onChange={() => setAreaMode("abs")}
+                  />
+                  по модулю |ΔF|
+                </label>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="radio"
+                    name={`area-mode-${kind}`}
+                    checked={areaMode === "signed"}
+                    onChange={() => setAreaMode("signed")}
+                  />
+                  со знаком ΔF
+                </label>
+              </div>
+              <p className="text-primary-600 text-base">
+                Осей: {renderedArray.length}
+              </p>
             </div>
           </div>
         </div>

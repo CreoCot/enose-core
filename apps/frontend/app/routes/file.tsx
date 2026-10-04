@@ -179,6 +179,38 @@ const selectedMaxRadarIcon = (
     />
   </svg>
 );
+const timeRadarIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="size-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  </svg>
+);
+
+const selectedTimeRadarIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className="size-6"
+  >
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm.75 4.5a.75.75 0 0 0-1.5 0v5.25c0 .284.16.544.415.67l3.5 1.75a.75.75 0 1 0 .67-1.34l-3.085-1.543V6.75Z"
+    />
+  </svg>
+);
+
 const summaryIcon = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -511,6 +543,7 @@ const file = () => {
         plotIcon,
         multiPlotIcon,
         maxRadarIcon,
+        timeRadarIcon,
         summaryIcon,
         downloadIcon,
       ],
@@ -519,6 +552,7 @@ const file = () => {
         selectedPlotIcon,
         selectedMultiPlotIcon,
         selectedMaxRadarIcon,
+        selectedTimeRadarIcon,
         selectedSummaryIcon,
         downloadIcon,
       ],
@@ -606,6 +640,30 @@ const file = () => {
         </motion.div>
       );
     }, [plots, plotError, sensorSize, renderedPlotIds]),
+    useMemo(() => {
+      return (
+        <motion.div
+          key="timeRadar"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.15 }}
+        >
+          <MaxRadar
+            key={maskId ?? "no-mask"}
+            kind="time"
+            maxArray={[]}
+            deltas={plots}
+            times={plotTimestamps}
+            sensorSize={sensorSize}
+            error={plotError}
+            renderedPlotIds={renderedPlotIds}
+            handleCheckboxClick={handleCheckboxClick}
+            handleLessThanTwo={() => setOpen(0)}
+          />
+        </motion.div>
+      );
+    }, [plots, plotTimestamps, plotError, sensorSize, renderedPlotIds, maskId]),
     useMemo(() => {
       return (
         <SensorSummary
@@ -703,14 +761,33 @@ const file = () => {
               </div>
             )}
           </div>
+          <div className="relative group">
+            <button
+              className={`${
+                open === 4 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              } hover:bg-grey-200 relative hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 disabled:cursor-not-allowed disabled:outline disabled:outline-red-600 w-full h-full`}
+              onClick={() => setOpen(4)}
+              disabled={renderedLength <= 2}
+            >
+              <div className="flex items-center gap-1">
+                {open === 4 ? icons[1][4] : icons[0][4]}
+                Временная диаграмма
+              </div>
+            </button>
+            {renderedLength <= 2 && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-100 text-red-800 border border-red-800 rounded-[10px] text-base whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                Нужно выбрать минимум 3 сенсора
+              </div>
+            )}
+          </div>
           <button
             className={`${
-              open === 4 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              open === 5 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
             } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
-            onClick={() => setOpen(4)}
+            onClick={() => setOpen(5)}
           >
             <div className="flex items-center gap-1">
-              {open === 4 ? icons[1][4] : icons[0][4]}
+              {open === 5 ? icons[1][5] : icons[0][5]}
               Сводная информация
             </div>
           </button>

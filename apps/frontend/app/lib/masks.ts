@@ -92,9 +92,60 @@ export function maxDiagramValues(deltas: number[][]): number[] {
 }
 
 /**
+ * Радиусы «временной диаграммы» MAG-soft. Оси идут time-major: ось j — это
+ * (время j / sensorCount, сенсор j % sensorCount), ровно как в легаси
+ * `Math.DivRem(j, DivMidGridAxes, out sensorIdx)`, где DivMidGridAxes — число
+ * сенсоров. Значение оси — ΔF этого сенсора в этот момент (со знаком).
+ */
+export function timeDiagramValues(deltas: number[][]): number[] {
+  const sensorCount = deltas.length;
+  if (sensorCount === 0) return [];
+  const pointCount = Math.min(...deltas.map((d) => d.length));
+  const values: number[] = [];
+  for (let j = 0; j < pointCount * sensorCount; j++) {
+    values.push(deltas[j % sensorCount][Math.floor(j / sensorCount)]);
+  }
+  return values;
+}
+
+/** Режим расчёта площади: по модулю ΔF или со знаком (как в MAG-soft). */
+export type AreaMode = "abs" | "signed";
+
+/**
+ * Минимум радиальной оси по умолчанию (AxeMinVal в легаси): для модуля это 0,
+ * для знакового режима — минимум по всем осям, иначе отрицательные лепестки
+ * обрежутся.
+ */
+export function axisMinFor(values: number[], mode: AreaMode): number {
+  if (mode === "abs" || values.length === 0) return 0;
+  return Math.min(...values);
+}
+
+/**
+ * Радиусы осей для расчёта площади, отсчитанные от минимума оси axisMin
+ * (в легаси — вычитание AxeMinVal перед TriangleSquare).
+ * - `abs` — |ΔF| минус минимум оси, с обрезкой снизу нулём;
+ * - `signed` — ΔF минус минимум оси, как в MAG-soft: отрицательные лепестки
+ *   дают меньший радиус, а не больший.
+ */
+export function fingerprintRadii(
+  values: number[],
+  mode: AreaMode,
+  axisMin: number,
+): number[] {
+  return mode === "abs"
+    ? values.map((v) => Math.max(0, Math.abs(v) - axisMin))
+    : values.map((v) => v - axisMin);
+}
+
+/**
  * Площадь лепестковой диаграммы по формуле MAG-soft: сумма площадей
  * треугольников между соседними осями, Σ a·b·sin(2π/N)/2 по кругу.
  * values — уже отсчитанные от минимума оси.
+ *
+ * Порядок операций повторяется в apps/report/app/areas.py (Python), поэтому
+ * множитель s вынесен из суммы один раз и накопление идёт по возрастанию i —
+ * менять это нельзя, иначе округление разойдётся между языками.
  */
 export function radarArea(values: number[]): number {
   const n = values.length;
