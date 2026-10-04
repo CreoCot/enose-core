@@ -22,6 +22,7 @@ from reportlab.platypus import (
 )
 
 from app.charts import ChartGenerator
+from app.areas import fingerprint_areas
 from app.features import calculate_features
 from app.schemas import ReportRequest
 
@@ -369,7 +370,68 @@ class PDFGenerator:
             )
         )
         story.append(card)
+        story.append(Spacer(1, 4 * mm))
+
+        area_rows = self._area_rows(report)
+        area_table = Table(
+            [
+                [self._metadata_cell(label, value) for label, value in area_rows[:2]],
+                [self._metadata_cell(label, value) for label, value in area_rows[2:]],
+            ],
+            colWidths=[self.CONTENT_WIDTH / 2] * 2,
+            rowHeights=[16 * mm, 16 * mm],
+        )
+        area_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), self.SURFACE),
+                    ("BOX", (0, 0), (-1, -1), 0.6, self.LINE),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.6, self.LINE),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                    ("TOPPADDING", (0, 0), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ]
+            )
+        )
+        story.append(area_table)
+        story.append(Spacer(1, 2 * mm))
+        story.append(
+            Paragraph(
+                "Area of the kinetic fingerprint, sum of a(i)*a(i+1)*sin(2*pi/N)/2 "
+                "over the ring, with radii measured from the diagram's axis minimum "
+                "(MAG-soft convention). Fewer than three axes gives zero. The maximum "
+                "diagram uses axis minimum 0; the time diagram uses the minimum over "
+                "all its axes.",
+                self.styles["FingerprintNote"],
+            )
+        )
         story.append(Spacer(1, 7 * mm))
+
+    def _area_rows(self, report: ReportRequest) -> list[tuple[str, str]]:
+        """Label/value pairs for the kinetic-fingerprint area block.
+
+        Split out from the flowables so the numbers stay unit-testable without
+        parsing the rendered PDF.
+        """
+        areas = fingerprint_areas(report)
+        scope = (
+            f"mask «{areas.mask_name}» · {areas.sample_count} points"
+            if report.mask is not None
+            else f"all samples · {areas.sample_count} points"
+        )
+        return [
+            ("MAXIMUM DIAGRAM AREA", f"{self._format_area(areas.max_diagram)} Hz2"),
+            ("TIME DIAGRAM AREA", f"{self._format_area(areas.time_diagram)} Hz2"),
+            ("AXES (MAX / TIME)", f"{areas.max_axes} / {areas.time_axes}"),
+            ("EVALUATED AT", scope),
+        ]
+
+    @staticmethod
+    def _format_area(value: float) -> str:
+        """Matches the UI's area.toFixed(2) so both surfaces read identically."""
+        return f"{value:.2f}"
 
     def _build_interpretation(self, story, report: ReportRequest):
         story.append(Spacer(1, 9 * mm))

@@ -219,7 +219,7 @@ func TestGetReport_Forbidden403(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/api/v1/report/1", nil)
 	c.Params = gin.Params{{Key: "id", Value: "1"}}
-	
+
 	// Пытаемся зайти под юзером 3 (не владелец)
 	c.Set("claims", &services.Claims{UserID: 3, Role: services.RoleOperator})
 
@@ -250,7 +250,7 @@ func TestGetReport_DownstreamError502(t *testing.T) {
 	c.Set("claims", &services.Claims{UserID: 2, Role: services.RoleOperator})
 
 	h.GetReport(c)
-	
+
 	assert.Equal(t, http.StatusBadGateway, w.Code)
 	assert.Contains(t, w.Body.String(), "report_service_error")
 }
@@ -297,7 +297,67 @@ func TestGetFeatures_DownstreamError502(t *testing.T) {
 	c.Set("claims", &services.Claims{UserID: 2, Role: services.RoleOperator})
 
 	h.GetFeatures(c)
-	
+
 	assert.Equal(t, http.StatusBadGateway, w.Code)
 	assert.Contains(t, w.Body.String(), "ml_service_error")
+}
+func TestResolveMaskSamples(t *testing.T) {
+	// Ряд с базовой точкой t=-1: отсчёт 0 — это индекс 1.
+	timestamps := []float64{-1, 0, 1, 2, 3, 4, 5}
+
+	tests := []struct {
+		name    string
+		points  []float64
+		kept    []float64
+		origIdx []int
+	}{
+		{"точки в пределах данных", []float64{1, 3, 5}, []float64{1, 3, 5}, []int{2, 4, 6}},
+		{"дробное время усекается", []float64{1.9, 4.2}, []float64{1.9, 4.2}, []int{2, 5}},
+		{"обрыв на первой вышедшей за данные", []float64{2, 6, 100}, []float64{2}, []int{3}},
+		{"пустая маска", nil, []float64{}, []int{}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			kept, idx := resolveMaskSamples(timestamps, tc.points)
+			assert.Equal(t, tc.kept, kept)
+			assert.Equal(t, tc.origIdx, idx)
+		})
+	}
+
+	t.Run("без базовой точки индекс совпадает с floor(t)", func(t *testing.T) {
+		kept, idx := resolveMaskSamples([]float64{0, 1, 2}, []float64{0, 2})
+		assert.Equal(t, []float64{0, 2}, kept)
+		assert.Equal(t, []int{0, 2}, idx)
+	})
+}
+
+func TestMergeIndices(t *testing.T) {
+	assert.Equal(t, []int{0, 1, 2, 4}, mergeIndices([]int{0, 2, 4}, []int{1, 2}))
+	assert.Equal(t, []int{}, mergeIndices(nil, nil))
+	// downsampleIndices может повторить индекс — объединение их схлопывает
+	assert.Equal(t, []int{3, 7}, mergeIndices([]int{3, 3, 7}, []int{7}))
+}
+
+func TestPositionsIn(t *testing.T) {
+	assert.Equal(t, []int{1, 3}, positionsIn([]int{0, 1, 2, 4}, []int{1, 4}))
+	assert.Equal(t, []int{}, positionsIn([]int{0, 1}, []int{9}))
+}
+
+// Точки маски должны пережить прореживание: иначе отчёт посчитал бы площадь
+// по другим отсчётам.
+func TestMaskSurvivesDownsampling(t *testing.T) {
+	n := 2*maxReportPointsPerSensor + 1
+	timestamps := make([]float64, n)
+	for i := range timestamps {
+		timestamps[i] = float64(i)
+	}
+
+	_, maskIdx := resolveMaskSamples(timestamps, []float64{7777})
+	idx := mergeIndices(downsampleIndices(n, maxReportPointsPerSensor), maskIdx)
+	pos := positionsIn(idx, maskIdx)
+
+	if assert.Len(t, pos, 1) {
+		assert.Equal(t, 7777.0, pickFloat(timestamps, idx)[pos[0]])
+	}
 }

@@ -8,7 +8,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from app.features import calculate_features
+from app.areas import max_diagram_values, selected_deltas
 from app.schemas import ReportRequest
 
 
@@ -92,12 +92,11 @@ class ChartGenerator:
         shift at that sensor's extremum (the ``max_abs`` report feature).
         """
         labels = [sensor.name for sensor in report.sensors]
-        values = [
-            calculate_features(report.timestamps, sensor.initial, sensor.values).get(
-                "max_abs", 0.0
-            )
-            for sensor in report.sensors
-        ]
+        # With a mask the radii are taken at the mask points only, exactly as
+        # the UI does. Without a mask this equals the previous computation,
+        # because max|F0 - v| is the same as max|v - F0|.
+        _, deltas = selected_deltas(report)
+        values = max_diagram_values(deltas)
 
         fig = plt.figure(figsize=(7.2, 6.2), facecolor="white")
         ax = fig.add_subplot(111, polar=True)

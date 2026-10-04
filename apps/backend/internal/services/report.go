@@ -30,11 +30,25 @@ type ReportInterpretation struct {
 	Text string `json:"text"`
 }
 
+// ReportMask — маска времени измерения, по точкам которой строится временная
+// диаграмма. Indices — позиции точек в ПЕРЕДАННЫХ timestamps/values (уже после
+// прореживания), чтобы report-сервис не пересчитывал индексы сам: про базовую
+// строку и прореживание знает только бэкенд.
+type ReportMask struct {
+	ID      int       `json:"id"`
+	Name    string    `json:"name"`
+	Points  []float64 `json:"points"`
+	Indices []int     `json:"indices"`
+}
+
 type ReportRequest struct {
 	Header         ReportHeader          `json:"header"`
 	Timestamps     []float64             `json:"timestamps"`
 	Sensors        []ReportSensor        `json:"sensors"`
 	Interpretation *ReportInterpretation `json:"interpretation"`
+	// Mask — nil, если у измерения нет маски по умолчанию: тогда временная
+	// диаграмма строится по всем отсчётам, как в MAG-soft без маски.
+	Mask *ReportMask `json:"mask,omitempty"`
 }
 
 // ReportClient вызывает stateless report-сервис для генерации PDF.

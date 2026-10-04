@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/CreoCot/enose-core/backend/internal/models"
@@ -191,9 +192,35 @@ func (h *MeasurementsHandler) GetReport(c *gin.Context) {
 		return
 	}
 
+	// Маска по умолчанию: по её точкам report-сервис построит временную
+	// диаграмму. Удалённая маска отчёт не ломает — строим без неё.
+	var maskPoints []float64
+	var maskMeta *models.Mask
+	if measurement.DefaultMaskID != nil {
+		m, err := h.Registry.Masks.GetByID(c.Request.Context(), *measurement.DefaultMaskID)
+		switch {
+		case err == nil:
+			maskMeta = m
+			maskPoints = make([]float64, len(m.Points))
+			for i, p := range m.Points {
+				maskPoints[i] = p.TimeS
+			}
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			// Маску удалили — отчёт строим по всем отсчётам.
+		default:
+			c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Error:   "fetch_error",
+				Message: err.Error(),
+			})
+			return
+		}
+	}
+
 	// Прореживаем общий ряд времени и применяем те же индексы ко всем сенсорам —
-	// точки должны оставаться выровненными между timestamps и values.
-	idx := downsampleIndices(len(timestamps), maxReportPointsPerSensor)
+	// точки должны оставаться выровненными между timestamps и values. Точки
+	// маски добавляем в набор, иначе прореживание их выбросит.
+	keptPoints, maskIdx := resolveMaskSamples(timestamps, maskPoints)
+	idx := mergeIndices(downsampleIndices(len(timestamps), maxReportPointsPerSensor), maskIdx)
 
 	reportSensors := make([]services.ReportSensor, 0, len(sensors))
 	for _, s := range sensors {
@@ -227,6 +254,14 @@ func (h *MeasurementsHandler) GetReport(c *gin.Context) {
 		Sensors:    reportSensors,
 		// Интерпретация появится вместе с авторским алгоритмом — пока nil.
 		Interpretation: nil,
+	}
+	if maskMeta != nil {
+		req.Mask = &services.ReportMask{
+			ID:      maskMeta.ID,
+			Name:    maskMeta.Name,
+			Points:  keptPoints,
+			Indices: positionsIn(idx, maskIdx),
+		}
 	}
 
 	pdf, err := h.report.GenerateReport(c.Request.Context(), req)
@@ -428,4 +463,63 @@ func (h *MeasurementsHandler) loadAuthorizedMeasurement(c *gin.Context) (*models
 	}
 
 	return measurement, true
+}
+
+// maskSampleEPS — та же поправка, что в apps/frontend/app/lib/masks.ts.
+const maskSampleEPS = 1e-9
+
+// resolveMaskSamples переводит точки маски в индексы исходного ряда по правилам
+// MAG-soft: отсчёт k = floor(t), где отсчёт 0 — первая точка ПОСЛЕ базовой
+// (базовые — ведущие точки с отрицательным временем). Точки маски отсортированы,
+// поэтому на первой вышедшей за пределы данных обход прекращается.
+func resolveMaskSamples(timestamps, points []float64) ([]float64, []int) {
+	kept := make([]float64, 0, len(points))
+	origIdx := make([]int, 0, len(points))
+
+	baseline := 0
+	for baseline < len(timestamps) && timestamps[baseline] < 0 {
+		baseline++
+	}
+	usable := len(timestamps) - baseline
+
+	for _, t := range points {
+		k := int(math.Floor(t + maskSampleEPS))
+		if k < 0 || k >= usable {
+			break
+		}
+		kept = append(kept, t)
+		origIdx = append(origIdx, baseline+k)
+	}
+	return kept, origIdx
+}
+
+// mergeIndices объединяет наборы индексов в один отсортированный без дублей:
+// точки маски обязаны пережить прореживание, иначе отчёт посчитает площадь
+// по другим отсчётам.
+func mergeIndices(base, extra []int) []int {
+	seen := make(map[int]struct{}, len(base)+len(extra))
+	out := make([]int, 0, len(base)+len(extra))
+	for _, group := range [][]int{base, extra} {
+		for _, v := range group {
+			if _, ok := seen[v]; ok {
+				continue
+			}
+			seen[v] = struct{}{}
+			out = append(out, v)
+		}
+	}
+	sort.Ints(out)
+	return out
+}
+
+// positionsIn ищет позиции wanted внутри отсортированного sorted; отсутствующие
+// пропускаются (в норме их нет — mergeIndices это гарантирует).
+func positionsIn(sorted, wanted []int) []int {
+	out := make([]int, 0, len(wanted))
+	for _, w := range wanted {
+		if i := sort.SearchInts(sorted, w); i < len(sorted) && sorted[i] == w {
+			out = append(out, i)
+		}
+	}
+	return out
 }
