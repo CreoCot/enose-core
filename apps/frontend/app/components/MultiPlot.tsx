@@ -46,7 +46,6 @@ const MultiPlot = ({
         series={activeSeries}
         height={384}
         controls
-        dashed
       />
     );
   }, [renderedPlotIds, sensorData, timestamps]);
