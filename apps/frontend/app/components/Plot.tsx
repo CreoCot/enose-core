@@ -11,7 +11,7 @@ const plotColor = "#7B3BCE"; // accent-500
 
 const Plot = ({ id, timestamps, sensorData }: Props) => {
   const series = useMemo(
-    () => [{ id: `sensor-${id}`, label: `Сенсор ${id + 1}`, data: sensorData }],
+    () => [{ id: `sensor-${id}`, label: `S${id + 1}`, data: sensorData }],
     [id, sensorData],
   );
   return (
@@ -25,7 +25,7 @@ const Plot = ({ id, timestamps, sensorData }: Props) => {
         hideLegend
       />
       <p className="font-medium text-center text-lg text-accent-900">
-        Сенсор {id + 1}
+        S{id + 1}
       </p>
     </div>
   );

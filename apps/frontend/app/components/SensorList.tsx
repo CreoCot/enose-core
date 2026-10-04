@@ -18,7 +18,7 @@ const SensorList = ({ renderedPlotIds, handleCheckboxClick }: Props) => {
             id={`${i}`}
             checked={renderedPlotIds[i]}
           />
-          <span className="hidden sm:flex text-nowrap">Сенсор {i + 1}</span>
+          <span className="hidden sm:flex text-nowrap">S{i + 1}</span>
         </div>
       ))}
     </div>

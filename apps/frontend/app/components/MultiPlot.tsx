@@ -33,7 +33,7 @@ const MultiPlot = ({
         return {
           id: `sensor-${i}`,
           data: arr,
-          label: `Сенсор ${i + 1}`,
+          label: `S${i + 1}`,
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);

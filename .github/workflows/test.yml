@@ -17,6 +17,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       ml: ${{ steps.filter.outputs.ml }}
       report: ${{ steps.filter.outputs.report }}
+      parser: ${{ steps.filter.outputs.parser }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -40,6 +41,9 @@ jobs:
               - '.github/workflows/test.yml'
             report:
               - 'apps/report/**'
+              - '.github/workflows/test.yml'
+            parser:
+              - 'apps/parser/**'
               - '.github/workflows/test.yml'
 
   test-frontend:
@@ -165,4 +169,26 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run report tests
+        run: pytest -q
+
+  test-parser:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.parser == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/parser
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run parser tests
         run: pytest -q

@@ -248,8 +248,16 @@ class PDFGenerator:
         )
         table_data = [headers]
 
-        for sensor, features in zip(report.sensors, sensor_features):
-            row = [Paragraph(escape(sensor.name), self.styles["SensorName"])]
+        for index, (sensor, features) in enumerate(
+            zip(report.sensors, sensor_features)
+        ):
+            # Короткая метка как на графиках и в интерфейсе, рядом — SID из
+            # файла, чтобы идентичность сенсора не терялась.
+            row = [
+                Paragraph(
+                    f"S{index + 1} · {escape(sensor.name)}", self.styles["SensorName"]
+                )
+            ]
             for key, _, _ in self.FEATURE_COLUMNS:
                 row.append(self._format_number(features.get(key)))
             table_data.append(row)

@@ -58,7 +58,7 @@ const MeasurementsTable = ({
       if (renderedPlotIds[i - 1]) {
         cols.push({
           accessorKey: `sensor_${i}`,
-          header: `Сенсор ${i}`,
+          header: `S${i}`,
         });
       }
     }

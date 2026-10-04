@@ -529,10 +529,15 @@ const file = () => {
     if (!(target instanceof HTMLElement)) {
       return;
     }
+    // Берём реальный бокс элемента и гасим его внешние отступы: с mx-8/my-4
+    // html-to-image сдвигал клон на величину отступа, из-за чего картинка
+    // съезжала вправо и обрезались подписи крайних осей.
+    const rect = target.getBoundingClientRect();
     const options = {
       backgroundColor: "#FFFFFF",
-      width: target.scrollWidth,
-      height: target.scrollHeight,
+      width: Math.ceil(rect.width),
+      height: Math.ceil(rect.height),
+      style: { margin: "0" },
       filter: exportFilter,
     };
     const render =

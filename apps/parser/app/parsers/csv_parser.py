@@ -1,11 +1,36 @@
 from __future__ import annotations
 
 import csv
-import io
 from datetime import datetime
 
 from .common import finalize
 from ..schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
+
+
+# Строка базовых частот в экспорте MAG-soft: в русской сборке «Базовая
+# частота», в английской — «Base frequency».
+BASE_FREQUENCY_KEYS = ("base frequency", "базовая частота")
+
+
+def _is_base_frequency_row(line: str) -> bool:
+    key = line.split(";", 1)[0].strip().lower()
+    return key in BASE_FREQUENCY_KEYS
+
+
+def _parse_base_frequencies(line: str | None, count: int) -> list[float] | None:
+    """Абсолютные базовые частоты сенсоров, если строка есть и читается."""
+    if not line:
+        return None
+    values: list[float] = []
+    for raw in line.split(";")[1:]:
+        raw = raw.strip().replace(",", ".")
+        if not raw:
+            continue
+        try:
+            values.append(float(raw))
+        except ValueError:
+            return None
+    return values if len(values) >= count else None
 
 
 def parse_csv(content: bytes) -> ParsedMeasurement:
@@ -32,11 +57,14 @@ def parse_csv(content: bytes) -> ParsedMeasurement:
 
     sensors_line = None
     units_line = None
+    base_line = None
 
     while idx < len(lines):
         line = lines[idx].strip()
         if line.startswith("Sensors;"):
             sensors_line = line
+        elif _is_base_frequency_row(line):
+            base_line = line
         elif line.startswith("Time;"):
             units_line = line
             idx += 1
@@ -64,18 +92,18 @@ def parse_csv(content: bytes) -> ParsedMeasurement:
 
     data_points: list[ParsedDataPoint] = []
     times: list[float] = []
-    
+
     reader = csv.reader(lines[idx:], delimiter=";")
     for row_num, row in enumerate(reader, start=idx + 1):
         if not row or all(not c.strip() for c in row):
             continue
-            
+
         try:
             time_offset_s = float(row[0].replace(",", "."))
             times.append(time_offset_s)
         except ValueError:
             continue
-            
+
         for i, raw_value in enumerate(row[1:]):
             if not raw_value.strip():
                 continue
@@ -93,6 +121,25 @@ def parse_csv(content: bytes) -> ParsedMeasurement:
 
     if not data_points:
         raise ValueError("В CSV нет корректных строк с данными")
+
+    # MAG-soft экспортирует в CSV уже посчитанные ΔF, а абсолютные частоты
+    # кладёт отдельной строкой. Приводим к тому же виду, что и XML: точка
+    # time = -1 с базовой частотой, дальше абсолютные частоты F = F0 - ΔF.
+    # Без этого «базовая частота» в интерфейсе была бы первым значением ΔF.
+    base_frequencies = _parse_base_frequencies(base_line, len(sensors))
+    if base_frequencies:
+        for dp in data_points:
+            dp.value = base_frequencies[dp.sensor_position - 1] - dp.value
+        data_points = [
+            ParsedDataPoint(
+                time_offset_s=-1.0,
+                sensor_position=i + 1,
+                value=base_frequencies[i],
+            )
+            for i in range(len(sensors))
+        ] + data_points
+        for sensor in sensors:
+            sensor.unit = "Hz"
 
     interval_ms = 1000
     if len(times) >= 2:
@@ -117,5 +164,5 @@ def parse_csv(content: bytes) -> ParsedMeasurement:
         sensors=sensors,
         data_points=data_points,
     )
-    
+
     return finalize(parsed)

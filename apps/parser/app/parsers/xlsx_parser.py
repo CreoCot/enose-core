@@ -5,6 +5,7 @@ from datetime import datetime
 import openpyxl
 
 from .common import finalize
+from .csv_parser import BASE_FREQUENCY_KEYS
 from ..schemas import ParsedDataPoint, ParsedMeasurement, ParsedSensor
 
 
@@ -24,12 +25,12 @@ def parse_xlsx(content: bytes) -> ParsedMeasurement:
     for row in rows:
         if not row or all(c is None for c in row):
             continue
-        
+
         first_cell = row[0]
         if isinstance(first_cell, str) and first_cell.strip().lower() == "sensors":
             sensors_row = row
             break
-            
+
         if first_cell is not None:
             key = str(first_cell).strip().lower()
             val = row[1] if len(row) > 1 else None
@@ -39,14 +40,20 @@ def parse_xlsx(content: bytes) -> ParsedMeasurement:
     if not sensors_row:
         raise ValueError("В файле не найдена строка с сенсорами ('Sensors')")
 
+    base_row = None
     for row in rows:
         if not row or all(c is None for c in row):
             continue
-            
+
         first_cell = row[0]
         if isinstance(first_cell, str) and first_cell.strip().lower() == "time":
             units_row = row
             break
+        if (
+            isinstance(first_cell, str)
+            and first_cell.strip().lower() in BASE_FREQUENCY_KEYS
+        ):
+            base_row = row
 
     sensor_labels = [str(c).strip() for c in sensors_row[1:] if c is not None]
     if not sensor_labels:
@@ -73,13 +80,13 @@ def parse_xlsx(content: bytes) -> ParsedMeasurement:
     for row_num, row in enumerate(rows, start=1):
         if not row or row[0] is None:
             continue
-            
+
         try:
             time_offset_s = float(row[0])
             times.append(time_offset_s)
         except ValueError:
             continue
-            
+
         for i, raw_value in enumerate(row[1 : 1 + len(sensor_labels)]):
             if raw_value is None or str(raw_value).strip() == "":
                 continue
@@ -97,6 +104,32 @@ def parse_xlsx(content: bytes) -> ParsedMeasurement:
 
     if not data_points:
         raise ValueError("В файле нет корректных строк с данными")
+
+    # Как и в CSV, MAG-soft кладёт в XLSX уже посчитанные ΔF, а абсолютные
+    # частоты — отдельной строкой. Приводим к виду XML: точка time = -1 с
+    # базовой частотой, дальше абсолютные частоты F = F0 - ΔF.
+    base_frequencies: list[float] = []
+    if base_row:
+        for cell in base_row[1 : 1 + len(sensors)]:
+            try:
+                base_frequencies.append(float(cell))
+            except (TypeError, ValueError):
+                base_frequencies = []
+                break
+
+    if len(base_frequencies) == len(sensors):
+        for dp in data_points:
+            dp.value = base_frequencies[dp.sensor_position - 1] - dp.value
+        data_points = [
+            ParsedDataPoint(
+                time_offset_s=-1.0,
+                sensor_position=i + 1,
+                value=base_frequencies[i],
+            )
+            for i in range(len(sensors))
+        ] + data_points
+        for sensor in sensors:
+            sensor.unit = "Hz"
 
     interval_ms = 1000
     if len(times) >= 2:

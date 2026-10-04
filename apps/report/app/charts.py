@@ -42,7 +42,7 @@ class ChartGenerator:
                 report.timestamps,
                 delta,
                 color=self.COLORS[index % len(self.COLORS)],
-                label=sensor.name,
+                label=f"S{index + 1}",
                 linewidth=1.8,
                 alpha=0.95,
             )
@@ -91,7 +91,7 @@ class ChartGenerator:
         Each axis represents a sensor and its radius is the absolute frequency
         shift at that sensor's extremum (the ``max_abs`` report feature).
         """
-        labels = [sensor.name for sensor in report.sensors]
+        labels = [f"S{i + 1}" for i in range(len(report.sensors))]
         # With a mask the radii are taken at the mask points only, exactly as
         # the UI does. Without a mask this equals the previous computation,
         # because max|F0 - v| is the same as max|v - F0|.

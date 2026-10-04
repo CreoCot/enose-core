@@ -1,5 +1,5 @@
 import { RadarAxis, RadarChart } from "@mui/x-charts/RadarChart";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SensorList from "./SensorList";
 import {
   fingerprintRadii,
@@ -40,6 +40,10 @@ const MaxRadar = ({
 }: Props) => {
   const isTime = kind === "time";
   const [areaMode, setAreaMode] = useState<AreaMode>(isTime ? "signed" : "abs");
+  // Сетка по умолчанию только на временных метках: спица на каждый сенсор
+  // при 8 сенсорах даёт в 8 раз больше линий и забивает диаграмму.
+  const [sensorGrid, setSensorGrid] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
   const visibleSensors = Object.entries(renderedPlotIds)
     .filter(([_, v]) => v === true)
     .map(([k]) => Number(k));
@@ -60,12 +64,12 @@ const MaxRadar = ({
   // остаётся в тултипе.
   const axisNames = useMemo(() => {
     if (!isTime) {
-      return visibleSensors.map((i) => `Сенсор ${i + 1}`);
+      return visibleSensors.map((i) => `S${i + 1}`);
     }
     const n = visibleSensors.length;
     return renderedArray.map((_, j) => {
       const t = times[Math.floor(j / n)];
-      return `Сенсор ${visibleSensors[j % n] + 1} · ${t ?? "?"} с`;
+      return `S${visibleSensors[j % n] + 1} · ${t ?? "?"} с`;
     });
   }, [isTime, renderedArray, times, renderedPlotIds]);
 
@@ -91,6 +95,36 @@ const MaxRadar = ({
   const area = radarArea(
     fingerprintRadii(renderedArray, areaMode, areaMode === "abs" ? 0 : plotMin),
   );
+
+  // Спицы сетки идут по одной на ось (time-major), поэтому «только временные
+  // метки» — это каждая N-я, где N — число показанных сенсоров.
+  //
+  // Прячем их атрибутом на самом элементе, а не стилем: CSS-правило из sx не
+  // попадает в клон при выгрузке в PNG/SVG, и экспорт расходился бы с экраном.
+  // MUI перерисовывает сетку после замера размеров и возвращает свою
+  // прозрачность, поэтому следим за поддеревом и применяем заново.
+  useEffect(() => {
+    const root = chartRef.current;
+    if (!root) return;
+    const n = visibleSensors.length;
+
+    const apply = () => {
+      root
+        .querySelectorAll<SVGPathElement>(".MuiRadarChart-gridRadial")
+        .forEach((spoke, i) => {
+          const hidden = isTime && !sensorGrid && n > 1 && i % n !== 0;
+          const want = hidden ? "0" : "0.3";
+          if (spoke.getAttribute("stroke-opacity") !== want) {
+            spoke.setAttribute("stroke-opacity", want);
+          }
+        });
+    };
+
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [isTime, sensorGrid, renderedArray.length, renderedPlotIds]);
 
   const metrics = useMemo(
     () =>
@@ -134,38 +168,42 @@ const MaxRadar = ({
             renderedPlotIds={renderedPlotIds}
             handleCheckboxClick={handleCheckboxClick}
           />
-          <RadarChart
-            key={metrics.length}
-            colors={[plotColor]}
-            className="download-image mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border-2 border-primary-200"
-            height={640}
-            skipAnimation={isTime}
-            sx={{
-              "& text": {
-                fontFamily: '"Times New Roman", Times, serif !important',
-                fontSize: isTime ? "13px !important" : "19px !important",
-              },
-              "& .MuiRadarChart-seriesArea": { fillOpacity: 1 },
-            }}
-            series={[{ data: renderedArray, fillArea: true, hideMark: isTime }]}
-            radar={{
-              max: plotMax,
-              metrics: metrics,
-              // На окружности подписываем только первый сенсор каждой
-              // временной группы (как в MAG-soft), в тултипе — полное имя.
-              labelFormatter: (name, { location }) =>
-                !isTime || location === "tooltip"
-                  ? name
-                  : tickByName[name] ?? "",
-            }}
-          >
-            {/* <RadarAxis
+          <div ref={chartRef} className="contents">
+            <RadarChart
+              key={metrics.length}
+              colors={[plotColor]}
+              className="download-image mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border-2 border-primary-200"
+              height={640}
+              skipAnimation={isTime}
+              sx={{
+                "& text": {
+                  fontFamily: '"Times New Roman", Times, serif !important',
+                  fontSize: isTime ? "13px !important" : "19px !important",
+                },
+                "& .MuiRadarChart-seriesArea": { fillOpacity: 1 },
+              }}
+              series={[
+                { data: renderedArray, fillArea: true, hideMark: isTime },
+              ]}
+              radar={{
+                max: plotMax,
+                metrics: metrics,
+                // На окружности подписываем только первый сенсор каждой
+                // временной группы (как в MAG-soft), в тултипе — полное имя.
+                labelFormatter: (name, { location }) =>
+                  !isTime || location === "tooltip"
+                    ? name
+                    : tickByName[name] ?? "",
+              }}
+            >
+              {/* <RadarAxis
               metric={metrics[0]?.name}
               divisions={Math.max(1, Math.ceil((plotMax - plotMin) / 2))}
               labelOrientation="horizontal"
               angle={0}
             /> */}
-          </RadarChart>
+            </RadarChart>
+          </div>
           <div className="flex flex-col justify-start p-5 h-full">
             <div className="flex flex-col p-6 gap-5 border-2 border-primary-200 rounded-[10px] shadow-sm shadow-primary-200">
               <p className="text-primary-800 font-semibold text-2xl">Масштаб</p>
@@ -174,17 +212,14 @@ const MaxRadar = ({
                   Минимум
                   <input
                     type="number"
-                    min={0}
                     max={plotMax}
                     step="any"
                     value={plotMin}
                     onChange={(event) => {
                       const value = Number(event.target.value);
-                      if (
-                        Number.isFinite(value) &&
-                        value >= 0 &&
-                        value < plotMax
-                      ) {
+                      // Минимум может быть отрицательным: на временной
+                      // диаграмме ΔF со знаком уходит ниже нуля.
+                      if (Number.isFinite(value) && value < plotMax) {
                         setPlotMin(value);
                       }
                     }}
@@ -262,6 +297,16 @@ const MaxRadar = ({
                   со знаком ΔF
                 </label>
               </div>
+              {isTime && (
+                <label className="flex cursor-pointer items-center gap-2 text-primary-700 text-lg">
+                  <input
+                    type="checkbox"
+                    checked={sensorGrid}
+                    onChange={(e) => setSensorGrid(e.target.checked)}
+                  />
+                  сетка по сенсорам
+                </label>
+              )}
               <p className="text-primary-600 text-base">
                 Осей: {renderedArray.length}
               </p>
