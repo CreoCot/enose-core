@@ -30,6 +30,12 @@ interface Props {
   hideLegend?: boolean;
   /** Показывать панель «Авто Y» + «Сброс» (для крупного графика сравнения) */
   controls?: boolean;
+  /**
+   * Различать серии штрихом линии, а не только цветом. Нужно там, где кривых
+   * много: в чёрно-белой печати статьи цвета сливаются в неразличимые оттенки
+   * серого.
+   */
+  dashed?: boolean;
 }
 
 interface Selection {
@@ -149,6 +155,28 @@ const SelectionOverlay = ({ autoY, onZoom, onReset }: OverlayProps) => {
 
 const RED = "#dc2626";
 
+// Штрихи для серий: порядок повторяет научную традицию — сплошная, штриховая,
+// пунктир, штрихпунктир и т.д. Повторяется по кругу, если серий больше.
+const DASH_PATTERNS = [
+  "0",
+  "7 3",
+  "2 3",
+  "9 3 2 3",
+  "12 4",
+  "4 2 1 2",
+  "1 3",
+  "14 3 2 3 2 3",
+];
+
+const dashStyles = (series: ChartSeries[]) =>
+  Object.fromEntries(
+    series.map((s, i) => [
+      // В @mui/x-charts 9 серия помечается атрибутом, а не классом
+      `& .MuiLineChart-line[data-series-id="${s.id}"]`,
+      { strokeDasharray: DASH_PATTERNS[i % DASH_PATTERNS.length] },
+    ]),
+  );
+
 const ZoomableChart = ({
   timestamps,
   series,
@@ -157,6 +185,7 @@ const ZoomableChart = ({
   className,
   hideLegend,
   controls = false,
+  dashed = false,
 }: Props) => {
   const [xRange, setXRange] = useState<Range | null>(null);
   const [yRange, setYRange] = useState<Range | null>(null);
@@ -219,15 +248,21 @@ const ZoomableChart = ({
       <LineChart
         className="-ml-3 -mr-1 -mb-3"
         colors={colors}
+        sx={dashed ? dashStyles(series) : undefined}
         xAxis={[
           {
             data: timestamps,
             scaleType: "linear",
             min: xDomain[0],
             max: xDomain[1],
+            label: "Время, с",
           },
         ]}
-        yAxis={[yDomain ? { min: yDomain[0], max: yDomain[1] } : {}]}
+        yAxis={[
+          yDomain
+            ? { min: yDomain[0], max: yDomain[1], label: "ΔF, Гц", width: 70 }
+            : { label: "ΔF, Гц", width: 70 },
+        ]}
         series={series.map((s) => ({
           id: s.id,
           data: s.data,

@@ -19,7 +19,7 @@ import {
 } from "~/lib/masks";
 import { fetchDefaultMaskId, fetchMasks } from "~/lib/masksApi";
 import { buildDeltaModel, type SummaryItem } from "~/lib/utils";
-import { toPng } from "html-to-image";
+import { toPng, toSvg } from "html-to-image";
 
 const tableIcon = (
   <svg
@@ -445,13 +445,21 @@ const handleDownload = async (
   }
 };
 
-function downloadImage(dataUrl: string) {
+// 300 dpi при 96 css-dpi: столько просят в требованиях к иллюстрациям
+// большинства журналов (растровые рисунки — не ниже 300 dpi).
+const EXPORT_PIXEL_RATIO = 300 / 96;
+
+function downloadDataUrl(dataUrl: string, filename: string) {
   const a = document.createElement("a");
 
-  a.setAttribute("download", "downloadedImage.png");
+  a.setAttribute("download", filename);
   a.setAttribute("href", dataUrl);
   a.click();
 }
+
+// Кнопки управления графиком — часть интерфейса, а не рисунка
+const exportFilter = (node: HTMLElement) =>
+  !(node instanceof HTMLElement) || !node.classList.contains("no-export");
 
 const file = () => {
   const loaderData = useLoaderData<Awaited<ReturnType<typeof clientLoader>>>();
@@ -516,22 +524,24 @@ const file = () => {
       [e.target.id]: e.target.checked,
     }));
   };
-  const onItemDownload = () => {
+  const exportChart = (format: "png" | "svg") => {
     const target = document.querySelector(".download-image");
     if (!(target instanceof HTMLElement)) {
       return;
     }
-    const imageWidth = target.scrollWidth;
-    const imageHeight = target.scrollHeight;
-
-    toPng(target, {
-      backgroundColor: "FFFFFF",
-      width: imageWidth,
-      height: imageHeight,
-      // Кнопки масштаба графика — часть управления, а не картинки
-      filter: (node) =>
-        !(node instanceof HTMLElement) || !node.classList.contains("no-export"),
-    }).then(downloadImage);
+    const options = {
+      backgroundColor: "#FFFFFF",
+      width: target.scrollWidth,
+      height: target.scrollHeight,
+      filter: exportFilter,
+    };
+    const render =
+      format === "png"
+        ? toPng(target, { ...options, pixelRatio: EXPORT_PIXEL_RATIO })
+        : toSvg(target, options);
+    render.then((dataUrl) =>
+      downloadDataUrl(dataUrl, `measurement-${fileId}.${format}`),
+    );
   };
 
   const [open, setOpen] = useState(1);
@@ -824,12 +834,19 @@ const file = () => {
           </div>
         </div>
         <div>
-          <div className="sm:mx-7">
+          <div className="sm:mx-7 flex flex-wrap gap-4">
             <button
               className="lg:text-xl m-1 font-medium flex gap-2 text-grey-700 hover:text-grey-600 transition-colors duration-200 cursor-pointer"
-              onClick={onItemDownload}
+              onClick={() => exportChart("png")}
             >
-              <span>Скачать</span>
+              <span>Скачать PNG, 300 dpi</span>
+              {smallDownloadIcon}
+            </button>
+            <button
+              className="lg:text-xl m-1 font-medium flex gap-2 text-grey-700 hover:text-grey-600 transition-colors duration-200 cursor-pointer"
+              onClick={() => exportChart("svg")}
+            >
+              <span>Скачать SVG</span>
               {smallDownloadIcon}
             </button>
           </div>
