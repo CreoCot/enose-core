@@ -82,10 +82,6 @@ const RingScale = ({
             style={{
               fontSize,
               textAnchor: "start",
-              // белая обводка, чтобы цифры читались поверх заливки
-              stroke: "#fff",
-              strokeWidth: fontSize * 0.2,
-              paintOrder: "stroke",
             }}
           />
         );
@@ -155,6 +151,8 @@ const MaxRadar = ({
   // Сетка по умолчанию только на временных метках: спица на каждый сенсор
   // при 8 сенсорах даёт в 8 раз больше линий и забивает диаграмму.
   const [sensorGrid, setSensorGrid] = useState(false);
+  // Основная сетка (кольца и спицы) — можно скрыть, оставив только подписи
+  const [mainGrid, setMainGrid] = useState(true);
   const chartRef = useRef<HTMLDivElement>(null);
   const visibleSensors = Object.entries(renderedPlotIds)
     .filter(([_, v]) => v === true)
@@ -235,9 +233,18 @@ const MaxRadar = ({
 
     const apply = () => {
       root
+        .querySelectorAll<SVGElement>(".MuiRadarChart-gridDivider")
+        .forEach((ring) => {
+          const want = mainGrid ? "0.3" : "0";
+          if (ring.getAttribute("stroke-opacity") !== want) {
+            ring.setAttribute("stroke-opacity", want);
+          }
+        });
+      root
         .querySelectorAll<SVGPathElement>(".MuiRadarChart-gridRadial")
         .forEach((spoke, i) => {
-          const hidden = isTime && !sensorGrid && n > 1 && i % n !== 0;
+          const hidden =
+            !mainGrid || (isTime && !sensorGrid && n > 1 && i % n !== 0);
           const want = hidden ? "0" : "0.3";
           if (spoke.getAttribute("stroke-opacity") !== want) {
             spoke.setAttribute("stroke-opacity", want);
@@ -249,7 +256,7 @@ const MaxRadar = ({
     const observer = new MutationObserver(apply);
     observer.observe(root, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [isTime, sensorGrid, renderedArray.length, renderedPlotIds]);
+  }, [isTime, sensorGrid, mainGrid, renderedArray.length, renderedPlotIds]);
 
   const metrics = useMemo(
     () =>
@@ -435,7 +442,15 @@ const MaxRadar = ({
                   со знаком ΔF
                 </label>
               </div>
-              {isTime && (
+              <label className="flex cursor-pointer items-center gap-2 text-primary-700 text-lg">
+                <input
+                  type="checkbox"
+                  checked={mainGrid}
+                  onChange={(e) => setMainGrid(e.target.checked)}
+                />
+                основная сетка
+              </label>
+              {isTime && mainGrid && (
                 <label className="flex cursor-pointer items-center gap-2 text-primary-700 text-lg">
                   <input
                     type="checkbox"
