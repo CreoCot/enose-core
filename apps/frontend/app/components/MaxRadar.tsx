@@ -151,8 +151,10 @@ const MaxRadar = ({
   // Сетка по умолчанию только на временных метках: спица на каждый сенсор
   // при 8 сенсорах даёт в 8 раз больше линий и забивает диаграмму.
   const [sensorGrid, setSensorGrid] = useState(false);
-  // Основная сетка (кольца и спицы) — можно скрыть, оставив только подписи
+  // Основная сетка — лучи от центра; круговые линии (шаги) остаются всегда.
   const [mainGrid, setMainGrid] = useState(true);
+  // Цифры шкалы на вертикальной оси (и подпись единиц)
+  const [showScale, setShowScale] = useState(true);
   const chartRef = useRef<HTMLDivElement>(null);
   const visibleSensors = Object.entries(renderedPlotIds)
     .filter(([_, v]) => v === true)
@@ -232,14 +234,6 @@ const MaxRadar = ({
     const n = visibleSensors.length;
 
     const apply = () => {
-      root
-        .querySelectorAll<SVGElement>(".MuiRadarChart-gridDivider")
-        .forEach((ring) => {
-          const want = mainGrid ? "0.3" : "0";
-          if (ring.getAttribute("stroke-opacity") !== want) {
-            ring.setAttribute("stroke-opacity", want);
-          }
-        });
       root
         .querySelectorAll<SVGPathElement>(".MuiRadarChart-gridRadial")
         .forEach((spoke, i) => {
@@ -340,13 +334,15 @@ const MaxRadar = ({
                     : tickByName[name] ?? "",
               }}
             >
-              <RingScale
-                min={axisMin}
-                max={axisMax}
-                rings={rings}
-                fontSize={fontPx}
-              />
-              <ScaleUnit fontSize={fontPx} />
+              {showScale && (
+                <RingScale
+                  min={axisMin}
+                  max={axisMax}
+                  rings={rings}
+                  fontSize={fontPx}
+                />
+              )}
+              {showScale && <ScaleUnit fontSize={fontPx} />}
             </RadarChart>
           </div>
           <div className="flex flex-col justify-start p-5 h-full">
@@ -448,7 +444,15 @@ const MaxRadar = ({
                   checked={mainGrid}
                   onChange={(e) => setMainGrid(e.target.checked)}
                 />
-                основная сетка
+                основная сетка (лучи)
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-primary-700 text-lg">
+                <input
+                  type="checkbox"
+                  checked={showScale}
+                  onChange={(e) => setShowScale(e.target.checked)}
+                />
+                цифры шкалы
               </label>
               {isTime && mainGrid && (
                 <label className="flex cursor-pointer items-center gap-2 text-primary-700 text-lg">
