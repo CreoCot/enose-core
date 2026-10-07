@@ -180,6 +180,39 @@ export function niceStep(
   return span / maxDivisions;
 }
 
+/**
+ * Круглые границы оси для данных [min, max]: обе кратны одному шагу, и ноль
+ * остаётся на сетке. Нужна для знаковых значений: от «сырого» минимума
+ * (−31) кольца получаются некруглыми (−31, −11, 9…), а от −40 — круглыми.
+ */
+export function niceRange(min: number, max: number): [number, number] {
+  let lo = Math.min(min, 0);
+  let hi = Math.max(max, lo + MIN_SPAN);
+  // Шаг зависит от размаха, а размах после округления растёт — доводим до
+  // устойчивого значения (хватает двух-трёх проходов)
+  for (let i = 0; i < 4; i++) {
+    const step = niceStep(hi - lo);
+    const nextLo = round10(Math.floor(lo / step + 1e-9) * step);
+    const nextHi = round10(
+      nextLo + Math.ceil((hi - nextLo) / step - 1e-9) * step,
+    );
+    if (nextLo === lo && nextHi === hi) break;
+    lo = nextLo;
+    hi = nextHi;
+  }
+  return [lo, hi];
+}
+
+/**
+ * Число для подписи шкалы без хвоста плавающей точки: MUI считает значения
+ * колец через scale.invert и показывает 29.000000000000007.
+ */
+export function formatTick(value: number): string {
+  const rounded = Number(value.toPrecision(10));
+  // «-0» и остатки вида -1e-15 — это нуль, а не число для подписи
+  return Math.abs(rounded) < 1e-9 ? "0" : String(rounded);
+}
+
 /** Ближайший сверху к max «красивый» максимум оси, отсчитанный от min. */
 export function niceCeil(min: number, max: number): number {
   const step = niceStep(max - min);
@@ -219,15 +252,19 @@ export function zoomRadarMax(
 // Выгрузка графиков для статьи
 // ---------------------------------------------------------------------------
 
-/** Печатная ширина рисунка в журнале: одна колонка и вся страница. */
-export const EXPORT_WIDTH_MM = { column: 84, page: 170 } as const;
+/**
+ * Печатная ширина рисунка: радар (колонка) и широкий график (страница).
+ * Колонка взята 100 мм, а не 84: радар квадратный и в 84 мм превращался в
+ * мелкий кружок среди огромных подписей.
+ */
+export const EXPORT_WIDTH_MM = { column: 100, page: 170 } as const;
 
 /**
- * Кегль подписей на печати. Журналы требуют ≥ 12 pt, а рисунок нередко
- * уменьшают при вёрстке, поэтому берём 16 pt: даже после уменьшения до 75 %
- * остаётся 12 pt.
+ * Кегль подписей на печати: журналы требуют ≥ 12 pt, плюс небольшой запас на
+ * усадку при вёрстке. Больше не берём — при 16 pt подписи были вдвое крупнее
+ * экранных и забивали рисунок.
  */
-export const EXPORT_FONT_PT = 16;
+export const EXPORT_FONT_PT = 13;
 
 /**
  * Размер шрифта в px исходного узла, при котором на печатной ширине
@@ -246,12 +283,15 @@ export function exportFontPx(
 }
 
 /**
- * Кегль подписей (px) на время выгрузки, `null` — обычный экран. Графикам он
- * нужен, чтобы заранее отвести поля под крупный шрифт: MUI считает раскладку
- * при рендере и не знает, что в клон потом проставят другие размеры, —
- * без этого крайние подписи («S3», «S7») обрезаются.
+ * Кегль подписей графиков (px). Один и тот же для экрана и для выгрузки: его
+ * считает route из реальной ширины графика (см. exportFontPx), поэтому
+ * картинка в файле совпадает с тем, что видно на сайте, — ни пересчёта, ни
+ * «выгрузочных» размеров. `null` — ширина ещё не измерена, берётся запасной.
  */
-export const ExportFontContext = createContext<number | null>(null);
+export const ChartFontContext = createContext<number | null>(null);
+
+/** Запасной кегль, пока ширина графика не измерена */
+export const DEFAULT_CHART_FONT_PX = 16;
 
 const EXPORT_FONT_FAMILY = '"Times New Roman", Times, serif';
 

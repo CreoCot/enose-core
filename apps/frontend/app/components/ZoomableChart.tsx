@@ -7,7 +7,8 @@ import {
   useYScale,
 } from "@mui/x-charts";
 import {
-  ExportFontContext,
+  ChartFontContext,
+  DEFAULT_CHART_FONT_PX,
   MIN_SELECTION_PX,
   fullXRange,
   normalizeRange,
@@ -168,7 +169,8 @@ const ZoomableChart = ({
   const [xRange, setXRange] = useState<Range | null>(null);
   const [yRange, setYRange] = useState<Range | null>(null);
   const [autoY, setAutoY] = useState(true);
-  const exportFont = useContext(ExportFontContext);
+  // Кегль общий для экрана и выгрузки (см. ChartFontContext)
+  const fontPx = useContext(ChartFontContext) ?? DEFAULT_CHART_FONT_PX;
 
   const data = useMemo(() => series.map((s) => s.data), [series]);
   const zoomed = xRange !== null || yRange !== null;
@@ -234,35 +236,37 @@ const ZoomableChart = ({
             min: xDomain[0],
             max: xDomain[1],
             label: "Время, с",
-            // Под крупный шрифт выгрузки нужна более высокая ось и меньше
-            // делений: MUI подбирает их под экранный шрифт, и подписи слипаются
-            ...(exportFont
+            // Размеры осей пропорциональны кеглю, и делений меньше: MUI
+            // подбирает их под свой шрифт, и крупные подписи слипаются
+            height: Math.ceil(fontPx * 2.8),
+            // Мини-график получает ~1/3 страницы: три метки (начало, середина,
+            // конец) вместо слипающихся «100200300»
+            ...(compact
               ? {
-                  height: Math.ceil(exportFont * 2.8),
-                  // Мини-график получает ~1/3 страницы: три метки (начало,
-                  // середина, конец) вместо слипающихся «100200300»
-                  ...(compact
-                    ? {
-                        tickInterval: [
-                          xDomain[0],
-                          Math.round((xDomain[0] + xDomain[1]) / 2),
-                          xDomain[1],
-                        ],
-                      }
-                    : { tickNumber: 6 }),
+                  tickInterval: [
+                    xDomain[0],
+                    Math.round((xDomain[0] + xDomain[1]) / 2),
+                    xDomain[1],
+                  ],
                 }
-              : {}),
+              : { tickNumber: 6 }),
           },
         ]}
         yAxis={[
           {
             ...(yDomain ? { min: yDomain[0], max: yDomain[1] } : {}),
             label: "ΔF, Гц",
-            width: exportFont ? Math.ceil(exportFont * 3.4) : 70,
-            ...(exportFont ? { tickNumber: compact ? 4 : 5 } : {}),
+            width: Math.ceil(fontPx * 3.4),
+            tickNumber: compact ? 4 : 5,
           },
         ]}
-        margin={exportFont ? { right: Math.ceil(exportFont * 1.2) } : undefined}
+        margin={{ right: Math.ceil(fontPx * 1.2) }}
+        sx={{
+          "& text, & .MuiChartsLegend-root, & .MuiChartsLegend-root *": {
+            fontFamily: '"Times New Roman", Times, serif !important',
+            fontSize: `${fontPx}px !important`,
+          },
+        }}
         series={series.map((s) => ({
           id: s.id,
           data: s.data,

@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
 import ZoomableChart from "./ZoomableChart";
+import { ChartFontContext, DEFAULT_CHART_FONT_PX } from "../lib/utils";
 
 interface Props {
   id: number;
@@ -10,6 +11,8 @@ interface Props {
 const plotColor = "#7B3BCE"; // accent-500
 
 const Plot = ({ id, timestamps, sensorData }: Props) => {
+  // Подпись панели — тем же кеглем, что и подписи графика, как и в выгрузке
+  const fontPx = useContext(ChartFontContext) ?? DEFAULT_CHART_FONT_PX;
   const series = useMemo(
     () => [{ id: `sensor-${id}`, label: `S${id + 1}`, data: sensorData }],
     [id, sensorData],
@@ -25,7 +28,10 @@ const Plot = ({ id, timestamps, sensorData }: Props) => {
         hideLegend
         compact
       />
-      <p className="export-caption font-medium text-center text-lg text-accent-900">
+      <p
+        className="export-caption font-medium text-center text-accent-900"
+        style={{ fontSize: fontPx }}
+      >
         S{id + 1}
       </p>
     </div>

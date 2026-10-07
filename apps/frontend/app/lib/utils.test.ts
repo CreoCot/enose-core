@@ -5,6 +5,8 @@ import {
   EXPORT_FONT_PT,
   EXPORT_WIDTH_MM,
   exportFontPx,
+  formatTick,
+  niceRange,
   fullXRange,
   niceCeil,
   niceStep,
@@ -189,13 +191,14 @@ describe("exportFontPx", () => {
     );
   });
 
-  it("после печати на 84 мм подписи не меньше 12 pt, даже при сжатии до 75 %", () => {
+  it("на печатной ширине колонки подписи не меньше 12 pt", () => {
+    const columnWidthPx = (EXPORT_WIDTH_MM.column / 25.4) * 96;
     for (const nodeWidth of [400, 595, 900, 1300]) {
       const fontPx = exportFontPx(nodeWidth, EXPORT_WIDTH_MM.column);
       // печатный кегль = px * (печатная ширина / ширина узла), в pt
-      const printedPt = fontPx * (columnPx / nodeWidth) * (72 / 96);
+      const printedPt = fontPx * (columnWidthPx / nodeWidth) * (72 / 96);
       expect(printedPt).toBeCloseTo(EXPORT_FONT_PT, 6);
-      expect(printedPt * 0.75).toBeGreaterThanOrEqual(12 - 1e-9);
+      expect(printedPt).toBeGreaterThanOrEqual(12);
     }
   });
 
@@ -203,5 +206,49 @@ describe("exportFontPx", () => {
     expect(exportFontPx(900, EXPORT_WIDTH_MM.page)).toBeLessThan(
       exportFontPx(900, EXPORT_WIDTH_MM.column),
     );
+  });
+});
+
+describe("niceRange", () => {
+  it("округляет знаковый диапазон до круглых границ", () => {
+    // −31…49 раньше давало кольца −31, −11, 9, 29, 49
+    expect(niceRange(-31, 49)).toEqual([-40, 60]);
+  });
+  it("оставляет ноль на сетке для положительных данных", () => {
+    expect(niceRange(3, 37)).toEqual([0, 40]);
+  });
+  it("не падает на вырожденных данных", () => {
+    const [lo, hi] = niceRange(0, 0);
+    expect(hi).toBeGreaterThan(lo);
+  });
+  it("обе границы кратны одному шагу", () => {
+    for (const [min, max] of [
+      [-5, 45],
+      [-120, 33],
+      [-0.7, 2.9],
+    ] as const) {
+      const [lo, hi] = niceRange(min, max);
+      const step = niceStep(hi - lo);
+      expect(Math.abs(lo / step - Math.round(lo / step))).toBeLessThan(1e-9);
+      expect(Math.abs(hi / step - Math.round(hi / step))).toBeLessThan(1e-9);
+      expect(lo).toBeLessThanOrEqual(min);
+      expect(hi).toBeGreaterThanOrEqual(max);
+    }
+  });
+});
+
+describe("formatTick", () => {
+  it("убирает хвост плавающей точки", () => {
+    expect(formatTick(29.000000000000007)).toBe("29");
+    expect(formatTick(-31.000000000000004)).toBe("-31");
+    expect(formatTick(8.999999999999996)).toBe("9");
+  });
+  it("сохраняет настоящие дроби", () => {
+    expect(formatTick(0.5)).toBe("0.5");
+    expect(formatTick(-1.25)).toBe("-1.25");
+  });
+  it("не пишет «-0»", () => {
+    expect(formatTick(-0)).toBe("0");
+    expect(formatTick(-1e-15)).toBe("0");
   });
 });

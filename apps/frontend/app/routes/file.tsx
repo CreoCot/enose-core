@@ -19,8 +19,9 @@ import {
 } from "~/lib/masks";
 import { fetchDefaultMaskId, fetchMasks } from "~/lib/masksApi";
 import {
+  ChartFontContext,
+  DEFAULT_CHART_FONT_PX,
   EXPORT_WIDTH_MM,
-  ExportFontContext,
   buildDeltaModel,
   exportFontPx,
   inlineChartStyles,
@@ -532,8 +533,39 @@ const file = () => {
     }));
   };
   const [open, setOpen] = useState(1);
-  // Кегль выгрузки: пока он задан, графики отводят поля под крупные подписи
-  const [exportFont, setExportFont] = useState<number | null>(null);
+  // Кегль подписей графиков: считается из реальной ширины графика и одинаков
+  // на экране и в выгрузке (см. ChartFontContext). Печатная ширина: линейные
+  // графики широкие и идут на всю страницу журнала, радары — в одну колонку.
+  const printWidthMm =
+    open === 1 || open === 2 ? EXPORT_WIDTH_MM.page : EXPORT_WIDTH_MM.column;
+  const [chartFont, setChartFont] = useState<number | null>(null);
+  useEffect(() => {
+    let observer: ResizeObserver | undefined;
+    let watched: Element | null = null;
+    const attach = () => {
+      // Вкладка появляется после анимации выхода предыдущей: в DOM на миг
+      // остаются оба графика, поэтому следим за тем, что видно и подключено
+      const node = Array.from(
+        document.querySelectorAll(".download-image"),
+      ).find((el) => el.getBoundingClientRect().width > 0);
+      if (!node || node === watched) return;
+      observer?.disconnect();
+      watched = node;
+      const update = () => {
+        const width = node.getBoundingClientRect().width;
+        if (width > 0) setChartFont(exportFontPx(width, printWidthMm));
+      };
+      update();
+      observer = new ResizeObserver(update);
+      observer.observe(node);
+    };
+    attach();
+    const timer = window.setInterval(attach, 150);
+    return () => {
+      window.clearInterval(timer);
+      observer?.disconnect();
+    };
+  }, [open, printWidthMm, maskId]);
 
   const exportChart = async (format: "png" | "svg") => {
     const target = document.querySelector(".download-image");
@@ -544,19 +576,11 @@ const file = () => {
     // html-to-image сдвигал клон на величину отступа, из-за чего картинка
     // съезжала вправо и обрезались подписи крайних осей.
     const rect = target.getBoundingClientRect();
-    // Печатная ширина: линейные графики широкие (восемь мини-графиков или
-    // 300 с по оси X) и идут на всю страницу журнала, радары — в одну колонку. От неё зависит кегль,
-    // при котором подписи на бумаге получатся не меньше нужных pt.
-    const finalWidthMm =
-      open === 1 || open === 2 ? EXPORT_WIDTH_MM.page : EXPORT_WIDTH_MM.column;
-    const fontPx = exportFontPx(rect.width, finalWidthMm);
-    // Сначала перерисовываем графики с полями под крупный шрифт и только потом
-    // ставим сами размеры: раскладку MUI считает при рендере, а не по DOM.
-    setExportFont(fontPx);
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
-    const restoreStyles = inlineChartStyles(target, { fontPx });
+    // Размеры подписей на экране уже заданы этим же кеглем, но правила из
+    // sx в клон не попадают — дублируем их inline на время съёмки.
+    const restoreStyles = inlineChartStyles(target, {
+      fontPx: chartFont ?? DEFAULT_CHART_FONT_PX,
+    });
     try {
       const options = {
         backgroundColor: "#FFFFFF",
@@ -571,10 +595,7 @@ const file = () => {
           : await toSvg(target, options);
       downloadDataUrl(dataUrl, `measurement-${fileId}.${format}`);
     } finally {
-      // Откат обязателен: иначе после ошибки на экране остались бы
-      // «выгрузочные» шрифты и поля.
       restoreStyles();
-      setExportFont(null);
     }
   };
 
@@ -886,9 +907,9 @@ const file = () => {
           <div className="flex">
             <div className="flex flex-col"></div>
             <div className="article-view w-full">
-              <ExportFontContext.Provider value={exportFont}>
+              <ChartFontContext.Provider value={chartFont}>
                 <AnimatePresence mode="wait">{items[open]}</AnimatePresence>
-              </ExportFontContext.Provider>
+              </ChartFontContext.Provider>
             </div>
           </div>
         </div>

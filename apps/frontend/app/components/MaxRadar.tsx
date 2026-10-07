@@ -1,5 +1,5 @@
 import { ChartsText, useDrawingArea } from "@mui/x-charts";
-import { RadarAxis, RadarChart } from "@mui/x-charts/RadarChart";
+import { RadarChart } from "@mui/x-charts/RadarChart";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import SensorList from "./SensorList";
 import {
@@ -9,8 +9,11 @@ import {
   type AreaMode,
 } from "../lib/masks";
 import {
-  ExportFontContext,
+  ChartFontContext,
+  DEFAULT_CHART_FONT_PX,
+  formatTick,
   niceCeil,
+  niceRange,
   niceStep,
   zoomRadarMax,
 } from "../lib/utils";
@@ -46,6 +49,51 @@ const ScaleUnit = ({ fontSize }: { fontSize: number }) => {
   );
 };
 
+// Подписи колец вдоль вертикальной оси (она у радара всегда идёт вверх).
+// Свои, а не RadarAxis: тот берёт значения из scale.invert и показывает
+// 29.000000000000007, а формат для радиальной оси в MUI задать нельзя.
+const RingScale = ({
+  min,
+  max,
+  rings,
+  fontSize,
+}: {
+  min: number;
+  max: number;
+  rings: number;
+  fontSize: number;
+}) => {
+  const { left, top, width, height } = useDrawingArea();
+  const cx = left + width / 2;
+  const cy = top + height / 2;
+  const radius = Math.min(width, height) / 2;
+  return (
+    <g>
+      {Array.from({ length: rings }, (_, k) => {
+        const fraction = (k + 1) / rings;
+        return (
+          <ChartsText
+            key={k}
+            // справа от вертикальной линии, сразу под своим кольцом: над внешним
+            // кольцом стоит подпись оси («0 с»), и числа бы с ней слипались
+            x={cx + fontSize * 0.25}
+            y={cy - radius * fraction + fontSize * 0.95}
+            text={formatTick(min + (max - min) * fraction)}
+            style={{
+              fontSize,
+              textAnchor: "start",
+              // белая обводка, чтобы цифры читались поверх заливки
+              stroke: "#fff",
+              strokeWidth: fontSize * 0.2,
+              paintOrder: "stroke",
+            }}
+          />
+        );
+      })}
+    </g>
+  );
+};
+
 const MaxRadar = ({
   maxArray,
   sensorSize,
@@ -58,7 +106,8 @@ const MaxRadar = ({
   times = [],
 }: Props) => {
   const isTime = kind === "time";
-  const exportFont = useContext(ExportFontContext);
+  // Кегль общий для экрана и выгрузки (см. ChartFontContext)
+  const fontPx = useContext(ChartFontContext) ?? DEFAULT_CHART_FONT_PX;
   const [areaMode, setAreaMode] = useState<AreaMode>(isTime ? "signed" : "abs");
   // Сетка по умолчанию только на временных метках: спица на каждый сенсор
   // при 8 сенсорах даёт в 8 раз больше линий и забивает диаграмму.
@@ -93,13 +142,14 @@ const MaxRadar = ({
     });
   }, [isTime, renderedArray, times, renderedPlotIds]);
 
-  const autoMin = isTime
-    ? Math.min(0, Math.floor(Math.min(...renderedArray, 0)))
-    : 0;
-  const globalMax = Math.max(autoMin, ...renderedArray.filter(Number.isFinite));
-  // Округляем верх оси до «красивого» значения, чтобы подписи делений
-  // оставались круглыми (иначе после зума получаются дроби вида 30.5785…)
-  const initialPlotMax = niceCeil(autoMin, Math.max(globalMax, autoMin + 1));
+  // Границы оси — круглые и кратные шагу колец, иначе подписи получаются
+  // вроде −31, −11, 9, 29. У диаграммы максимумов нижняя граница — ноль.
+  const [autoMin, initialPlotMax] = isTime
+    ? niceRange(
+        Math.min(...renderedArray, 0),
+        Math.max(0, ...renderedArray.filter(Number.isFinite)),
+      )
+    : [0, niceCeil(0, Math.max(1, ...renderedArray.filter(Number.isFinite)))];
   const [plotMin, setPlotMin] = useState(autoMin);
   const [plotMax, setPlotMax] = useState(initialPlotMax);
   const plotColor = "#4b4bc3";
@@ -150,13 +200,6 @@ const MaxRadar = ({
   // число колец равно числу шагов и каждое кольцо подписано круглым числом.
   const range = plotMax - plotMin;
   const rings = Math.max(1, Math.round(range / niceStep(range)));
-  const fontPx = isTime ? 16 : 22;
-  // Шкалу ставим между осями, чтобы подписи колец не наезжали на подписи самих
-  // осей. У временной диаграммы подписано ~12 направлений через 30°, поэтому
-  // шкала идёт по биссектрисе первого промежутка; у диаграммы максимумов — по
-  // биссектрисе между первыми двумя осями.
-  const scaleAngle = isTime ? 15 : 180 / Math.max(1, axisNames.length);
-
   const metrics = useMemo(
     () =>
       axisNames.map((name) => ({
@@ -209,20 +252,14 @@ const MaxRadar = ({
               // Классический вид: круглая сетка и никаких серых полос
               shape="circular"
               stripeColor={null}
-              // Крупный шрифт выгрузки не помещается в стандартные поля —
-              // боковые подписи («S3», «S7») обрезались бы
-              margin={
-                exportFont
-                  ? {
-                      // «300 с» шире, чем «S3»: боковые поля подбираем под
-                      // самую длинную подпись, иначе её обрежет
-                      left: Math.ceil(exportFont * (isTime ? 3.4 : 2.4)),
-                      right: Math.ceil(exportFont * (isTime ? 3.4 : 2.4)),
-                      top: Math.ceil(exportFont * 1.8),
-                      bottom: Math.ceil(exportFont * 1.8),
-                    }
-                  : undefined
-              }
+              // Поля под подписи пропорциональны кеглю: «300 с» шире, чем «S3»,
+              // а без запаса крайние подписи обрезаются
+              margin={{
+                left: Math.ceil(fontPx * (isTime ? 3.4 : 2.4)),
+                right: Math.ceil(fontPx * (isTime ? 3.4 : 2.4)),
+                top: Math.ceil(fontPx * 1.8),
+                bottom: Math.ceil(fontPx * 1.8),
+              }}
               divisions={rings}
               sx={{
                 "& text": {
@@ -245,16 +282,12 @@ const MaxRadar = ({
                     : tickByName[name] ?? "",
               }}
             >
-              {/* Шкала по радиусу: подписи колец ставим между осями, чтобы они
-                  не наезжали на подписи самих осей */}
-              {metrics.length > 0 && (
-                <RadarAxis
-                  metric={metrics[0].name}
-                  divisions={rings}
-                  labelOrientation="horizontal"
-                  angle={scaleAngle}
-                />
-              )}
+              <RingScale
+                min={plotMin}
+                max={plotMax}
+                rings={rings}
+                fontSize={fontPx}
+              />
               <ScaleUnit fontSize={fontPx} />
             </RadarChart>
           </div>
@@ -319,7 +352,7 @@ const MaxRadar = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setPlotMin(0);
+                    setPlotMin(autoMin);
                     setPlotMax(initialPlotMax);
                   }}
                   className="rounded-full bg-accent-200 px-4 py-1.5 text-accent-600 font-semibold border border-accent-500 hover:bg-accent-300 cursor-pointer transition-colors duration-300"
