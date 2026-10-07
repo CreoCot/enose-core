@@ -44,7 +44,7 @@ const MultiPlot = ({
         colors={generateColors(activeSeries.length)}
         timestamps={timestamps}
         series={activeSeries}
-        height={384}
+        height={560}
         controls
       />
     );

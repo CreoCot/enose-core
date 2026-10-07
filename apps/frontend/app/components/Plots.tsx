@@ -31,7 +31,7 @@ const Plots = ({
             renderedPlotIds={renderedPlotIds}
             handleCheckboxClick={handleCheckboxClick}
           />
-          <div className="w-full download-image grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-x-8 px-2 gap-y-6 py-4">
+          <div className="w-full download-image grid grid-cols-1 lg:grid-cols-2 gap-x-8 px-2 gap-y-6 py-4">
             {Array.from({ length: sensorSize }, (_, i) => {
               if (renderedPlotIds[i])
                 return (

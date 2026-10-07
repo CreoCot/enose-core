@@ -24,7 +24,7 @@ const Plot = ({ id, timestamps, sensorData }: Props) => {
         timestamps={timestamps}
         series={series}
         colors={[plotColor]}
-        height={300}
+        height={380}
         hideLegend
         compact
       />

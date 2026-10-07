@@ -15,7 +15,6 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
       username,
       password,
       remember_me: rememberMe,
-      
     });
     return redirect("/data");
   } catch (error) {

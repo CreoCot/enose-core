@@ -266,6 +266,10 @@ const ZoomableChart = ({
             fontFamily: '"Times New Roman", Times, serif !important',
             fontSize: `${fontPx}px !important`,
           },
+          // Красные min/max — только экранная подсказка (в выгрузке скрыта)
+          "& .MuiChartsReferenceLine-label": {
+            fontSize: `${Math.round(fontPx * 0.6)}px !important`,
+          },
         }}
         series={series.map((s) => ({
           id: s.id,

@@ -269,7 +269,7 @@ export const EXPORT_WIDTH_MM = { column: 100, page: 170 } as const;
  * усадку при вёрстке. Больше не берём — при 16 pt подписи были вдвое крупнее
  * экранных и забивали рисунок.
  */
-export const EXPORT_FONT_PT = 13;
+export const EXPORT_FONT_PT = 12;
 
 /**
  * Размер шрифта в px исходного узла, при котором на печатной ширине
