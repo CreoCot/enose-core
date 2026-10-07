@@ -165,13 +165,17 @@ const RADAR_MAX_DIVISIONS = 5;
 
 const round10 = (v: number) => Number(v.toFixed(10));
 
-/** «Красивый» шаг сетки (1, 2, 5 · 10^n), чтобы делений было не больше maxDivisions. */
+/**
+ * «Красивый» шаг сетки (1, 2, 5 · 10^n), чтобы делений было не больше
+ * maxDivisions. Шаг всегда целый (n ≥ 0): автоподбор никогда не даёт дробных
+ * подписей, как и в MAG-soft. Дробный шаг можно задать только вручную.
+ */
 export function niceStep(
   span: number,
   maxDivisions = RADAR_MAX_DIVISIONS,
 ): number {
   if (!(span > 0)) return 1;
-  for (let exp = -3; exp <= 9; exp++) {
+  for (let exp = 0; exp <= 9; exp++) {
     for (const base of [1, 2, 5]) {
       const step = base * 10 ** exp;
       if (span / step <= maxDivisions) return step;
@@ -208,9 +212,10 @@ export function niceRange(min: number, max: number): [number, number] {
  * колец через scale.invert и показывает 29.000000000000007.
  */
 export function formatTick(value: number): string {
-  const rounded = Number(value.toPrecision(10));
+  // Не больше двух знаков после запятой, без хвоста плавающей точки
+  const rounded = Number(value.toFixed(2));
   // «-0» и остатки вида -1e-15 — это нуль, а не число для подписи
-  return Math.abs(rounded) < 1e-9 ? "0" : String(rounded);
+  return rounded === 0 ? "0" : String(rounded);
 }
 
 /** Ближайший сверху к max «красивый» максимум оси, отсчитанный от min. */

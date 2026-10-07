@@ -137,6 +137,12 @@ describe("niceStep / niceCeil", () => {
     expect(niceCeil(0, 36)).toBe(40);
     expect(niceCeil(0, 4.3)).toBe(5);
   });
+  it("автоматический шаг всегда целый", () => {
+    expect(niceStep(0.3)).toBe(1);
+    for (const span of [1, 3, 7.5, 19, 58, 137, 1234]) {
+      expect(Number.isInteger(niceStep(span))).toBe(true);
+    }
+  });
   it("не падает на вырожденном диапазоне", () => {
     expect(niceStep(0)).toBe(1);
   });
@@ -246,6 +252,11 @@ describe("formatTick", () => {
   it("сохраняет настоящие дроби", () => {
     expect(formatTick(0.5)).toBe("0.5");
     expect(formatTick(-1.25)).toBe("-1.25");
+  });
+  it("оставляет не больше двух знаков после запятой", () => {
+    expect(formatTick(38.66666667)).toBe("38.67");
+    expect(formatTick(19.33333333)).toBe("19.33");
+    expect(formatTick(0.123456)).toBe("0.12");
   });
   it("не пишет «-0»", () => {
     expect(formatTick(-0)).toBe("0");

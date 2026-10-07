@@ -94,6 +94,49 @@ const RingScale = ({
   );
 };
 
+const MAX_RINGS = 20;
+const round2 = (v: number) => Number(v.toFixed(2));
+const zoomButton =
+  "flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-full bg-primary-200 text-primary-600 text-xl font-semibold leading-none border-2 border-primary-400 hover:bg-primary-300 cursor-pointer transition-colors duration-300";
+
+// Числовое поле с буфером: значение применяется по Enter или уходу фокуса, а
+// не на каждый символ (иначе «-» или «5.» в процессе набора сбрасывали бы
+// поле). Пустое поле у «Шаг» означает автоподбор.
+const NumberField = ({
+  label,
+  value,
+  placeholder,
+  onCommit,
+}: {
+  label: string;
+  value: number | null;
+  placeholder?: string;
+  onCommit: (value: number) => void;
+}) => {
+  const [text, setText] = useState(value === null ? "" : String(value));
+  useEffect(() => setText(value === null ? "" : String(value)), [value]);
+  const commit = () => {
+    const parsed = text.trim() === "" ? 0 : Number(text.replace(",", "."));
+    if (Number.isFinite(parsed)) onCommit(parsed);
+    else setText(value === null ? "" : String(value));
+  };
+  return (
+    <label className="flex flex-col gap-1 text-primary-700 text-base">
+      {label}
+      <input
+        type="text"
+        inputMode="decimal"
+        value={text}
+        placeholder={placeholder}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+        className="w-full min-w-0 rounded-[10px] border border-primary-300 px-2 py-1 text-primary-600 text-lg"
+      />
+    </label>
+  );
+};
+
 const MaxRadar = ({
   maxArray,
   sensorSize,
@@ -152,7 +195,19 @@ const MaxRadar = ({
     : [0, niceCeil(0, Math.max(1, ...renderedArray.filter(Number.isFinite)))];
   const [plotMin, setPlotMin] = useState(autoMin);
   const [plotMax, setPlotMax] = useState(initialPlotMax);
+  // null — шаг подбирается автоматически (всегда целый)
+  const [stepOverride, setStepOverride] = useState<number | null>(null);
   const plotColor = "#4b4bc3";
+
+  // Сетка строится от шага: границы оси подтягиваются к кратным ему значениям,
+  // и каждое кольцо получает круглую подпись, а не 58 / 3 = 19.3333.
+  const span = plotMax - plotMin;
+  const autoStep = niceStep(span);
+  let step = stepOverride ?? autoStep;
+  if (span / step > MAX_RINGS) step = niceStep(span, MAX_RINGS);
+  const axisMin = round2(Math.floor(plotMin / step + 1e-9) * step);
+  const rings = Math.max(1, Math.ceil((plotMax - axisMin) / step - 1e-9));
+  const axisMax = round2(axisMin + rings * step);
   useEffect(() => {
     const activeCount = Object.values(renderedPlotIds).filter(Boolean).length;
     if (activeCount <= 2) {
@@ -163,7 +218,7 @@ const MaxRadar = ({
   // Площадь по формуле MAG-soft. В режиме «со знаком» радиусы отсчитываются от
   // минимума оси (AxeMinVal), в режиме «по модулю» — от нуля.
   const area = radarArea(
-    fingerprintRadii(renderedArray, areaMode, areaMode === "abs" ? 0 : plotMin),
+    fingerprintRadii(renderedArray, areaMode, areaMode === "abs" ? 0 : axisMin),
   );
 
   // Спицы сетки идут по одной на ось (time-major), поэтому «только временные
@@ -196,18 +251,14 @@ const MaxRadar = ({
     return () => observer.disconnect();
   }, [isTime, sensorGrid, renderedArray.length, renderedPlotIds]);
 
-  // Кольца: ось заканчивается на кратном шагу значении (см. niceCeil), поэтому
-  // число колец равно числу шагов и каждое кольцо подписано круглым числом.
-  const range = plotMax - plotMin;
-  const rings = Math.max(1, Math.round(range / niceStep(range)));
   const metrics = useMemo(
     () =>
       axisNames.map((name) => ({
         name,
-        min: plotMin,
-        max: plotMax,
+        min: axisMin,
+        max: axisMax,
       })),
-    [plotMax, plotMin, axisNames],
+    [axisMax, axisMin, axisNames],
   );
 
   // Подписи делений на самой окружности. Оси и площадь считаются по всем
@@ -272,7 +323,7 @@ const MaxRadar = ({
                 { data: renderedArray, fillArea: true, hideMark: isTime },
               ]}
               radar={{
-                max: plotMax,
+                max: axisMax,
                 metrics: metrics,
                 // На окружности подписываем только первый сенсор каждой
                 // временной группы (как в MAG-soft), в тултипе — полное имя.
@@ -283,8 +334,8 @@ const MaxRadar = ({
               }}
             >
               <RingScale
-                min={plotMin}
-                max={plotMax}
+                min={axisMin}
+                max={axisMax}
                 rings={rings}
                 fontSize={fontPx}
               />
@@ -292,74 +343,74 @@ const MaxRadar = ({
             </RadarChart>
           </div>
           <div className="flex flex-col justify-start p-5 h-full">
-            <div className="flex flex-col p-6 gap-5 border-2 border-primary-200 rounded-[10px] shadow-sm shadow-primary-200">
+            <div className="flex w-64 flex-col gap-4 rounded-[10px] border-2 border-primary-200 p-5 shadow-sm shadow-primary-200">
               <p className="text-primary-800 font-semibold text-2xl">Масштаб</p>
-              <div className="flex flex-col gap-3">
-                <label className="flex flex-col gap-2 text-primary-700 text-xl">
-                  Минимум
-                  <input
-                    type="number"
-                    max={plotMax}
-                    step="any"
-                    value={plotMin}
-                    onChange={(event) => {
-                      const value = Number(event.target.value);
-                      // Минимум может быть отрицательным: на временной
-                      // диаграмме ΔF со знаком уходит ниже нуля.
-                      if (Number.isFinite(value) && value < plotMax) {
-                        setPlotMin(value);
-                      }
-                    }}
-                    className="w-10 border border-primary-300 rounded-[10px] px-3 py-1 text-primary-600 text-lg"
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-primary-700 text-xl">
-                  Максимум
-                  <input
-                    type="number"
-                    min={plotMin}
-                    step="any"
-                    value={plotMax}
-                    onChange={(event) => {
-                      const value = Number(event.target.value);
-                      if (Number.isFinite(value) && value > plotMin) {
-                        setPlotMax(value);
-                      }
-                    }}
-                    className="w-20 border border-primary-300 rounded-[10px] px-3 py-1 text-primary-600 text-lg"
-                  />
-                </label>
+              <div className="grid grid-cols-3 gap-2">
+                <NumberField
+                  label="Мин"
+                  value={axisMin}
+                  onCommit={(v) => v < plotMax && setPlotMin(round2(v))}
+                />
+                <NumberField
+                  label="Макс"
+                  value={axisMax}
+                  onCommit={(v) => v > plotMin && setPlotMax(round2(v))}
+                />
+                <NumberField
+                  label="Шаг"
+                  value={stepOverride}
+                  placeholder={String(step)}
+                  onCommit={(v) => setStepOverride(v > 0 ? round2(v) : null)}
+                />
               </div>
-              <div className="flex flex-col gap-2">
+              <p className="text-primary-600 text-sm -mt-2">
+                {stepOverride === null
+                  ? "шаг подобран автоматически"
+                  : "шаг задан вручную"}
+                {" · "}колец: {rings}
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-primary-700 text-lg grow">Масштаб</span>
                 <button
                   type="button"
+                  title="Отдалить"
                   onClick={() =>
-                    setPlotMax((m) => zoomRadarMax(plotMin, m, "in"))
+                    setPlotMax(
+                      stepOverride === null
+                        ? zoomRadarMax(axisMin, axisMax, "out")
+                        : axisMax + step,
+                    )
                   }
-                  className="rounded-full bg-primary-200 px-4 py-1.5 text-primary-500 font-semibold border-2 border-primary-400 hover:bg-primary-300 cursor-pointer transition-colors duration-300"
+                  className={zoomButton}
                 >
-                  Приблизить
+                  −
                 </button>
                 <button
                   type="button"
+                  title="Приблизить"
                   onClick={() =>
-                    setPlotMax((m) => zoomRadarMax(plotMin, m, "out"))
+                    setPlotMax(
+                      stepOverride === null
+                        ? zoomRadarMax(axisMin, axisMax, "in")
+                        : Math.max(axisMax - step, axisMin + step),
+                    )
                   }
-                  className="rounded-full bg-primary-200 px-4 py-1.5 text-primary-500 font-semibold border-2 border-primary-400 hover:bg-primary-300 cursor-pointer transition-colors duration-300"
+                  className={zoomButton}
                 >
-                  Отдалить
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPlotMin(autoMin);
-                    setPlotMax(initialPlotMax);
-                  }}
-                  className="rounded-full bg-accent-200 px-4 py-1.5 text-accent-600 font-semibold border border-accent-500 hover:bg-accent-300 cursor-pointer transition-colors duration-300"
-                >
-                  Авто
+                  +
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPlotMin(autoMin);
+                  setPlotMax(initialPlotMax);
+                  setStepOverride(null);
+                }}
+                className="rounded-full bg-accent-200 px-4 py-1.5 text-accent-600 font-semibold border border-accent-500 hover:bg-accent-300 cursor-pointer transition-colors duration-300"
+              >
+                Авто
+              </button>
             </div>
             <div className="mt-5 flex flex-col gap-3 rounded-[10px] border-2 border-primary-200 p-6 shadow-sm shadow-primary-200">
               <p className="text-primary-800 font-semibold text-2xl">Площадь</p>
