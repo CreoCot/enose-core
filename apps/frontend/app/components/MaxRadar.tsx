@@ -1,5 +1,6 @@
+import { ChartsText, useDrawingArea } from "@mui/x-charts";
 import { RadarAxis, RadarChart } from "@mui/x-charts/RadarChart";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import SensorList from "./SensorList";
 import {
   fingerprintRadii,
@@ -7,7 +8,12 @@ import {
   timeDiagramValues,
   type AreaMode,
 } from "../lib/masks";
-import { niceCeil, zoomRadarMax } from "../lib/utils";
+import {
+  ExportFontContext,
+  niceCeil,
+  niceStep,
+  zoomRadarMax,
+} from "../lib/utils";
 
 interface Props {
   maxArray: number[];
@@ -27,6 +33,19 @@ interface Props {
   times?: number[];
 }
 
+// Единицы радиальной шкалы. Рисуется внутри SVG, чтобы попасть в выгрузку.
+const ScaleUnit = ({ fontSize }: { fontSize: number }) => {
+  const { left, top } = useDrawingArea();
+  return (
+    <ChartsText
+      x={left + 4}
+      y={top + fontSize}
+      text="ΔF, Гц"
+      style={{ fontSize, textAnchor: "start" }}
+    />
+  );
+};
+
 const MaxRadar = ({
   maxArray,
   sensorSize,
@@ -39,6 +58,7 @@ const MaxRadar = ({
   times = [],
 }: Props) => {
   const isTime = kind === "time";
+  const exportFont = useContext(ExportFontContext);
   const [areaMode, setAreaMode] = useState<AreaMode>(isTime ? "signed" : "abs");
   // Сетка по умолчанию только на временных метках: спица на каждый сенсор
   // при 8 сенсорах даёт в 8 раз больше линий и забивает диаграмму.
@@ -126,6 +146,17 @@ const MaxRadar = ({
     return () => observer.disconnect();
   }, [isTime, sensorGrid, renderedArray.length, renderedPlotIds]);
 
+  // Кольца: ось заканчивается на кратном шагу значении (см. niceCeil), поэтому
+  // число колец равно числу шагов и каждое кольцо подписано круглым числом.
+  const range = plotMax - plotMin;
+  const rings = Math.max(1, Math.round(range / niceStep(range)));
+  const fontPx = isTime ? 16 : 22;
+  // Шкалу ставим между осями, чтобы подписи колец не наезжали на подписи самих
+  // осей. У временной диаграммы подписано ~12 направлений через 30°, поэтому
+  // шкала идёт по биссектрисе первого промежутка; у диаграммы максимумов — по
+  // биссектрисе между первыми двумя осями.
+  const scaleAngle = isTime ? 15 : 180 / Math.max(1, axisNames.length);
+
   const metrics = useMemo(
     () =>
       axisNames.map((name) => ({
@@ -175,10 +206,28 @@ const MaxRadar = ({
               className="download-image mx-8 my-4 rounded-[10px] shadow-sm shadow-primary-200 border-2 border-primary-200"
               height={640}
               skipAnimation={isTime}
+              // Классический вид: круглая сетка и никаких серых полос
+              shape="circular"
+              stripeColor={null}
+              // Крупный шрифт выгрузки не помещается в стандартные поля —
+              // боковые подписи («S3», «S7») обрезались бы
+              margin={
+                exportFont
+                  ? {
+                      // «300 с» шире, чем «S3»: боковые поля подбираем под
+                      // самую длинную подпись, иначе её обрежет
+                      left: Math.ceil(exportFont * (isTime ? 3.4 : 2.4)),
+                      right: Math.ceil(exportFont * (isTime ? 3.4 : 2.4)),
+                      top: Math.ceil(exportFont * 1.8),
+                      bottom: Math.ceil(exportFont * 1.8),
+                    }
+                  : undefined
+              }
+              divisions={rings}
               sx={{
                 "& text": {
                   fontFamily: '"Times New Roman", Times, serif !important',
-                  fontSize: isTime ? "13px !important" : "19px !important",
+                  fontSize: `${fontPx}px !important`,
                 },
                 "& .MuiRadarChart-seriesArea": { fillOpacity: 1 },
               }}
@@ -196,12 +245,17 @@ const MaxRadar = ({
                     : tickByName[name] ?? "",
               }}
             >
-              {/* <RadarAxis
-              metric={metrics[0]?.name}
-              divisions={Math.max(1, Math.ceil((plotMax - plotMin) / 2))}
-              labelOrientation="horizontal"
-              angle={0}
-            /> */}
+              {/* Шкала по радиусу: подписи колец ставим между осями, чтобы они
+                  не наезжали на подписи самих осей */}
+              {metrics.length > 0 && (
+                <RadarAxis
+                  metric={metrics[0].name}
+                  divisions={rings}
+                  labelOrientation="horizontal"
+                  angle={scaleAngle}
+                />
+              )}
+              <ScaleUnit fontSize={fontPx} />
             </RadarChart>
           </div>
           <div className="flex flex-col justify-start p-5 h-full">

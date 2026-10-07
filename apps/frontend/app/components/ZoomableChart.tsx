@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useContext, useMemo, useRef, useState } from "react";
 import {
   ChartsReferenceLine,
   LineChart,
@@ -7,6 +7,7 @@ import {
   useYScale,
 } from "@mui/x-charts";
 import {
+  ExportFontContext,
   MIN_SELECTION_PX,
   fullXRange,
   normalizeRange,
@@ -30,6 +31,11 @@ interface Props {
   hideLegend?: boolean;
   /** Показывать панель «Авто Y» + «Сброс» (для крупного графика сравнения) */
   controls?: boolean;
+  /**
+   * Мини-график среди нескольких: в выгрузке ему достаётся ~1/3 страницы,
+   * поэтому делений на осях должно быть меньше, иначе подписи слипаются.
+   */
+  compact?: boolean;
 }
 
 interface Selection {
@@ -157,10 +163,12 @@ const ZoomableChart = ({
   className,
   hideLegend,
   controls = false,
+  compact = false,
 }: Props) => {
   const [xRange, setXRange] = useState<Range | null>(null);
   const [yRange, setYRange] = useState<Range | null>(null);
   const [autoY, setAutoY] = useState(true);
+  const exportFont = useContext(ExportFontContext);
 
   const data = useMemo(() => series.map((s) => s.data), [series]);
   const zoomed = xRange !== null || yRange !== null;
@@ -226,13 +234,35 @@ const ZoomableChart = ({
             min: xDomain[0],
             max: xDomain[1],
             label: "Время, с",
+            // Под крупный шрифт выгрузки нужна более высокая ось и меньше
+            // делений: MUI подбирает их под экранный шрифт, и подписи слипаются
+            ...(exportFont
+              ? {
+                  height: Math.ceil(exportFont * 2.8),
+                  // Мини-график получает ~1/3 страницы: три метки (начало,
+                  // середина, конец) вместо слипающихся «100200300»
+                  ...(compact
+                    ? {
+                        tickInterval: [
+                          xDomain[0],
+                          Math.round((xDomain[0] + xDomain[1]) / 2),
+                          xDomain[1],
+                        ],
+                      }
+                    : { tickNumber: 6 }),
+                }
+              : {}),
           },
         ]}
         yAxis={[
-          yDomain
-            ? { min: yDomain[0], max: yDomain[1], label: "ΔF, Гц", width: 70 }
-            : { label: "ΔF, Гц", width: 70 },
+          {
+            ...(yDomain ? { min: yDomain[0], max: yDomain[1] } : {}),
+            label: "ΔF, Гц",
+            width: exportFont ? Math.ceil(exportFont * 3.4) : 70,
+            ...(exportFont ? { tickNumber: compact ? 4 : 5 } : {}),
+          },
         ]}
+        margin={exportFont ? { right: Math.ceil(exportFont * 1.2) } : undefined}
         series={series.map((s) => ({
           id: s.id,
           data: s.data,

@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   buildDeltaModel,
   cn,
+  EXPORT_FONT_PT,
+  EXPORT_WIDTH_MM,
+  exportFontPx,
   fullXRange,
   niceCeil,
   niceStep,
@@ -121,16 +124,16 @@ describe("fullXRange", () => {
 });
 
 describe("niceStep / niceCeil", () => {
-  it("подбирает шаг 1/2/5·10^n не более 12 делений", () => {
-    expect(niceStep(37)).toBe(5);
-    expect(niceStep(10)).toBe(1);
-    expect(niceStep(4.5)).toBe(0.5);
-    expect(niceStep(400)).toBe(50);
+  it("подбирает шаг 1/2/5·10^n не более 5 колец", () => {
+    expect(niceStep(37)).toBe(10);
+    expect(niceStep(10)).toBe(2);
+    expect(niceStep(4.5)).toBe(1);
+    expect(niceStep(400)).toBe(100);
   });
   it("округляет максимум вверх до сетки", () => {
     expect(niceCeil(0, 37)).toBe(40);
     expect(niceCeil(0, 36)).toBe(40);
-    expect(niceCeil(0, 4.3)).toBe(4.5);
+    expect(niceCeil(0, 4.3)).toBe(5);
   });
   it("не падает на вырожденном диапазоне", () => {
     expect(niceStep(0)).toBe(1);
@@ -139,12 +142,12 @@ describe("niceStep / niceCeil", () => {
 
 describe("zoomRadarMax", () => {
   it("приближение уменьшает максимум и привязывает к сетке", () => {
-    // 40 / 1.1 = 36.4 -> 40, не сдвинулось -> на один шаг сетки (5) ниже
-    expect(zoomRadarMax(0, 40, "in")).toBe(35);
+    // 40 / 1.1 = 36.4 -> 40, не сдвинулось -> на один шаг сетки (10) ниже
+    expect(zoomRadarMax(0, 40, "in")).toBe(30);
   });
   it("отдаление увеличивает максимум", () => {
-    // 35 * 1.1 = 38.5 -> 40
-    expect(zoomRadarMax(0, 35, "out")).toBe(40);
+    // 30 * 1.1 = 33 -> 40
+    expect(zoomRadarMax(0, 30, "out")).toBe(40);
   });
   it("каждый клик двигает ось минимум на один шаг сетки", () => {
     let max = 40;
@@ -168,5 +171,37 @@ describe("zoomRadarMax", () => {
   it("не даёт диапазону стать меньше минимального", () => {
     expect(zoomRadarMax(0, 1.05, "in")).toBe(1.05);
     expect(zoomRadarMax(0, 1, "in")).toBe(1);
+  });
+});
+
+describe("exportFontPx", () => {
+  // 84 мм при 96 dpi = 317.48 px
+  const columnPx = (84 / 25.4) * 96;
+
+  it("при печатной ширине, равной ширине узла, 16 pt = 21.33 px", () => {
+    expect(exportFontPx(columnPx, 84, 16)).toBeCloseTo((16 * 96) / 72, 8);
+  });
+
+  it("кегль растёт пропорционально ширине узла", () => {
+    expect(exportFontPx(2 * columnPx, 84, 16)).toBeCloseTo(
+      2 * ((16 * 96) / 72),
+      8,
+    );
+  });
+
+  it("после печати на 84 мм подписи не меньше 12 pt, даже при сжатии до 75 %", () => {
+    for (const nodeWidth of [400, 595, 900, 1300]) {
+      const fontPx = exportFontPx(nodeWidth, EXPORT_WIDTH_MM.column);
+      // печатный кегль = px * (печатная ширина / ширина узла), в pt
+      const printedPt = fontPx * (columnPx / nodeWidth) * (72 / 96);
+      expect(printedPt).toBeCloseTo(EXPORT_FONT_PT, 6);
+      expect(printedPt * 0.75).toBeGreaterThanOrEqual(12 - 1e-9);
+    }
+  });
+
+  it("на всю страницу (170 мм) тот же кегль даёт меньший px при том же узле", () => {
+    expect(exportFontPx(900, EXPORT_WIDTH_MM.page)).toBeLessThan(
+      exportFontPx(900, EXPORT_WIDTH_MM.column),
+    );
   });
 });

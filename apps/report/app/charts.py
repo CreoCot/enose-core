@@ -98,9 +98,12 @@ class ChartGenerator:
         _, deltas = selected_deltas(report)
         values = max_diagram_values(deltas)
 
-        fig = plt.figure(figsize=(7.2, 6.2), facecolor="white")
+        # Фигура сразу в размер вставки в PDF (96 x 82.5 мм = 3.78 x 3.25 дюйма):
+        # тогда pt шрифта в коде — это pt на бумаге, без пересчёта при
+        # масштабировании картинки. Для статьи подписи должны быть >= 12 pt.
+        fig = plt.figure(figsize=(3.78, 3.25), facecolor="white")
         ax = fig.add_subplot(111, polar=True)
-        ax.set_facecolor("#F8FAFC")
+        ax.set_facecolor("white")
 
         if labels:
             angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False)
@@ -108,23 +111,20 @@ class ChartGenerator:
             closed_values = np.append(values, values[0])
             upper_limit = max(values) * 1.15 if max(values) > 0 else 1.0
 
+            # Цвет и сплошная заливка — как на диаграмме максимумов в интерфейсе
             ax.plot(
                 closed_angles,
                 closed_values,
-                color="#2563EB",
-                linewidth=2.2,
+                color="#4B4BC3",
+                linewidth=1.4,
                 marker="o",
-                markersize=4.5,
-                markerfacecolor="#0F766E",
-                markeredgecolor="white",
-                markeredgewidth=1,
+                markersize=3.5,
+                markerfacecolor="#4B4BC3",
+                markeredgecolor="#4B4BC3",
             )
-            ax.fill(closed_angles, closed_values, color="#2563EB", alpha=0.16)
-            axis_labels = [
-                f"{label}\n{value:,.2f} Hz" for label, value in zip(labels, values)
-            ]
+            ax.fill(closed_angles, closed_values, color="#4B4BC3", alpha=1.0)
             ax.set_xticks(angles)
-            ax.set_xticklabels(axis_labels, color="#334155", fontsize=9)
+            ax.set_xticklabels(labels, color="black", fontsize=13)
             ax.set_ylim(0, upper_limit)
         else:
             ax.set_xticks([])
@@ -142,21 +142,16 @@ class ChartGenerator:
 
         ax.set_theta_zero_location("N")
         ax.set_theta_direction(-1)
-        ax.grid(color="#CBD5E1", linewidth=0.7, alpha=0.85)
-        ax.spines["polar"].set_color("#DCE4EE")
-        ax.spines["polar"].set_linewidth(0.8)
-        ax.tick_params(axis="x", pad=11)
-        ax.tick_params(axis="y", colors="#64748B", labelsize=8)
-        ax.set_rlabel_position(18)
-        ax.set_title(
-            "Peak response by sensor, Hz",
-            color="#0F172A",
-            fontsize=12,
-            fontweight="bold",
-            pad=18,
-        )
+        # Классический вид: белый фон, круглая сетка без заливки полос
+        ax.grid(color="black", linewidth=0.5, alpha=0.3)
+        ax.spines["polar"].set_color("black")
+        ax.spines["polar"].set_linewidth(0.6)
+        ax.tick_params(axis="x", pad=4)
+        ax.tick_params(axis="y", colors="black", labelsize=12)
+        ax.set_rlabel_position(22)
+        ax.set_title("Peak response, Hz", color="black", fontsize=13, pad=10)
 
-        fig.subplots_adjust(left=0.13, right=0.87, bottom=0.13, top=0.84)
+        fig.subplots_adjust(left=0.12, right=0.88, bottom=0.12, top=0.82)
         buffer = BytesIO()
         fig.savefig(
             buffer,

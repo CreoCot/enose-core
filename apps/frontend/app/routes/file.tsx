@@ -18,7 +18,14 @@ import {
   type Mask,
 } from "~/lib/masks";
 import { fetchDefaultMaskId, fetchMasks } from "~/lib/masksApi";
-import { buildDeltaModel, type SummaryItem } from "~/lib/utils";
+import {
+  EXPORT_WIDTH_MM,
+  ExportFontContext,
+  buildDeltaModel,
+  exportFontPx,
+  inlineChartStyles,
+  type SummaryItem,
+} from "~/lib/utils";
 import { toPng, toSvg } from "html-to-image";
 
 const tableIcon = (
@@ -524,7 +531,11 @@ const file = () => {
       [e.target.id]: e.target.checked,
     }));
   };
-  const exportChart = (format: "png" | "svg") => {
+  const [open, setOpen] = useState(1);
+  // Кегль выгрузки: пока он задан, графики отводят поля под крупные подписи
+  const [exportFont, setExportFont] = useState<number | null>(null);
+
+  const exportChart = async (format: "png" | "svg") => {
     const target = document.querySelector(".download-image");
     if (!(target instanceof HTMLElement)) {
       return;
@@ -533,23 +544,40 @@ const file = () => {
     // html-to-image сдвигал клон на величину отступа, из-за чего картинка
     // съезжала вправо и обрезались подписи крайних осей.
     const rect = target.getBoundingClientRect();
-    const options = {
-      backgroundColor: "#FFFFFF",
-      width: Math.ceil(rect.width),
-      height: Math.ceil(rect.height),
-      style: { margin: "0" },
-      filter: exportFilter,
-    };
-    const render =
-      format === "png"
-        ? toPng(target, { ...options, pixelRatio: EXPORT_PIXEL_RATIO })
-        : toSvg(target, options);
-    render.then((dataUrl) =>
-      downloadDataUrl(dataUrl, `measurement-${fileId}.${format}`),
+    // Печатная ширина: линейные графики широкие (восемь мини-графиков или
+    // 300 с по оси X) и идут на всю страницу журнала, радары — в одну колонку. От неё зависит кегль,
+    // при котором подписи на бумаге получатся не меньше нужных pt.
+    const finalWidthMm =
+      open === 1 || open === 2 ? EXPORT_WIDTH_MM.page : EXPORT_WIDTH_MM.column;
+    const fontPx = exportFontPx(rect.width, finalWidthMm);
+    // Сначала перерисовываем графики с полями под крупный шрифт и только потом
+    // ставим сами размеры: раскладку MUI считает при рендере, а не по DOM.
+    setExportFont(fontPx);
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
     );
+    const restoreStyles = inlineChartStyles(target, { fontPx });
+    try {
+      const options = {
+        backgroundColor: "#FFFFFF",
+        width: Math.ceil(rect.width),
+        height: Math.ceil(rect.height),
+        style: { margin: "0" },
+        filter: exportFilter,
+      };
+      const dataUrl =
+        format === "png"
+          ? await toPng(target, { ...options, pixelRatio: EXPORT_PIXEL_RATIO })
+          : await toSvg(target, options);
+      downloadDataUrl(dataUrl, `measurement-${fileId}.${format}`);
+    } finally {
+      // Откат обязателен: иначе после ошибки на экране остались бы
+      // «выгрузочные» шрифты и поля.
+      restoreStyles();
+      setExportFont(null);
+    }
   };
 
-  const [open, setOpen] = useState(1);
   const [downloadError, setDownloadError] = useState("");
   const icons = useMemo(() => {
     return [
@@ -858,7 +886,9 @@ const file = () => {
           <div className="flex">
             <div className="flex flex-col"></div>
             <div className="article-view w-full">
-              <AnimatePresence mode="wait">{items[open]}</AnimatePresence>
+              <ExportFontContext.Provider value={exportFont}>
+                <AnimatePresence mode="wait">{items[open]}</AnimatePresence>
+              </ExportFontContext.Provider>
             </div>
           </div>
         </div>

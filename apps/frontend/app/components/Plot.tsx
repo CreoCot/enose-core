@@ -17,14 +17,15 @@ const Plot = ({ id, timestamps, sensorData }: Props) => {
   return (
     <div className="flex flex-col gap-3 w-full h-full">
       <ZoomableChart
-        className="rounded-[10px] shadow-sm shadow-accent-300 border border-accent-300"
+        className="export-frameless rounded-[10px] shadow-sm shadow-accent-300 border border-accent-300"
         timestamps={timestamps}
         series={series}
         colors={[plotColor]}
         height={300}
         hideLegend
+        compact
       />
-      <p className="font-medium text-center text-lg text-accent-900">
+      <p className="export-caption font-medium text-center text-lg text-accent-900">
         S{id + 1}
       </p>
     </div>

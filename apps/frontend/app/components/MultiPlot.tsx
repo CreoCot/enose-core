@@ -40,7 +40,7 @@ const MultiPlot = ({
 
     return (
       <ZoomableChart
-        className="w-full"
+        className="w-full download-image"
         colors={generateColors(activeSeries.length)}
         timestamps={timestamps}
         series={activeSeries}
@@ -57,7 +57,7 @@ const MultiPlot = ({
         </div>
       )}
       {error.length === 0 && (
-        <div className="flex download-image bg-grey-100 md:mx-8 my-4 lg:py-5 px-4 md:px-5 2xl:px-6 rounded-[10px] shadow-md shadow-accent-200 border border-accent-300">
+        <div className="flex bg-grey-100 md:mx-8 my-4 lg:py-5 px-4 md:px-5 2xl:px-6 rounded-[10px] shadow-md shadow-accent-200 border border-accent-300">
           <SensorList
             renderedPlotIds={renderedPlotIds}
             handleCheckboxClick={handleCheckboxClick}

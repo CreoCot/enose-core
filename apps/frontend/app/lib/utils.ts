@@ -1,3 +1,4 @@
+import { createContext } from "react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -155,8 +156,12 @@ export function fullXRange(timestamps: number[]): Range {
 
 /** Шаг масштабирования диаграммы, как scaleStep в MAG-soft */
 const RADAR_SCALE_STEP = 1.1;
-/** Не больше стольки делений у оси радара (иначе подписи слипаются) */
-const RADAR_MAX_DIVISIONS = 12;
+/**
+ * Не больше стольки колец у радара. Кольца подписаны числами, поэтому их
+ * мало: ось всегда заканчивается на круглом значении, кратном шагу колец
+ * (40, а не 37), и крупные подписи для статьи не налезают друг на друга.
+ */
+const RADAR_MAX_DIVISIONS = 5;
 
 const round10 = (v: number) => Number(v.toFixed(10));
 
@@ -208,4 +213,116 @@ export function zoomRadarMax(
   let target = niceCeil(min, min + next);
   if (target <= max) target = round10(max + grid);
   return target;
+}
+
+// ---------------------------------------------------------------------------
+// Выгрузка графиков для статьи
+// ---------------------------------------------------------------------------
+
+/** Печатная ширина рисунка в журнале: одна колонка и вся страница. */
+export const EXPORT_WIDTH_MM = { column: 84, page: 170 } as const;
+
+/**
+ * Кегль подписей на печати. Журналы требуют ≥ 12 pt, а рисунок нередко
+ * уменьшают при вёрстке, поэтому берём 16 pt: даже после уменьшения до 75 %
+ * остаётся 12 pt.
+ */
+export const EXPORT_FONT_PT = 16;
+
+/**
+ * Размер шрифта в px исходного узла, при котором на печатной ширине
+ * `finalWidthMm` подписи будут не меньше `pt`.
+ *
+ * Рисунок масштабируется целиком, поэтому кегль считается пропорцией: узел
+ * шириной nodeWidthPx будет напечатан шириной finalWidthMm.
+ */
+export function exportFontPx(
+  nodeWidthPx: number,
+  finalWidthMm: number,
+  pt = EXPORT_FONT_PT,
+): number {
+  const finalWidthPx = (finalWidthMm / 25.4) * 96;
+  return ((pt * 96) / 72) * (nodeWidthPx / finalWidthPx);
+}
+
+/**
+ * Кегль подписей (px) на время выгрузки, `null` — обычный экран. Графикам он
+ * нужен, чтобы заранее отвести поля под крупный шрифт: MUI считает раскладку
+ * при рендере и не знает, что в клон потом проставят другие размеры, —
+ * без этого крайние подписи («S3», «S7») обрезаются.
+ */
+export const ExportFontContext = createContext<number | null>(null);
+
+const EXPORT_FONT_FAMILY = '"Times New Roman", Times, serif';
+
+/**
+ * Ставит стили для выгрузки прямо на элементы графика и возвращает функцию
+ * отката.
+ *
+ * `html-to-image` переносит в клон только атрибуты и inline-стили самого
+ * элемента, а правила из `sx`/CSS в файл не попадают (проверено по SVG:
+ * на экране Times New Roman 19px, в файле Roboto 12px и fill-opacity 0.2).
+ * Поэтому всё, что должно совпадать с экраном, задаётся здесь inline.
+ */
+export function inlineChartStyles(
+  node: HTMLElement,
+  { fontPx }: { fontPx: number },
+): () => void {
+  const restores: Array<() => void> = [];
+
+  const set = (el: Element, name: string, value: string) => {
+    const style = (el as HTMLElement | SVGElement).style;
+    const prev = style.getPropertyValue(name);
+    const prevPriority = style.getPropertyPriority(name);
+    style.setProperty(name, value, "important");
+    restores.push(() =>
+      prev
+        ? style.setProperty(name, prev, prevPriority)
+        : style.removeProperty(name),
+    );
+  };
+  const setAttr = (el: Element, name: string, value: string) => {
+    const prev = el.getAttribute(name);
+    el.setAttribute(name, value);
+    restores.push(() =>
+      prev === null ? el.removeAttribute(name) : el.setAttribute(name, prev),
+    );
+  };
+
+  node.querySelectorAll("svg text").forEach((text) => {
+    set(text, "font-size", `${fontPx}px`);
+    set(text, "font-family", EXPORT_FONT_FAMILY);
+    set(text, "fill", "#000");
+  });
+  // Легенда линейного графика — обычный HTML, а не SVG
+  node
+    .querySelectorAll(".MuiChartsLegend-root, .MuiChartsLegend-root *")
+    .forEach((el) => {
+      set(el, "font-size", `${fontPx}px`);
+      set(el, "font-family", EXPORT_FONT_FAMILY);
+    });
+  // Рамка мини-графика — часть экрана: в выгрузке она получалась обрезанной
+  // (виден только верхний край), а в статье рамки вокруг панелей не нужны.
+  node.querySelectorAll(".export-frameless").forEach((frame) => {
+    set(frame, "border", "0");
+    set(frame, "box-shadow", "none");
+  });
+  // Подпись панели («S1») — обычный HTML, поэтому её кегль задаём отдельно
+  node.querySelectorAll(".export-caption").forEach((caption) => {
+    set(caption, "font-size", `${fontPx}px`);
+    set(caption, "font-family", EXPORT_FONT_FAMILY);
+    set(caption, "color", "#000");
+  });
+  // Пунктирные линии min/max — подсказка для работы с графиком, а не часть
+  // рисунка: в статье они только мешают подписям.
+  node.querySelectorAll(".MuiChartsReferenceLine-root").forEach((line) => {
+    set(line, "display", "none");
+  });
+  // MUI рисует заливку радара атрибутом fill-opacity 0.2, на экране её
+  // перебивает sx — в выгрузке нужна та же сплошная заливка
+  node.querySelectorAll(".MuiRadarChart-seriesArea").forEach((area) => {
+    setAttr(area, "fill-opacity", "1");
+  });
+
+  return () => restores.reverse().forEach((restore) => restore());
 }
