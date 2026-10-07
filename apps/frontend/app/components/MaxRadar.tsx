@@ -319,10 +319,13 @@ const MaxRadar = ({
                   fontSize: `${fontPx}px !important`,
                 },
                 "& .MuiRadarChart-seriesArea": { fillOpacity: 1 },
+                // Точки скрыты; при наведении на ось видна чёрная точка
+                "& .MuiRadarChart-axisHighlightDot": {
+                  fill: "#000",
+                  stroke: "#000",
+                },
               }}
-              series={[
-                { data: renderedArray, fillArea: true, hideMark: isTime },
-              ]}
+              series={[{ data: renderedArray, fillArea: true, hideMark: true }]}
               radar={{
                 max: axisMax,
                 metrics: metrics,
