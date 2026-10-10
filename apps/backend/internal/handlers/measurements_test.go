@@ -374,3 +374,33 @@ func TestMaskSurvivesDownsampling(t *testing.T) {
 		assert.Equal(t, 7777.0, pickFloat(timestamps, idx)[pos[0]])
 	}
 }
+
+func TestParseIndexList(t *testing.T) {
+	t.Run("список без повторов и пробелов", func(t *testing.T) {
+		idx, err := parseIndexList("0, 2,2,5")
+		assert.NoError(t, err)
+		assert.Equal(t, []int{0, 2, 5}, idx)
+	})
+	t.Run("пустая строка — пустой, не nil", func(t *testing.T) {
+		idx, err := parseIndexList("")
+		assert.NoError(t, err)
+		assert.NotNil(t, idx)
+		assert.Empty(t, idx)
+	})
+	t.Run("мусор и отрицательные отвергаются", func(t *testing.T) {
+		_, err := parseIndexList("1,a")
+		assert.Error(t, err)
+		_, err = parseIndexList("-1")
+		assert.Error(t, err)
+	})
+}
+
+func TestPickSensors(t *testing.T) {
+	sensors := []repository.ReportSensorSeries{{Name: "a"}, {Name: "b"}, {Name: "c"}}
+
+	got := pickSensors(sensors, []int{2, 0, 9})
+
+	assert.Len(t, got, 2)
+	assert.Equal(t, "a", got[0].Name)
+	assert.Equal(t, "c", got[1].Name)
+}

@@ -81,6 +81,7 @@ func SetupRouter(cfg *config.Config, reg *repository.Registry, parser *services.
 			protected.PUT("/masks/:id", masksHandler.Update)
 			protected.DELETE("/masks/:id", masksHandler.Delete)
 			protected.GET("/report/:id", measurementsHandler.GetReport)
+			protected.POST("/report/:id", measurementsHandler.PostReport)
 			protected.GET("/features/:id", measurementsHandler.GetFeatures)
 			protected.DELETE("/delete/:id", measurementsHandler.Delete)
 			// Измерение привязывается к загрузившему (user_id из клеймов),

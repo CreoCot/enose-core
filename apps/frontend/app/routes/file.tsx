@@ -24,10 +24,12 @@ import {
   EXPORT_WIDTH_MM,
   buildDeltaModel,
   exportFontPx,
-  inlineChartStyles,
   type SummaryItem,
 } from "~/lib/utils";
-import { toPng, toSvg } from "html-to-image";
+import ReportCapture, {
+  renderChart,
+  type CaptureResult,
+} from "~/components/ReportCapture";
 
 const tableIcon = (
   <svg
@@ -406,11 +408,14 @@ export function HydrateFallback() {
 const handleDownload = async (
   fileId: number,
   setError: (arg0: string) => void,
+  // Картинки графиков с сайта; без них отчёт рисуется на сервере
+  form?: FormData,
 ) => {
   try {
-    const response = await axios.get(`/api/v1/report/${fileId}`, {
-      responseType: "blob",
-    });
+    const url = `/api/v1/report/${fileId}`;
+    const response = form
+      ? await axios.post(url, form, { responseType: "blob" })
+      : await axios.get(url, { responseType: "blob" });
     const contentDisposition = response.headers["content-disposition"];
     let filename = `report-${fileId}.pdf`;
     if (contentDisposition && contentDisposition.includes("filename=")) {
@@ -453,10 +458,6 @@ const handleDownload = async (
   }
 };
 
-// 300 dpi при 96 css-dpi: столько просят в требованиях к иллюстрациям
-// большинства журналов (растровые рисунки — не ниже 300 dpi).
-const EXPORT_PIXEL_RATIO = 300 / 96;
-
 function downloadDataUrl(dataUrl: string, filename: string) {
   const a = document.createElement("a");
 
@@ -464,10 +465,6 @@ function downloadDataUrl(dataUrl: string, filename: string) {
   a.setAttribute("href", dataUrl);
   a.click();
 }
-
-// Кнопки управления графиком — часть интерфейса, а не рисунка
-const exportFilter = (node: HTMLElement) =>
-  !(node instanceof HTMLElement) || !node.classList.contains("no-export");
 
 const file = () => {
   const loaderData = useLoaderData<Awaited<ReturnType<typeof clientLoader>>>();
@@ -572,34 +569,44 @@ const file = () => {
     if (!(target instanceof HTMLElement)) {
       return;
     }
-    // Берём реальный бокс элемента и гасим его внешние отступы: с mx-8/my-4
-    // html-to-image сдвигал клон на величину отступа, из-за чего картинка
-    // съезжала вправо и обрезались подписи крайних осей.
-    const rect = target.getBoundingClientRect();
-    // Размеры подписей на экране уже заданы этим же кеглем, но правила из
-    // sx в клон не попадают — дублируем их inline на время съёмки.
-    const restoreStyles = inlineChartStyles(target, {
-      fontPx: chartFont ?? DEFAULT_CHART_FONT_PX,
-    });
-    try {
-      const options = {
-        backgroundColor: "#FFFFFF",
-        width: Math.ceil(rect.width),
-        height: Math.ceil(rect.height),
-        style: { margin: "0" },
-        filter: exportFilter,
-      };
-      const dataUrl =
-        format === "png"
-          ? await toPng(target, { ...options, pixelRatio: EXPORT_PIXEL_RATIO })
-          : await toSvg(target, options);
-      downloadDataUrl(dataUrl, `measurement-${fileId}.${format}`);
-    } finally {
-      restoreStyles();
-    }
+    const dataUrl = await renderChart(
+      target,
+      chartFont ?? DEFAULT_CHART_FONT_PX,
+      format,
+    );
+    downloadDataUrl(dataUrl, `measurement-${fileId}.${format}`);
   };
 
   const [downloadError, setDownloadError] = useState("");
+  // Идёт сборка отчёта: за кадром рисуются графики для PDF (ReportCapture)
+  const [reporting, setReporting] = useState(false);
+  const handleReport = () => {
+    setDownloadError("");
+    if (reporting) return;
+    if (plotError || plots.length === 0) {
+      // Нечего снимать — серверный отчёт
+      handleDownload(fileId, setDownloadError);
+      return;
+    }
+    setReporting(true);
+  };
+  const onCaptured = async (result: CaptureResult) => {
+    const form = new FormData();
+    for (const [key, blob] of Object.entries(result.images)) {
+      form.append(key, blob, `${key}.png`);
+    }
+    form.append("mask_id", maskId === null ? "" : String(maskId));
+    form.append("sensors", result.sensors.join(","));
+    if (result.timeAxisMin !== null) {
+      form.append("time_axis_min", String(result.timeAxisMin));
+    }
+    await handleDownload(fileId, setDownloadError, form);
+    setReporting(false);
+  };
+  const onCaptureError = (message: string) => {
+    setDownloadError(message);
+    setReporting(false);
+  };
   const icons = useMemo(() => {
     return [
       [
@@ -742,6 +749,16 @@ const file = () => {
   return (
     <div className="w-full overflow-hidden bg-grey-50 pb-5">
       <Head>{`Запись №${fileId}`}</Head>
+      {reporting && (
+        <ReportCapture
+          plots={plots}
+          timestamps={plotTimestamps}
+          sensorSize={sensorSize}
+          renderedPlotIds={renderedPlotIds}
+          onResult={onCaptured}
+          onError={onCaptureError}
+        />
+      )}
       <Link
         className="flex gap-1 items-center w-fit lg:text-lg text-grey-700 hover:text-grey-600 mx-7 mt-5 transition-colors duration-200"
         to="/data"
@@ -872,16 +889,14 @@ const file = () => {
             )}
             <button
               id="download"
-              onClick={() => {
-                setDownloadError("");
-                handleDownload(fileId, setDownloadError);
-              }}
+              onClick={handleReport}
+              disabled={reporting}
               className={`bg-grey-600 hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 w-full h-full ${
                 downloadError.length !== 0 ? "outline outline-red-600" : ""
               }`}
             >
               <div className="flex justify-center gap-1">
-                Отчет
+                {reporting ? "Готовим отчёт…" : "Отчет"}
                 {icons[0][icons[0].length - 1]}
               </div>
             </button>

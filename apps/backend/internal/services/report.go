@@ -41,6 +41,15 @@ type ReportMask struct {
 	Indices []int     `json:"indices"`
 }
 
+// ReportImages — PNG-картинки графиков, снятые на сайте (300 dpi). []byte
+// в JSON кодируется base64, report-сервис читает их как Base64Bytes.
+type ReportImages struct {
+	Compare   []byte `json:"compare,omitempty"`
+	Plots     []byte `json:"plots,omitempty"`
+	MaxRadar  []byte `json:"max_radar,omitempty"`
+	TimeRadar []byte `json:"time_radar,omitempty"`
+}
+
 type ReportRequest struct {
 	Header         ReportHeader          `json:"header"`
 	Timestamps     []float64             `json:"timestamps"`
@@ -49,6 +58,11 @@ type ReportRequest struct {
 	// Mask — nil, если у измерения нет маски по умолчанию: тогда временная
 	// диаграмма строится по всем отсчётам, как в MAG-soft без маски.
 	Mask *ReportMask `json:"mask,omitempty"`
+	// Images — картинки с сайта; nil — report-сервис рисует графики сам.
+	Images *ReportImages `json:"images,omitempty"`
+	// TimeAxisMin — минимум оси временной диаграммы на присланном рисунке:
+	// площадь считается от него, как на сайте.
+	TimeAxisMin *float64 `json:"time_axis_min,omitempty"`
 }
 
 // ReportClient вызывает stateless report-сервис для генерации PDF.

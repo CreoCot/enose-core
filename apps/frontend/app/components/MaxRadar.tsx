@@ -13,7 +13,7 @@ import {
   DEFAULT_CHART_FONT_PX,
   formatTick,
   niceCeil,
-  niceRange,
+  autoTimeRange,
   niceStep,
   zoomRadarMax,
 } from "../lib/utils";
@@ -188,10 +188,7 @@ const MaxRadar = ({
   // Границы оси — круглые и кратные шагу колец, иначе подписи получаются
   // вроде −31, −11, 9, 29. У диаграммы максимумов нижняя граница — ноль.
   const [autoMin, initialPlotMax] = isTime
-    ? niceRange(
-        Math.min(...renderedArray, 0),
-        Math.max(0, ...renderedArray.filter(Number.isFinite)),
-      )
+    ? autoTimeRange(renderedArray)
     : [0, niceCeil(0, Math.max(1, ...renderedArray.filter(Number.isFinite)))];
   const [plotMin, setPlotMin] = useState(autoMin);
   const [plotMax, setPlotMax] = useState(initialPlotMax);

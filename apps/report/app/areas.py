@@ -121,18 +121,23 @@ def fingerprint_areas(report: ReportRequest) -> FingerprintAreas:
     """Both areas at the PDF's non-interactive auto scale.
 
     The maximum diagram uses axis minimum 0 (the UI's default ``plotMin``);
-    the time diagram uses the minimum over all its axes, as MAG-soft's
-    auto-scale does.
+    the time diagram uses ``report.time_axis_min`` (the minimum drawn on the
+    figure from the site) or, without it, the minimum over all its axes, as
+    MAG-soft's auto-scale does.
     """
     times, deltas = selected_deltas(report)
     max_vals = max_diagram_values(deltas)
     time_vals = time_diagram_values(deltas)
 
+    time_min = (
+        report.time_axis_min
+        if report.time_axis_min is not None
+        else axis_min_for(time_vals, "signed")
+    )
+
     return FingerprintAreas(
         max_diagram=radar_area(fingerprint_radii(max_vals, "abs", 0.0)),
-        time_diagram=radar_area(
-            fingerprint_radii(time_vals, "signed", axis_min_for(time_vals, "signed"))
-        ),
+        time_diagram=radar_area(fingerprint_radii(time_vals, "signed", time_min)),
         max_axes=len(max_vals),
         time_axes=len(time_vals),
         sample_count=len(times),

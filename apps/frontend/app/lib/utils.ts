@@ -208,6 +208,16 @@ export function niceRange(min: number, max: number): [number, number] {
 }
 
 /**
+ * Автоматические границы шкалы временной диаграммы по её радиусам (ΔF со
+ * знаком). Одно место для экрана и для отчёта: минимум шкалы входит в формулу
+ * площади, и в PDF он обязан совпадать с нарисованным.
+ */
+export function autoTimeRange(values: number[]): [number, number] {
+  const finite = values.filter(Number.isFinite);
+  return niceRange(Math.min(...finite, 0), Math.max(0, ...finite));
+}
+
+/**
  * Число для подписи шкалы без хвоста плавающей точки: MUI считает значения
  * колец через scale.invert и показывает 29.000000000000007.
  */

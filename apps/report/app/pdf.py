@@ -24,6 +24,7 @@ from reportlab.platypus import (
 from app.charts import ChartGenerator
 from app.areas import fingerprint_areas
 from app.features import calculate_features
+from app.report_text import figure_captions, methodology
 from app.schemas import ReportRequest
 
 
@@ -77,13 +78,21 @@ class PDFGenerator:
 
         story = []
         self._build_header(story, report)
-        self._build_chart(story, report)
-        story.append(PageBreak())
-        self._build_fingerprint(story, report)
-        self._build_feature_table(story, report)
+        from_site = report.images is not None and report.images.any()
+        if from_site:
+            # Графики сайта вместо matplotlib + текст обоснования (на русском)
+            self._build_site_figures(story, report)
+            self._build_site_areas(story, report)
+            self._build_methodology(story, report)
+            story.append(PageBreak())
+        else:
+            self._build_chart(story, report)
+            story.append(PageBreak())
+            self._build_fingerprint(story, report)
+        self._build_feature_table(story, report, "04" if from_site else "03")
 
         if report.interpretation:
-            self._build_interpretation(story, report)
+            self._build_interpretation(story, report, "05" if from_site else "04")
 
         doc.build(story, onFirstPage=self._draw_page, onLaterPages=self._draw_page)
         pdf = buffer.getvalue()
@@ -224,9 +233,9 @@ class PDFGenerator:
         )
         story.append(chart_table)
 
-    def _build_feature_table(self, story, report: ReportRequest):
+    def _build_feature_table(self, story, report: ReportRequest, number: str = "03"):
         intro = [
-            self._section_heading("03", "Calculated features"),
+            self._section_heading(number, "Calculated features"),
             Paragraph(
                 "Signal descriptors calculated from baseline-corrected values (Δf).",
                 self.styles["SectionLead"],
@@ -380,7 +389,22 @@ class PDFGenerator:
         story.append(card)
         story.append(Spacer(1, 4 * mm))
 
-        area_rows = self._area_rows(report)
+        story.append(self._area_table(self._area_rows(report)))
+        story.append(Spacer(1, 2 * mm))
+        story.append(
+            Paragraph(
+                "Area of the kinetic fingerprint, sum of a(i)*a(i+1)*sin(2*pi/N)/2 "
+                "over the ring, with radii measured from the diagram's axis minimum "
+                "(MAG-soft convention). Fewer than three axes gives zero. The maximum "
+                "diagram uses axis minimum 0; the time diagram uses the minimum over "
+                "all its axes.",
+                self.styles["FingerprintNote"],
+            )
+        )
+        story.append(Spacer(1, 7 * mm))
+
+    def _area_table(self, area_rows: list[tuple[str, str]]) -> Table:
+        """2×2 block of label/value cells for the kinetic-fingerprint areas."""
         area_table = Table(
             [
                 [self._metadata_cell(label, value) for label, value in area_rows[:2]],
@@ -403,19 +427,84 @@ class PDFGenerator:
                 ]
             )
         )
-        story.append(area_table)
-        story.append(Spacer(1, 2 * mm))
+        return area_table
+
+    # --- Блоки с картинками сайта и текстом обоснования (русский) -----------
+
+    # Печатная ширина рисунков: линейные графики — на всю страницу, радары —
+    # в одну колонку (как при выгрузке с сайта, чтобы кегль был не меньше 12 pt)
+    FIGURE_WIDTH = {
+        "compare": CONTENT_WIDTH,
+        "plots": CONTENT_WIDTH,
+        "max_radar": 100 * mm,
+        "time_radar": 100 * mm,
+    }
+    FIGURE_MAX_HEIGHT = 212 * mm
+
+    def _build_site_figures(self, story, report: ReportRequest):
+        story.append(self._section_heading("01", "Графики отклика"))
         story.append(
             Paragraph(
-                "Area of the kinetic fingerprint, sum of a(i)*a(i+1)*sin(2*pi/N)/2 "
-                "over the ring, with radii measured from the diagram's axis minimum "
-                "(MAG-soft convention). Fewer than three axes gives zero. The maximum "
-                "diagram uses axis minimum 0; the time diagram uses the minimum over "
-                "all its axes.",
-                self.styles["FingerprintNote"],
+                "Рисунки получены с сайта в том виде, в каком их видит оператор "
+                "(выбранные маска и сенсоры), в разрешении 300 dpi.",
+                self.styles["SectionLead"],
             )
         )
+        story.append(Spacer(1, 3 * mm))
+
+        for figure in figure_captions(report):
+            data = getattr(report.images, figure.key)
+            reader = ImageReader(BytesIO(data))
+            px_width, px_height = reader.getSize()
+            width = self.FIGURE_WIDTH[figure.key]
+            height = width * px_height / px_width
+            if height > self.FIGURE_MAX_HEIGHT:
+                width *= self.FIGURE_MAX_HEIGHT / height
+                height = self.FIGURE_MAX_HEIGHT
+            image = Image(BytesIO(data), width=width, height=height)
+            image.hAlign = "CENTER"
+            story.append(
+                KeepTogether(
+                    [
+                        image,
+                        Spacer(1, 2 * mm),
+                        Paragraph(figure.caption, self.styles["FigureCaption"]),
+                        Spacer(1, 6 * mm),
+                    ]
+                )
+            )
+
+    def _build_site_areas(self, story, report: ReportRequest):
+        heading = self._section_heading("02", "Площадь кинетического отпечатка")
+        areas = fingerprint_areas(report)
+        scope = (
+            f"маска «{escape(areas.mask_name or '')}» · {areas.sample_count} точек"
+            if report.mask is not None
+            else f"все отсчёты · {areas.sample_count} точек"
+        )
+        table = self._area_table(
+            [
+                (
+                    "ДИАГРАММА МАКСИМУМОВ",
+                    f"{self._format_area(areas.max_diagram)} Гц²",
+                ),
+                (
+                    "ВРЕМЕННАЯ ДИАГРАММА",
+                    f"{self._format_area(areas.time_diagram)} Гц²",
+                ),
+                ("ОСЕЙ (МАКС. / ВРЕМ.)", f"{areas.max_axes} / {areas.time_axes}"),
+                ("ОЦЕНКА ПО", scope),
+            ]
+        )
+        # Заголовок не должен оставаться внизу страницы без таблицы
+        story.append(KeepTogether([heading, Spacer(1, 3 * mm), table]))
         story.append(Spacer(1, 7 * mm))
+
+    def _build_methodology(self, story, report: ReportRequest):
+        story.append(self._section_heading("03", "Методика расчёта и обоснование"))
+        story.append(Spacer(1, 3 * mm))
+        for paragraph in methodology(report):
+            story.append(Paragraph(paragraph, self.styles["MethodBody"]))
 
     def _area_rows(self, report: ReportRequest) -> list[tuple[str, str]]:
         """Label/value pairs for the kinetic-fingerprint area block.
@@ -441,10 +530,12 @@ class PDFGenerator:
         """Matches the UI's area.toFixed(2) so both surfaces read identically."""
         return f"{value:.2f}"
 
-    def _build_interpretation(self, story, report: ReportRequest):
+    def _build_interpretation(self, story, report: ReportRequest, number: str = "04"):
         story.append(Spacer(1, 9 * mm))
         content = [
-            Paragraph("04  ·  INTERPRETATION", self.styles["InterpretationLabel"]),
+            Paragraph(
+                f"{number}  ·  INTERPRETATION", self.styles["InterpretationLabel"]
+            ),
             Spacer(1, 2 * mm),
             Paragraph(
                 escape(report.interpretation.text), self.styles["InterpretationBody"]
@@ -662,6 +753,27 @@ class PDFGenerator:
                 leading=10.5,
                 textColor=self.MUTED,
                 spaceBefore=2,
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="FigureCaption",
+                fontName="DejaVu",
+                fontSize=8.2,
+                leading=12,
+                textColor=self.SLATE,
+                alignment=TA_LEFT,
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="MethodBody",
+                fontName="DejaVu",
+                fontSize=9,
+                leading=14,
+                textColor=self.NAVY,
+                alignment=TA_LEFT,
+                spaceAfter=6,
             )
         )
         styles.add(
