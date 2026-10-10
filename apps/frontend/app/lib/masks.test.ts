@@ -62,6 +62,27 @@ describe("applyMask", () => {
   });
 });
 
+describe("applyMask при шаге, отличном от секунды", () => {
+  // отсчёты каждые 2 с: 2, 4, …, 120
+  const times = Array.from({ length: 60 }, (_, k) => 2 * (k + 1));
+  const deltas = [times.map((t) => t * 10)];
+  it("точки маски — секунды, а не номера отсчётов", () => {
+    const m = applyMask(deltas, [10, 20, 60, 100, 120], times);
+    expect(m.times).toEqual([10, 20, 60, 100, 120]);
+    expect(m.deltas[0]).toEqual([100, 200, 600, 1000, 1200]);
+  });
+  it("маска на 14 точек (0–130 с) не обрезается на 50-й секунде", () => {
+    const mask = Array.from({ length: 14 }, (_, k) => k * 10);
+    expect(applyMask(deltas, mask, times).times).toEqual(mask.slice(0, 13));
+  });
+  it("записи с шагом 1 с работают как раньше (floor(t))", () => {
+    const t1 = [0, 1, 2, 3, 4, 5];
+    expect(applyMask([[0, 1, 2, 3, 4, 5]], [1.9, 4.2], t1).deltas[0]).toEqual([
+      1, 4,
+    ]);
+  });
+});
+
 describe("summarizeMasked", () => {
   it("считает min/max/абсолютный максимум по точкам маски", () => {
     const masked = { times: [10, 20, 30], deltas: [[2, -7, 5]] };

@@ -506,7 +506,7 @@ const file = () => {
         summaryData: rawSummary,
       };
     }
-    const masked = applyMask(rawPlots, activeMask.points);
+    const masked = applyMask(rawPlots, activeMask.points, rawTimestamps);
     return {
       plots: masked.deltas,
       plotTimestamps: masked.times,

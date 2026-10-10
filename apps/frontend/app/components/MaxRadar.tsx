@@ -41,8 +41,8 @@ const ScaleUnit = ({ fontSize }: { fontSize: number }) => {
   const { left, top } = useDrawingArea();
   return (
     <ChartsText
-      x={left + 4}
-      y={top + fontSize}
+      x={left - fontSize * 0.5}
+      y={top + fontSize * 0.4}
       text="ΔF, Гц"
       style={{ fontSize, textAnchor: "start" }}
     />

@@ -468,9 +468,52 @@ func (h *MeasurementsHandler) loadAuthorizedMeasurement(c *gin.Context) (*models
 // maskSampleEPS — та же поправка, что в apps/frontend/app/lib/masks.ts.
 const maskSampleEPS = 1e-9
 
-// resolveMaskSamples переводит точки маски в индексы исходного ряда по правилам
-// MAG-soft: отсчёт k = floor(t), где отсчёт 0 — первая точка ПОСЛЕ базовой
-// (базовые — ведущие точки с отрицательным временем). Точки маски отсортированы,
+// maskLegacyStepTolerance — допуск на «шаг около секунды» (как в masks.ts).
+const maskLegacyStepTolerance = 0.2
+
+// medianStep — медианный шаг по времени; 0, если отсчётов меньше двух.
+func medianStep(times []float64) float64 {
+	if len(times) < 2 {
+		return 0
+	}
+	steps := make([]float64, 0, len(times)-1)
+	for i := 1; i < len(times); i++ {
+		steps = append(steps, times[i]-times[i-1])
+	}
+	sort.Float64s(steps)
+	return steps[len(steps)/2]
+}
+
+// maskSampleIndex — номер отсчёта (среди отсчётов после базовой точки) для
+// момента маски t или -1 за пределами данных. Правило то же, что в
+// apps/frontend/app/lib/masks.ts: при шаге около 1 с (записи MAG-soft) отсчёт
+// равен floor(t), при другом шаге t — секунды, берётся ближайший по времени.
+func maskSampleIndex(times []float64, t float64) int {
+	if len(times) == 0 {
+		return -1
+	}
+	step := medianStep(times)
+	if step <= 0 || math.Abs(step-1) <= maskLegacyStepTolerance {
+		k := int(math.Floor(t + maskSampleEPS))
+		if k < 0 || k >= len(times) {
+			return -1
+		}
+		return k
+	}
+	if t > times[len(times)-1]+step/2+maskSampleEPS {
+		return -1
+	}
+	best := 0
+	for k := 1; k < len(times); k++ {
+		if math.Abs(times[k]-t) < math.Abs(times[best]-t) {
+			best = k
+		}
+	}
+	return best
+}
+
+// resolveMaskSamples переводит точки маски в индексы исходного ряда. Базовые
+// точки — ведущие точки с отрицательным временем. Точки маски отсортированы,
 // поэтому на первой вышедшей за пределы данных обход прекращается.
 func resolveMaskSamples(timestamps, points []float64) ([]float64, []int) {
 	kept := make([]float64, 0, len(points))
@@ -480,11 +523,11 @@ func resolveMaskSamples(timestamps, points []float64) ([]float64, []int) {
 	for baseline < len(timestamps) && timestamps[baseline] < 0 {
 		baseline++
 	}
-	usable := len(timestamps) - baseline
+	usable := timestamps[baseline:]
 
 	for _, t := range points {
-		k := int(math.Floor(t + maskSampleEPS))
-		if k < 0 || k >= usable {
+		k := maskSampleIndex(usable, t)
+		if k < 0 {
 			break
 		}
 		kept = append(kept, t)

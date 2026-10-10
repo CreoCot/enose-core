@@ -1,7 +1,8 @@
 // Маски времени, как в MAG-soft. Маска — список моментов (секунды), в которых
 // оцениваются кривые. В MAG-soft момент t — это индекс отсчёта (int(t)) в ряду
 // измеренных точек (deltas[0] — первая точка после базовой, t ≈ 0), поэтому
-// здесь так же: индекс = floor(t). Маска отсортирована; как только момент
+// для записей с шагом ≈ 1 с индекс = floor(t); при другом шаге t — секунды
+// и берётся ближайший по времени отсчёт. Маска отсортирована; как только момент
 // выходит за пределы данных, остальные (они больше) тоже отбрасываются.
 
 import { summarizeSeries, type SummaryItem } from "./utils";
@@ -59,21 +60,62 @@ export function formatMaskPoints(points: number[]): string {
   return points.join(" ");
 }
 
+/** Медианный шаг по времени; 0, если отсчётов меньше двух. */
+function medianStep(times: number[]): number {
+  if (times.length < 2) return 0;
+  const steps = times
+    .slice(1)
+    .map((t, i) => t - times[i])
+    .sort((a, b) => a - b);
+  return steps[Math.floor(steps.length / 2)];
+}
+
+// Шаг около секунды — запись MAG-soft, где момент маски и есть номер отсчёта.
+const LEGACY_STEP_TOLERANCE = 0.2;
+
+/**
+ * Номер отсчёта для момента маски t или -1, если t вышел за пределы данных.
+ * times — время отсчётов ПОСЛЕ базовой точки.
+ * - шаг ≈ 1 с (записи MAG-soft): как в легаси, отсчёт = floor(t);
+ * - иной шаг (например, 2 с): t — секунды, берётся ближайший по времени
+ *   отсчёт. Иначе маска «0 10 … 130» на записи с шагом 2 с обрезалась бы
+ *   на 50-й секунде, потому что «60-й отсчёт» лежит на 120-й секунде.
+ */
+export function maskSampleIndex(times: number[], t: number): number {
+  if (times.length === 0) return -1;
+  const step = medianStep(times);
+  if (step <= 0 || Math.abs(step - 1) <= LEGACY_STEP_TOLERANCE) {
+    const k = Math.floor(t + EPS);
+    return k < 0 || k >= times.length ? -1 : k;
+  }
+  if (t > times[times.length - 1] + step / 2 + EPS) return -1;
+  let best = 0;
+  for (let k = 1; k < times.length; k++) {
+    if (Math.abs(times[k] - t) < Math.abs(times[best] - t)) best = k;
+  }
+  return best;
+}
+
 /** Применяет маску к рядам ΔF. Без маски вызывать не нужно. */
 export function applyMask(
   deltas: number[][],
   maskPoints: number[],
+  sampleTimes: number[] = [],
 ): MaskedSeries {
   const length = deltas.length ? Math.min(...deltas.map((d) => d.length)) : 0;
-  const times: number[] = [];
+  // Время отсчётов: если не передано, считаем шаг равным секунде (легаси)
+  const times = sampleTimes.length
+    ? sampleTimes.slice(0, length)
+    : Array.from({ length }, (_, k) => k);
+  const kept: number[] = [];
   const indices: number[] = [];
   for (const t of maskPoints) {
-    const k = Math.floor(t + EPS);
-    if (k < 0 || k >= length) break;
-    times.push(t);
+    const k = maskSampleIndex(times, t);
+    if (k < 0) break;
+    kept.push(t);
     indices.push(k);
   }
-  return { times, deltas: deltas.map((d) => indices.map((k) => d[k])) };
+  return { times: kept, deltas: deltas.map((d) => indices.map((k) => d[k])) };
 }
 
 /** min / max / абсолютный максимум ΔF по точкам маски (как в MAG-soft). */

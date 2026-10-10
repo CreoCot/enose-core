@@ -332,6 +332,19 @@ func TestResolveMaskSamples(t *testing.T) {
 	})
 }
 
+func TestResolveMaskSamplesStepTwoSeconds(t *testing.T) {
+	// Запись с шагом 2 с: t=0..120, отсчёты 2, 4, … Момент маски — секунды,
+	// а не номер отсчёта, иначе «60 с» вышло бы за данные.
+	timestamps := []float64{-1}
+	for s := 2.0; s <= 120; s += 2 {
+		timestamps = append(timestamps, s)
+	}
+	points := []float64{10, 20, 60, 100, 120, 130}
+	kept, idx := resolveMaskSamples(timestamps, points)
+	assert.Equal(t, []float64{10, 20, 60, 100, 120}, kept)
+	assert.Equal(t, []int{5, 10, 30, 50, 60}, idx)
+}
+
 func TestMergeIndices(t *testing.T) {
 	assert.Equal(t, []int{0, 1, 2, 4}, mergeIndices([]int{0, 2, 4}, []int{1, 2}))
 	assert.Equal(t, []int{}, mergeIndices(nil, nil))
