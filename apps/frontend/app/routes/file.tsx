@@ -605,6 +605,10 @@ const file = () => {
       overrides: colorOverrides,
       setColor: (index: number, color: string) =>
         saveColors({ ...colorOverrides, [index]: color }),
+      clearColor: (index: number) => {
+        const { [index]: _removed, ...rest } = colorOverrides;
+        saveColors(rest);
+      },
       resetColors: () => saveColors({}),
     }),
     [colorOverrides, colorsKey],

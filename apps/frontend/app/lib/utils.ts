@@ -246,16 +246,47 @@ export function defaultSensorColor(index: number): string {
   return hslToHex(((index * 41) % 360) + 266, 60, 52);
 }
 
+/**
+ * Палитра для выбора цвета сенсора: 20 различимых на белом фоне цветов.
+ * Системный <input type="color"> перерисовывал графики на каждое движение
+ * курсора по палитре и сильно лагал, поэтому выбор — по клику на готовый цвет.
+ */
+export const SENSOR_PALETTE = [
+  "#e6194b",
+  "#f58231",
+  "#d4a000",
+  "#8cb800",
+  "#3cb44b",
+  "#00a896",
+  "#42a5f5",
+  "#4363d8",
+  "#000075",
+  "#911eb4",
+  "#f032e6",
+  "#ff6f91",
+  "#800000",
+  "#9a6324",
+  "#808000",
+  "#469990",
+  "#000000",
+  "#555555",
+  "#a9a9a9",
+  "#7b3bce",
+] as const;
+
 /** Цвета, выбранные пользователем: индекс сенсора → "#rrggbb". */
 export interface SensorColors {
   overrides: Record<number, string>;
   setColor: (index: number, color: string) => void;
+  /** Вернуть сенсору цвет по умолчанию */
+  clearColor: (index: number) => void;
   resetColors: () => void;
 }
 
 export const SensorColorsContext = createContext<SensorColors>({
   overrides: {},
   setColor: () => {},
+  clearColor: () => {},
   resetColors: () => {},
 });
 

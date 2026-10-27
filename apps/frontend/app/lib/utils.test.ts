@@ -10,6 +10,7 @@ import {
   defaultSensorColor,
   fullXRange,
   hslToHex,
+  SENSOR_PALETTE,
   sensorColor,
   niceCeil,
   niceStep,
@@ -279,6 +280,11 @@ describe("цвета сенсоров", () => {
     const colors = Array.from({ length: 8 }, (_, i) => defaultSensorColor(i));
     for (const c of colors) expect(c).toMatch(/^#[0-9a-f]{6}$/);
     expect(new Set(colors).size).toBe(8);
+  });
+  it("палитра: не больше 20 уникальных hex-цветов", () => {
+    expect(SENSOR_PALETTE.length).toBeLessThanOrEqual(20);
+    expect(new Set(SENSOR_PALETTE).size).toBe(SENSOR_PALETTE.length);
+    for (const c of SENSOR_PALETTE) expect(c).toMatch(/^#[0-9a-f]{6}$/);
   });
   it("выбор пользователя перекрывает цвет по умолчанию", () => {
     expect(sensorColor({ 2: "#123456" }, 2)).toBe("#123456");

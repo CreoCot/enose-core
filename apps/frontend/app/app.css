@@ -218,6 +218,11 @@ body {
   border-color: #000 !important;
 }
 
+/* Образцы цвета сенсоров: правило выше красит в белый всё, кроме svg */
+.article-view .color-swatch {
+  background-color: var(--swatch) !important;
+}
+
 .article-view svg text {
   fill: #000;
   font-family: "Times New Roman", Times, serif;
