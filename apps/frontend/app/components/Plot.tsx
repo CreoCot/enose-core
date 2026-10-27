@@ -1,11 +1,6 @@
 import { useContext, useMemo } from "react";
 import ZoomableChart from "./ZoomableChart";
-import {
-  ChartFontContext,
-  DEFAULT_CHART_FONT_PX,
-  SensorColorsContext,
-  sensorColor,
-} from "../lib/utils";
+import { ChartFontContext, DEFAULT_CHART_FONT_PX } from "../lib/utils";
 
 interface Props {
   id: number;
@@ -16,7 +11,6 @@ interface Props {
 const plotColor = "#7B3BCE"; // accent-500
 
 const Plot = ({ id, timestamps, sensorData }: Props) => {
-  const { overrides } = useContext(SensorColorsContext);
   // Подпись панели — тем же кеглем, что и подписи графика, как и в выгрузке
   const fontPx = useContext(ChartFontContext) ?? DEFAULT_CHART_FONT_PX;
   const series = useMemo(
@@ -29,7 +23,7 @@ const Plot = ({ id, timestamps, sensorData }: Props) => {
         className="export-frameless rounded-[10px] shadow-sm shadow-accent-300 border border-accent-300"
         timestamps={timestamps}
         series={series}
-        colors={[sensorColor(overrides, id, plotColor)]}
+        colors={[plotColor]}
         height={380}
         hideLegend
         compact

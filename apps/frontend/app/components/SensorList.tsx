@@ -4,12 +4,18 @@ import { SENSOR_PALETTE, SensorColorsContext, sensorColor } from "../lib/utils";
 interface Props {
   renderedPlotIds: Record<string, boolean>;
   handleCheckboxClick: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  /** Показывать выбор цвета (только на графике сравнения) */
+  colors?: boolean;
 }
 
-const SensorList = ({ renderedPlotIds, handleCheckboxClick }: Props) => {
+const SensorList = ({
+  renderedPlotIds,
+  handleCheckboxClick,
+  colors = false,
+}: Props) => {
   const { overrides, setColor, clearColor, resetColors } =
     useContext(SensorColorsContext);
-  const customised = Object.keys(overrides).length > 0;
+  const customised = colors && Object.keys(overrides).length > 0;
   // Индекс сенсора, у которого открыта палитра
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -44,49 +50,55 @@ const SensorList = ({ renderedPlotIds, handleCheckboxClick }: Props) => {
             checked={renderedPlotIds[i]}
           />
           <span className="hidden sm:flex text-nowrap">S{i + 1}</span>
-          {/* Размеры в px: rem на этом сайте крупный, а образец должен быть мелким */}
-          <button
-            type="button"
-            aria-label={`Цвет S${i + 1}`}
-            title={`Цвет S${i + 1}`}
-            onClick={() => setOpenIndex(openIndex === i ? null : i)}
-            style={
-              { "--swatch": sensorColor(overrides, i) } as React.CSSProperties
-            }
-            className="color-swatch no-export h-[22px] w-[22px] shrink-0 cursor-pointer self-baseline rounded border border-primary-300 p-0"
-          />
-          {openIndex === i && (
-            <div className="no-export absolute left-full top-1/2 z-20 ml-2 flex w-[150px] -translate-y-1/2 flex-col gap-2 rounded-[10px] border border-primary-300 bg-white p-2 shadow-md">
-              <div className="grid grid-cols-5 gap-1">
-                {SENSOR_PALETTE.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    aria-label={color}
-                    onClick={() => {
-                      setColor(i, color);
-                      setOpenIndex(null);
-                    }}
-                    style={{ "--swatch": color } as React.CSSProperties}
-                    className={`color-swatch h-[24px] w-[24px] cursor-pointer rounded p-0 ${
-                      sensorColor(overrides, i) === color
-                        ? "border-2 border-grey-800"
-                        : "border border-primary-300"
-                    }`}
-                  />
-                ))}
-              </div>
+          {colors && (
+            <>
+              {/* Размеры в px: rem на этом сайте крупный, а образец должен быть мелким */}
               <button
                 type="button"
-                onClick={() => {
-                  clearColor(i);
-                  setOpenIndex(null);
-                }}
-                className="cursor-pointer whitespace-nowrap text-sm font-normal text-grey-600 underline hover:text-grey-800"
-              >
-                по умолчанию
-              </button>
-            </div>
+                aria-label={`Цвет S${i + 1}`}
+                title={`Цвет S${i + 1}`}
+                onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                style={
+                  {
+                    "--swatch": sensorColor(overrides, i),
+                  } as React.CSSProperties
+                }
+                className="color-swatch no-export h-[22px] w-[22px] shrink-0 cursor-pointer self-baseline rounded border border-primary-300 p-0"
+              />
+              {openIndex === i && (
+                <div className="no-export absolute left-full top-1/2 z-20 ml-2 flex w-[150px] -translate-y-1/2 flex-col gap-2 rounded-[10px] border border-primary-300 bg-white p-2 shadow-md">
+                  <div className="grid grid-cols-5 gap-1">
+                    {SENSOR_PALETTE.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        aria-label={color}
+                        onClick={() => {
+                          setColor(i, color);
+                          setOpenIndex(null);
+                        }}
+                        style={{ "--swatch": color } as React.CSSProperties}
+                        className={`color-swatch h-[24px] w-[24px] cursor-pointer rounded p-0 ${
+                          sensorColor(overrides, i) === color
+                            ? "border-2 border-grey-800"
+                            : "border border-primary-300"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearColor(i);
+                      setOpenIndex(null);
+                    }}
+                    className="cursor-pointer whitespace-nowrap text-sm font-normal text-grey-600 underline hover:text-grey-800"
+                  >
+                    по умолчанию
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       ))}
