@@ -215,6 +215,7 @@ type Measurement struct {
 	MeasurementObjectID *int      `gorm:"column:measurement_object_id;type:integer;index:idx_measurements_object"`
 	UserID              *int      `gorm:"column:user_id;type:integer"`
 	GroupID             *int      `gorm:"column:group_id;type:integer"`
+	DefaultMaskID       *int      `gorm:"column:default_mask_id;type:integer"`
 	StartTime           time.Time `gorm:"column:start_time;type:timestamptz;not null"`
 	DurationS           *float64  `gorm:"column:duration_s;type:numeric(12,3)"`
 	IntervalMS          int       `gorm:"column:interval_ms;type:integer;not null"`
@@ -264,4 +265,29 @@ type MeasurementData struct {
 
 func (MeasurementData) TableName() string {
 	return "measurement_data"
+}
+
+// Mask — именованная маска времени (как Mask/MaskData в MAG-soft): список
+// моментов, в которых оцениваются кривые. Маски общие для всех пользователей.
+type Mask struct {
+	ID        int       `gorm:"column:id;type:integer;primaryKey;autoIncrement"`
+	Name      string    `gorm:"column:name;type:varchar(128);not null;unique"`
+	CreatedBy *int      `gorm:"column:created_by;type:integer"`
+	CreatedAt time.Time `gorm:"column:created_at;type:timestamptz;not null;default:now()"`
+
+	Points []MaskPoint `gorm:"foreignKey:MaskID"`
+}
+
+func (Mask) TableName() string {
+	return "masks"
+}
+
+type MaskPoint struct {
+	ID     int     `gorm:"column:id;type:integer;primaryKey;autoIncrement"`
+	MaskID int     `gorm:"column:mask_id;type:integer;not null"`
+	TimeS  float64 `gorm:"column:time_s;type:numeric(12,3);not null"`
+}
+
+func (MaskPoint) TableName() string {
+	return "mask_points"
 }

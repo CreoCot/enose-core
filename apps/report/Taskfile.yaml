@@ -10,3 +10,8 @@ tasks:
     desc: Run report service with auto reload
     cmds:
       - uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+
+  test:
+    desc: Run report service tests
+    cmds:
+      - pytest -q

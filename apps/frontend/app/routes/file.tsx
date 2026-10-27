@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Head from "../components/Head";
 import MeasurementsTable from "../components/MeasurementsTable";
 import Plots from "../components/Plots";
@@ -10,6 +10,27 @@ import type { Route } from "./+types/file";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import { Link, useLoaderData } from "react-router";
 import SensorSummary from "~/components/SensorSummary";
+import MaskPicker from "~/components/MaskPicker";
+import {
+  applyMask,
+  maxDiagramValues,
+  summarizeMasked,
+  type Mask,
+} from "~/lib/masks";
+import { fetchDefaultMaskId, fetchMasks } from "~/lib/masksApi";
+import {
+  ChartFontContext,
+  SensorColorsContext,
+  DEFAULT_CHART_FONT_PX,
+  EXPORT_WIDTH_MM,
+  buildDeltaModel,
+  exportFontPx,
+  type SummaryItem,
+} from "~/lib/utils";
+import ReportCapture, {
+  renderChart,
+  type CaptureResult,
+} from "~/components/ReportCapture";
 
 const tableIcon = (
   <svg
@@ -113,6 +134,22 @@ const downloadIcon = (
     />
   </svg>
 );
+const smallDownloadIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 26 26"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="size-5 lg:size-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+    />
+  </svg>
+);
 const maxRadarIcon = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -153,6 +190,38 @@ const selectedMaxRadarIcon = (
     />
   </svg>
 );
+const timeRadarIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="size-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  </svg>
+);
+
+const selectedTimeRadarIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className="size-6"
+  >
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm.75 4.5a.75.75 0 0 0-1.5 0v5.25c0 .284.16.544.415.67l3.5 1.75a.75.75 0 1 0 .67-1.34l-3.085-1.543V6.75Z"
+    />
+  </svg>
+);
+
 const summaryIcon = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -213,12 +282,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   let plots: number[][] = [],
     plotTimestamps: number[] = [],
     plotError: string = "",
-    summaryData: {
-      baseFrequency: number;
-      minDelta: [number, number];
-      maxDelta: [number, number];
-      absMax: [number, number];
-    }[] = [];
+    summaryData: SummaryItem[] = [];
   try {
     const plotResponse = await axios.get(`/api/v1/plots/${fileId}`);
     if (
@@ -227,46 +291,15 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
       !plotResponse.data.timestamps
     ) {
       plotError = "Ошибка API";
-      return;
-    }
-    plotTimestamps = plotResponse.data.timestamps;
-    plots = plotResponse.data.data;
-
-    for (let i = 0; i < plots.length; i++) {
-      for (let j = 1; j < plots[i].length; j++) {
-        plots[i][j] = plots[i][0] - plots[i][j];
-      }
-    }
-    plots = plots.map((item) => {
-      return item.slice(1, item.length);
-    });
-    for (let i = 0; i < plots.length; i++) {
-      let mx = -Infinity,
-        mxel: [number, number] = [0, 0],
-        mn = Infinity,
-        mnel: [number, number] = [0, 0],
-        absmx = -Infinity,
-        absmxel: [number, number] = [0, 0];
-      for (let j = 0; j < plots[i].length; j++) {
-        if (plots[i][j] > mx) {
-          mx = plots[i][j];
-          mxel = [j, mx];
-        }
-        if (plots[i][j] < mn) {
-          mn = plots[i][j];
-          mnel = [j, mn];
-        }
-        if (Math.abs(plots[i][j]) > absmx) {
-          absmx = Math.abs(plots[i][j]);
-          absmxel = [j, absmx];
-        }
-      }
-      summaryData.push({
-        baseFrequency: table[0][i + 1],
-        minDelta: mnel,
-        maxDelta: mxel,
-        absMax: absmxel,
-      });
+    } else {
+      // Абсолютные частоты -> ΔF = F0 - F (логика MAG-soft, см. lib/utils)
+      const model = buildDeltaModel(
+        plotResponse.data.timestamps,
+        plotResponse.data.data,
+      );
+      plotTimestamps = model.timestamps;
+      plots = model.deltas;
+      summaryData = model.summary;
     }
 
     if (sensorSize === 0) sensorSize = plotResponse.data.size;
@@ -283,6 +316,18 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
       plotError = "Что-то пошло не так";
     }
   }
+  // Маски необязательны: если API недоступен, страница работает без них.
+  let masks: Mask[] = [];
+  let defaultMaskId: number | null = null;
+  try {
+    [masks, defaultMaskId] = await Promise.all([
+      fetchMasks(),
+      fetchDefaultMaskId(fileId),
+    ]);
+  } catch {
+    masks = [];
+    defaultMaskId = null;
+  }
   return {
     sensorSize,
     table,
@@ -292,6 +337,8 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     plotError,
     summaryData,
     fileId,
+    masks,
+    defaultMaskId,
   };
 }
 const HydrationText = () => {
@@ -362,11 +409,14 @@ export function HydrateFallback() {
 const handleDownload = async (
   fileId: number,
   setError: (arg0: string) => void,
+  // Картинки графиков с сайта; без них отчёт рисуется на сервере
+  form?: FormData,
 ) => {
   try {
-    const response = await axios.get(`/api/v1/report/${fileId}`, {
-      responseType: "blob",
-    });
+    const url = `/api/v1/report/${fileId}`;
+    const response = form
+      ? await axios.post(url, form, { responseType: "blob" })
+      : await axios.get(url, { responseType: "blob" });
     const contentDisposition = response.headers["content-disposition"];
     let filename = `report-${fileId}.pdf`;
     if (contentDisposition && contentDisposition.includes("filename=")) {
@@ -409,18 +459,61 @@ const handleDownload = async (
   }
 };
 
+function downloadDataUrl(dataUrl: string, filename: string) {
+  const a = document.createElement("a");
+
+  a.setAttribute("download", filename);
+  a.setAttribute("href", dataUrl);
+  a.click();
+}
+
 const file = () => {
   const loaderData = useLoaderData<Awaited<ReturnType<typeof clientLoader>>>();
   const {
     sensorSize = 0,
     table = [],
     tableError = "",
-    plots = [],
-    plotTimestamps = [],
+    plots: rawPlots = [],
+    plotTimestamps: rawTimestamps = [],
     plotError = "",
-    summaryData = [],
+    summaryData: rawSummary = [],
     fileId = -1,
+    masks = [],
+    defaultMaskId = null,
   } = loaderData || {};
+
+  // Маска времени (как в MAG-soft): графики, диаграмма максимумов и сводка
+  // считаются только по её точкам.
+  const initialMaskId = masks.some((m) => m.id === defaultMaskId)
+    ? defaultMaskId
+    : null;
+  const [maskList, setMaskList] = useState<Mask[]>(masks);
+  const [maskId, setMaskId] = useState<number | null>(initialMaskId);
+  const [savedMaskId, setSavedMaskId] = useState<number | null>(defaultMaskId);
+  useEffect(() => {
+    setMaskList(masks);
+    setMaskId(initialMaskId);
+    setSavedMaskId(defaultMaskId);
+  }, [fileId]);
+  const activeMask = maskList.find((m) => m.id === maskId) ?? null;
+  const { plots, plotTimestamps, summaryData } = useMemo(() => {
+    if (!activeMask) {
+      return {
+        plots: rawPlots,
+        plotTimestamps: rawTimestamps,
+        summaryData: rawSummary,
+      };
+    }
+    const masked = applyMask(rawPlots, activeMask.points, rawTimestamps);
+    return {
+      plots: masked.deltas,
+      plotTimestamps: masked.times,
+      summaryData: summarizeMasked(
+        rawSummary.map((s) => s.baseFrequency),
+        masked,
+      ),
+    };
+  }, [activeMask, rawPlots, rawTimestamps, rawSummary]);
   const [renderedPlotIds, setRenderedPlotIds] = useState<
     Record<string, boolean>
   >(() =>
@@ -437,9 +530,118 @@ const file = () => {
       [e.target.id]: e.target.checked,
     }));
   };
-
   const [open, setOpen] = useState(1);
+  // Кегль подписей графиков: считается из реальной ширины графика и одинаков
+  // на экране и в выгрузке (см. ChartFontContext). Печатная ширина: линейные
+  // графики широкие и идут на всю страницу журнала, радары — в одну колонку.
+  const printWidthMm =
+    open === 1 || open === 2 ? EXPORT_WIDTH_MM.page : EXPORT_WIDTH_MM.column;
+  const [chartFont, setChartFont] = useState<number | null>(null);
+  useEffect(() => {
+    let observer: ResizeObserver | undefined;
+    let watched: Element | null = null;
+    const attach = () => {
+      // Вкладка появляется после анимации выхода предыдущей: в DOM на миг
+      // остаются оба графика, поэтому следим за тем, что видно и подключено
+      const node = Array.from(
+        document.querySelectorAll(".download-image"),
+      ).find((el) => el.getBoundingClientRect().width > 0);
+      if (!node || node === watched) return;
+      observer?.disconnect();
+      watched = node;
+      const update = () => {
+        const width = node.getBoundingClientRect().width;
+        if (width > 0) setChartFont(exportFontPx(width, printWidthMm));
+      };
+      update();
+      observer = new ResizeObserver(update);
+      observer.observe(node);
+    };
+    attach();
+    const timer = window.setInterval(attach, 150);
+    return () => {
+      window.clearInterval(timer);
+      observer?.disconnect();
+    };
+  }, [open, printWidthMm, maskId]);
+
+  const exportChart = async (format: "png" | "svg") => {
+    const target = document.querySelector(".download-image");
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const dataUrl = await renderChart(
+      target,
+      chartFont ?? DEFAULT_CHART_FONT_PX,
+      format,
+    );
+    downloadDataUrl(dataUrl, `measurement-${fileId}.${format}`);
+  };
+
   const [downloadError, setDownloadError] = useState("");
+  // Цвета сенсоров, выбранные пользователем; хранятся в браузере по записи
+  const colorsKey = `enose:sensor-colors:${fileId}`;
+  const [colorOverrides, setColorOverrides] = useState<Record<number, string>>(
+    {},
+  );
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(colorsKey);
+      setColorOverrides(raw ? JSON.parse(raw) : {});
+    } catch {
+      setColorOverrides({});
+    }
+  }, [colorsKey]);
+  const saveColors = (next: Record<number, string>) => {
+    setColorOverrides(next);
+    try {
+      window.localStorage.setItem(colorsKey, JSON.stringify(next));
+    } catch {
+      // приватное окно или заблокированное хранилище — цвета живут до перезагрузки
+    }
+  };
+  const sensorColors = useMemo(
+    () => ({
+      overrides: colorOverrides,
+      setColor: (index: number, color: string) =>
+        saveColors({ ...colorOverrides, [index]: color }),
+      clearColor: (index: number) => {
+        const { [index]: _removed, ...rest } = colorOverrides;
+        saveColors(rest);
+      },
+      resetColors: () => saveColors({}),
+    }),
+    [colorOverrides, colorsKey],
+  );
+  // Идёт сборка отчёта: за кадром рисуются графики для PDF (ReportCapture)
+  const [reporting, setReporting] = useState(false);
+  const handleReport = () => {
+    setDownloadError("");
+    if (reporting) return;
+    if (plotError || plots.length === 0) {
+      // Нечего снимать — серверный отчёт
+      handleDownload(fileId, setDownloadError);
+      return;
+    }
+    setReporting(true);
+  };
+  const onCaptured = async (result: CaptureResult) => {
+    const form = new FormData();
+    for (const [key, blob] of Object.entries(result.images)) {
+      form.append(key, blob, `${key}.png`);
+    }
+    form.append("mask_id", maskId === null ? "" : String(maskId));
+    form.append("sensors", result.sensors.join(","));
+    if (result.timeAxisMin !== null) {
+      form.append("time_axis_min", String(result.timeAxisMin));
+    }
+    await handleDownload(fileId, setDownloadError, form);
+    setReporting(false);
+  };
+  const onCaptureError = (message: string) => {
+    setDownloadError(message);
+    setReporting(false);
+  };
   const icons = useMemo(() => {
     return [
       [
@@ -447,6 +649,7 @@ const file = () => {
         plotIcon,
         multiPlotIcon,
         maxRadarIcon,
+        timeRadarIcon,
         summaryIcon,
         downloadIcon,
       ],
@@ -455,6 +658,7 @@ const file = () => {
         selectedPlotIcon,
         selectedMultiPlotIcon,
         selectedMaxRadarIcon,
+        selectedTimeRadarIcon,
         selectedSummaryIcon,
         downloadIcon,
       ],
@@ -521,11 +725,7 @@ const file = () => {
       );
     }, [plots, plotTimestamps, plotError, sensorSize, renderedPlotIds]),
     useMemo(() => {
-      const maxArray = plots
-        .map((item) => {
-          return item.map((i) => Math.abs(i));
-        })
-        .map((item) => Math.max(...item));
+      const maxArray = maxDiagramValues(plots);
       return (
         <motion.div
           key="maxRadar"
@@ -535,6 +735,7 @@ const file = () => {
           transition={{ duration: 0.15 }}
         >
           <MaxRadar
+            key={maskId ?? "no-mask"}
             maxArray={maxArray}
             sensorSize={sensorSize}
             error={plotError}
@@ -547,6 +748,30 @@ const file = () => {
     }, [plots, plotError, sensorSize, renderedPlotIds]),
     useMemo(() => {
       return (
+        <motion.div
+          key="timeRadar"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.15 }}
+        >
+          <MaxRadar
+            key={maskId ?? "no-mask"}
+            kind="time"
+            maxArray={[]}
+            deltas={plots}
+            times={plotTimestamps}
+            sensorSize={sensorSize}
+            error={plotError}
+            renderedPlotIds={renderedPlotIds}
+            handleCheckboxClick={handleCheckboxClick}
+            handleLessThanTwo={() => setOpen(0)}
+          />
+        </motion.div>
+      );
+    }, [plots, plotTimestamps, plotError, sensorSize, renderedPlotIds, maskId]),
+    useMemo(() => {
+      return (
         <SensorSummary
           data={summaryData}
           error={plotError}
@@ -557,135 +782,191 @@ const file = () => {
     }, [plots, plotError, sensorSize, renderedPlotIds]),
   ];
   return (
-    <div className="w-full overflow-hidden bg-grey-50 pb-5">
-      <Head>{`Запись №${fileId}`}</Head>
-      <Link
-        className="flex gap-1 items-center w-fit lg:text-lg text-grey-700 hover:text-grey-600 mx-7 mt-5 transition-colors duration-200"
-        to="/data"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 27 27"
-          strokeWidth={0.9}
-          stroke="currentColor"
-          className="size-6"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
+    <SensorColorsContext.Provider value={sensorColors}>
+      <div className="w-full overflow-hidden bg-grey-50 pb-5">
+        <Head>{`Запись №${fileId}`}</Head>
+        {reporting && (
+          <ReportCapture
+            plots={plots}
+            timestamps={plotTimestamps}
+            sensorSize={sensorSize}
+            renderedPlotIds={renderedPlotIds}
+            onResult={onCaptured}
+            onError={onCaptureError}
           />
-        </svg>
-        <span>Назад</span>
-      </Link>
-      <div className="flex flex-col pt-3 text-xl lg:text-2xl px-6">
-        <div className="flex flex-col lg:flex-row w-fit bg-grey-600 justify-between gap-1 p-2 lg:p-1 rounded-[15px] lg:rounded-full sm:mx-7 text-grey-100">
-          <button
-            className={`${
-              open === 2 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
-            onClick={() => setOpen(2)}
+        )}
+        <Link
+          className="flex gap-1 items-center w-fit lg:text-lg text-grey-700 hover:text-grey-600 mx-7 mt-5 transition-colors duration-200"
+          to="/data"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 27 27"
+            strokeWidth={0.9}
+            stroke="currentColor"
+            className="size-6"
           >
-            <div className="flex items-center gap-1">
-              {open === 2 ? icons[1][2] : icons[0][2]}
-              Сравнение
-            </div>
-          </button>
-          <button
-            className={`${
-              open === 1 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
-            onClick={() => setOpen(1)}
-          >
-            <div className="flex items-center gap-1">
-              {open === 1 ? icons[1][1] : icons[0][1]}
-              Графики
-            </div>
-          </button>
-          <button
-            className={`${
-              open === 0 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
-            onClick={() => setOpen(0)}
-          >
-            <div className="flex items-center gap-1">
-              {open === 0 ? icons[1][0] : icons[0][0]}
-              Таблица
-            </div>
-          </button>
-          <div className="relative group">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
+            />
+          </svg>
+          <span>Назад</span>
+        </Link>
+        <MaskPicker
+          entryId={fileId}
+          masks={maskList}
+          selectedId={maskId}
+          defaultId={savedMaskId}
+          onSelect={setMaskId}
+          onMasksChange={setMaskList}
+          onDefaultChange={setSavedMaskId}
+        />
+        <div className="flex flex-col pt-3 text-xl lg:text-2xl px-6">
+          <div className="flex flex-col lg:flex-row w-fit bg-grey-600 justify-between gap-1 p-2 lg:p-1 rounded-[15px] lg:rounded-full sm:mx-7 text-grey-100 mb-2">
             <button
               className={`${
-                open === 3 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-              } hover:bg-grey-200 relative hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 disabled:cursor-not-allowed disabled:outline disabled:outline-red-600 w-full h-full`}
-              onClick={() => setOpen(3)}
-              disabled={renderedLength <= 2}
+                open === 2 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
+              onClick={() => setOpen(2)}
             >
               <div className="flex items-center gap-1">
-                {open === 3 ? icons[1][3] : icons[0][3]}
-                Максимумы
+                {open === 2 ? icons[1][2] : icons[0][2]}
+                Сравнение
               </div>
             </button>
-            {renderedLength <= 2 && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-100 text-red-800 border border-red-800 rounded-[10px] text-base whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                Нужно выбрать минимум 3 сенсора
-              </div>
-            )}
-          </div>
-          <button
-            className={`${
-              open === 4 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
-            onClick={() => setOpen(4)}
-          >
-            <div className="flex items-center gap-1">
-              {open === 4 ? icons[1][4] : icons[0][4]}
-              Сводная информация
-            </div>
-          </button>
-          <div className="relative group">
-            {downloadError.length !== 0 && (
-              <motion.p
-                transition={{ duration: 0.15, ease: "easeIn" }}
-                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-base text-red-800 bg-red-100 border border-red-800 w-max rounded-[10px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
-              >
-                {downloadError}
-                <button
-                  className="text-grey-600 pl-2 font-light cursor-pointer"
-                  onClick={() => setDownloadError("")}
-                >
-                  X
-                </button>
-              </motion.p>
-            )}
             <button
-              id="download"
-              onClick={() => {
-                setDownloadError("");
-                handleDownload(fileId, setDownloadError);
-              }}
-              className={`bg-grey-600 hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 w-full h-full ${
-                downloadError.length !== 0 ? "outline outline-red-600" : ""
-              }`}
+              className={`${
+                open === 1 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
+              onClick={() => setOpen(1)}
             >
-              <div className="flex justify-center gap-1">
-                Отчет
-                {icons[0][icons[0].length - 1]}
+              <div className="flex items-center gap-1">
+                {open === 1 ? icons[1][1] : icons[0][1]}
+                Графики
               </div>
             </button>
+            <button
+              className={`${
+                open === 0 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
+              onClick={() => setOpen(0)}
+            >
+              <div className="flex items-center gap-1">
+                {open === 0 ? icons[1][0] : icons[0][0]}
+                Таблица
+              </div>
+            </button>
+            <div className="relative group">
+              <button
+                className={`${
+                  open === 3 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+                } hover:bg-grey-200 relative hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 disabled:cursor-not-allowed disabled:outline disabled:outline-red-600 w-full h-full`}
+                onClick={() => setOpen(3)}
+                disabled={renderedLength <= 2}
+              >
+                <div className="flex items-center gap-1">
+                  {open === 3 ? icons[1][3] : icons[0][3]}
+                  Максимумы
+                </div>
+              </button>
+              {renderedLength <= 2 && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-100 text-red-800 border border-red-800 rounded-[10px] text-base whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Нужно выбрать минимум 3 сенсора
+                </div>
+              )}
+            </div>
+            <div className="relative group">
+              <button
+                className={`${
+                  open === 4 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+                } hover:bg-grey-200 relative hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 disabled:cursor-not-allowed disabled:outline disabled:outline-red-600 w-full h-full`}
+                onClick={() => setOpen(4)}
+                disabled={renderedLength <= 2}
+              >
+                <div className="flex items-center gap-1">
+                  {open === 4 ? icons[1][4] : icons[0][4]}
+                  Временная диаграмма
+                </div>
+              </button>
+              {renderedLength <= 2 && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-100 text-red-800 border border-red-800 rounded-[10px] text-base whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Нужно выбрать минимум 3 сенсора
+                </div>
+              )}
+            </div>
+            <button
+              className={`${
+                open === 5 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
+              onClick={() => setOpen(5)}
+            >
+              <div className="flex items-center gap-1">
+                {open === 5 ? icons[1][5] : icons[0][5]}
+                Сводная информация
+              </div>
+            </button>
+            <div className="relative group">
+              {downloadError.length !== 0 && (
+                <motion.p
+                  transition={{ duration: 0.15, ease: "easeIn" }}
+                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-base text-red-800 bg-red-100 border border-red-800 w-max rounded-[10px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
+                >
+                  {downloadError}
+                  <button
+                    className="text-grey-600 pl-2 font-light cursor-pointer"
+                    onClick={() => setDownloadError("")}
+                  >
+                    X
+                  </button>
+                </motion.p>
+              )}
+              <button
+                id="download"
+                onClick={handleReport}
+                disabled={reporting}
+                className={`bg-grey-600 hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 w-full h-full ${
+                  downloadError.length !== 0 ? "outline outline-red-600" : ""
+                }`}
+              >
+                <div className="flex justify-center gap-1">
+                  {reporting ? "Готовим отчёт…" : "Отчет"}
+                  {icons[0][icons[0].length - 1]}
+                </div>
+              </button>
+            </div>
           </div>
-        </div>
-        <div>
-          <div className="flex">
-            <div className="flex flex-col"></div>
-            <div className="w-full">
-              <AnimatePresence mode="wait">{items[open]}</AnimatePresence>
+          <div>
+            <div className="sm:mx-7 flex flex-wrap gap-4">
+              <button
+                className="lg:text-xl m-1 font-medium flex gap-2 text-grey-700 hover:text-grey-600 transition-colors duration-200 cursor-pointer"
+                onClick={() => exportChart("png")}
+              >
+                <span>Скачать PNG, 300 dpi</span>
+                {smallDownloadIcon}
+              </button>
+              <button
+                className="lg:text-xl m-1 font-medium flex gap-2 text-grey-700 hover:text-grey-600 transition-colors duration-200 cursor-pointer"
+                onClick={() => exportChart("svg")}
+              >
+                <span>Скачать SVG</span>
+                {smallDownloadIcon}
+              </button>
+            </div>
+            <div className="flex">
+              <div className="flex flex-col"></div>
+              <div className="article-view w-full">
+                <ChartFontContext.Provider value={chartFont}>
+                  <AnimatePresence mode="wait">{items[open]}</AnimatePresence>
+                </ChartFontContext.Provider>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </SensorColorsContext.Provider>
   );
 };
 

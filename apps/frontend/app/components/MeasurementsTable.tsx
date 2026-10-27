@@ -58,7 +58,7 @@ const MeasurementsTable = ({
       if (renderedPlotIds[i - 1]) {
         cols.push({
           accessorKey: `sensor_${i}`,
-          header: `Сенсор ${i}`,
+          header: `S${i}`,
         });
       }
     }
@@ -85,7 +85,7 @@ const MeasurementsTable = ({
         handleCheckboxClick={handleCheckboxClick}
       />
       <div className="h-fit rounded-[10px] overflow-hidden border border-primary-200 m-4">
-        <div className="flex overflow-x-auto overscroll-x-none">
+        <div className="download-image flex overflow-x-auto overscroll-x-none">
           <Table className="w-full h-full table-auto border-collapse">
             <TableHeader>
               {tableInstance.getHeaderGroups().map((headerGroup) => (

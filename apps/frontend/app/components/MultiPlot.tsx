@@ -1,7 +1,7 @@
-import { LineChart } from "@mui/x-charts";
-import { hsla } from "motion/react";
-import React, { useMemo, useState } from "react";
+import React, { useContext, useMemo } from "react";
 import SensorList from "./SensorList";
+import ZoomableChart from "./ZoomableChart";
+import { SensorColorsContext, sensorColor } from "../lib/utils";
 
 interface Props {
   timestamps: number[];
@@ -19,14 +19,7 @@ const MultiPlot = ({
   renderedPlotIds,
   handleCheckboxClick,
 }: Props) => {
-  const generateColors = (count: number): string[] => {
-    const colors: string[] = [];
-    for (let i = 0; i < count; i++) {
-      const hue = (i * 41) % 360;
-      colors.push(`hsl(${hue + 266}, 60%, 52%)`); // starting from accent-500; pretty :D
-    }
-    return colors;
-  };
+  const { overrides } = useContext(SensorColorsContext);
   const plots = useMemo(() => {
     const activeSeries = sensorData
       .map((arr, i) => {
@@ -34,28 +27,23 @@ const MultiPlot = ({
         return {
           id: `sensor-${i}`,
           data: arr,
-          label: `Сенсор ${i + 1}`,
+          label: `S${i + 1}`,
+          color: sensorColor(overrides, i),
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
 
     return (
-      <LineChart
-        className="-ml-5 -mb-3 -mr-1"
-        colors={generateColors(
-          Object.values(renderedPlotIds).filter((value) => value === true)
-            .length,
-        )}
-        xAxis={[
-          {
-            data: timestamps,
-          },
-        ]}
+      <ZoomableChart
+        className="w-full download-image"
+        colors={activeSeries.map((item) => item.color)}
+        timestamps={timestamps}
         series={activeSeries}
-        height={384}
+        height={560}
+        controls
       />
     );
-  }, [renderedPlotIds]);
+  }, [renderedPlotIds, sensorData, timestamps, overrides]);
   return (
     <div className="flex flex-col gap-3 w-full h-full">
       {error.length !== 0 && (
@@ -66,10 +54,10 @@ const MultiPlot = ({
       {error.length === 0 && (
         <div className="flex bg-grey-100 md:mx-8 my-4 lg:py-5 px-4 md:px-5 2xl:px-6 rounded-[10px] shadow-md shadow-accent-200 border border-accent-300">
           <SensorList
+            colors
             renderedPlotIds={renderedPlotIds}
             handleCheckboxClick={handleCheckboxClick}
           />
-          <div className=""></div>
           {plots}
         </div>
       )}

@@ -3,6 +3,7 @@ from pathlib import Path
 
 from app.schemas import (
     Header,
+    MaskSelection,
     ReportRequest,
     SensorSeries,
 )
@@ -54,3 +55,23 @@ def create_report() -> ReportRequest:
         sensors=sensors,
         interpretation=None,
     )
+
+
+def create_masked_report(
+    points: list[float] | None = None, name: str = "Базовая 60 с"
+) -> ReportRequest:
+    """create_report() с маской, разрешённой так же, как это делает бэкенд.
+
+    В фикстуре время начинается с 0 (строки базовой частоты нет), поэтому
+    индекс точки совпадает с floor(t).
+    """
+    report = create_report()
+    points = [0.0, 10.0, 20.0, 60.0] if points is None else points
+    kept = [(t, int(t)) for t in points if 0 <= int(t) < len(report.timestamps)]
+    report.mask = MaskSelection(
+        id=1,
+        name=name,
+        points=[t for t, _ in kept],
+        indices=[i for _, i in kept],
+    )
+    return report

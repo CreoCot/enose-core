@@ -1,15 +1,372 @@
-import { describe, it, expect } from 'vitest';
-import { cn } from './utils';
+import { describe, it, expect } from "vitest";
+import {
+  buildDeltaModel,
+  cn,
+  EXPORT_FONT_PT,
+  EXPORT_WIDTH_MM,
+  exportFontPx,
+  formatTick,
+  niceRange,
+  radarGrid,
+  round2,
+  autoTimeRange,
+  defaultSensorColor,
+  fullXRange,
+  hslToHex,
+  SENSOR_PALETTE,
+  sensorColor,
+  niceCeil,
+  niceStep,
+  normalizeRange,
+  padRange,
+  summarizeSeries,
+  visibleExtent,
+  zoomRadarMax,
+} from "./utils";
 
-describe('utils', () => {
-  it('cn merges and resolves tailwind conflicts correctly', () => {
+describe("utils", () => {
+  it("cn merges and resolves tailwind conflicts correctly", () => {
     // 1. Простая склейка (нет конфликтов)
-    expect(cn('bg-red-500', 'text-white')).toBe('bg-red-500 text-white');
-    
+    expect(cn("bg-red-500", "text-white")).toBe("bg-red-500 text-white");
+
     // 2. Разрешение конфликтов (p-4 перекрывает px-2 и py-1)
-    expect(cn('px-2 py-1', 'p-4')).toBe('p-4');
-    
+    expect(cn("px-2 py-1", "p-4")).toBe("p-4");
+
     // 3. Разрешение конфликтов цветов (последний выигрывает)
-    expect(cn('bg-red-500', 'bg-blue-500')).toBe('bg-blue-500');
+    expect(cn("bg-red-500", "bg-blue-500")).toBe("bg-blue-500");
+  });
+});
+
+describe("buildDeltaModel", () => {
+  // Данные из Examples/from_program.XML (сенсор SID0001): initial = 9952200,
+  // время -1, затем 0, 1, 2, 3, 4 ...
+  const timestamps = [-1, 0, 1, 2, 3, 4];
+  const sensor = [9952200, 9952199, 9952198, 9952198, 9952190, 9952238];
+
+  it("считает ΔF = F0 - F и отбрасывает базовую точку", () => {
+    const m = buildDeltaModel(timestamps, [sensor]);
+    expect(m.initial).toEqual([9952200]);
+    expect(m.timestamps).toEqual([0, 1, 2, 3, 4]);
+    expect(m.deltas[0]).toEqual([1, 2, 2, 10, -38]);
+  });
+
+  it("выравнивает время и значения по длине", () => {
+    const m = buildDeltaModel(timestamps, [sensor, sensor]);
+    expect(m.timestamps.length).toBe(m.deltas[0].length);
+    expect(m.deltas.length).toBe(2);
+  });
+
+  it("без точки t < 0 (CSV/XLSX) базовой считает первую точку", () => {
+    const m = buildDeltaModel([0, 2, 4], [[100, 90, 130]]);
+    expect(m.initial).toEqual([100]);
+    expect(m.timestamps).toEqual([2, 4]);
+    expect(m.deltas[0]).toEqual([10, -30]);
+  });
+
+  it("не падает на пустых данных", () => {
+    const m = buildDeltaModel([], []);
+    expect(m.deltas).toEqual([]);
+    expect(m.summary).toEqual([]);
+  });
+
+  it("сводка хранит время точки, а не индекс", () => {
+    const m = buildDeltaModel(timestamps, [sensor]);
+    expect(m.summary[0].baseFrequency).toBe(9952200);
+    expect(m.summary[0].minDelta).toEqual([4, -38]);
+    expect(m.summary[0].maxDelta).toEqual([3, 10]);
+    expect(m.summary[0].absMax).toEqual([4, 38]);
+  });
+});
+
+describe("summarizeSeries", () => {
+  it("использует реальное время при неравномерной дискретизации", () => {
+    const s = summarizeSeries(0, [0, 1, 5.02], [1, 2, 9]);
+    expect(s.maxDelta).toEqual([5.02, 9]);
+  });
+});
+
+describe("normalizeRange", () => {
+  it("упорядочивает границы", () => {
+    expect(normalizeRange(10, 2)).toEqual([2, 10]);
+  });
+  it("гарантирует минимальный диапазон", () => {
+    expect(normalizeRange(5, 5.3)).toEqual([5, 6]);
+    expect(normalizeRange(5, 5)).toEqual([5, 6]);
+  });
+});
+
+describe("visibleExtent", () => {
+  const t = [0, 1, 2, 3, 4];
+  const a = [1, 5, 2, 9, 3];
+  const b = [-4, 0, 1, 2, 3];
+
+  it("берёт min/max по всем точкам без окна", () => {
+    expect(visibleExtent(t, [a, b])).toEqual([-4, 9]);
+  });
+  it("учитывает только точки внутри окна по X", () => {
+    expect(visibleExtent(t, [a, b], [1, 2])).toEqual([0, 5]);
+  });
+  it("возвращает null, если в окне нет точек", () => {
+    expect(visibleExtent(t, [a], [10, 20])).toBeNull();
+  });
+});
+
+describe("padRange", () => {
+  it("добавляет поля по краям", () => {
+    const [lo, hi] = padRange([0, 100], 0.1);
+    expect(lo).toBeCloseTo(-10);
+    expect(hi).toBeCloseTo(110);
+  });
+  it("расширяет вырожденный диапазон до минимального", () => {
+    const [lo, hi] = padRange([5, 5]);
+    expect(hi - lo).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("fullXRange", () => {
+  it("возвращает границы времени", () => {
+    expect(fullXRange([0, 1, 300])).toEqual([0, 300]);
+  });
+  it("не падает на пустом ряде", () => {
+    expect(fullXRange([])).toEqual([0, 1]);
+  });
+});
+
+describe("niceStep / niceCeil", () => {
+  it("подбирает шаг 1/2/5·10^n не более 5 колец", () => {
+    expect(niceStep(37)).toBe(10);
+    expect(niceStep(10)).toBe(2);
+    expect(niceStep(4.5)).toBe(1);
+    expect(niceStep(400)).toBe(100);
+  });
+  it("округляет максимум вверх до сетки", () => {
+    expect(niceCeil(0, 37)).toBe(40);
+    expect(niceCeil(0, 36)).toBe(40);
+    expect(niceCeil(0, 4.3)).toBe(5);
+  });
+  it("автоматический шаг всегда целый", () => {
+    expect(niceStep(0.3)).toBe(1);
+    for (const span of [1, 3, 7.5, 19, 58, 137, 1234]) {
+      expect(Number.isInteger(niceStep(span))).toBe(true);
+    }
+  });
+  it("не падает на вырожденном диапазоне", () => {
+    expect(niceStep(0)).toBe(1);
+  });
+});
+
+describe("zoomRadarMax", () => {
+  it("приближение уменьшает максимум и привязывает к сетке", () => {
+    // 40 / 1.1 = 36.4 -> 40, не сдвинулось -> на один шаг сетки (10) ниже
+    expect(zoomRadarMax(0, 40, "in")).toBe(30);
+  });
+  it("отдаление увеличивает максимум", () => {
+    // 30 * 1.1 = 33 -> 40
+    expect(zoomRadarMax(0, 30, "out")).toBe(40);
+  });
+  it("каждый клик двигает ось минимум на один шаг сетки", () => {
+    let max = 40;
+    for (let i = 0; i < 6; i++) {
+      const next = zoomRadarMax(0, max, "in");
+      expect(next).toBeLessThan(max);
+      max = next;
+    }
+    let up = 10;
+    for (let i = 0; i < 6; i++) {
+      const next = zoomRadarMax(0, up, "out");
+      expect(next).toBeGreaterThan(up);
+      up = next;
+    }
+  });
+  it("учитывает ненулевой минимум", () => {
+    const v = zoomRadarMax(10, 40, "in");
+    expect(v).toBeGreaterThan(10);
+    expect(v).toBeLessThan(40);
+  });
+  it("не даёт диапазону стать меньше минимального", () => {
+    expect(zoomRadarMax(0, 1.05, "in")).toBe(1.05);
+    expect(zoomRadarMax(0, 1, "in")).toBe(1);
+  });
+});
+
+describe("exportFontPx", () => {
+  // 84 мм при 96 dpi = 317.48 px
+  const columnPx = (84 / 25.4) * 96;
+
+  it("при печатной ширине, равной ширине узла, 16 pt = 21.33 px", () => {
+    expect(exportFontPx(columnPx, 84, 16)).toBeCloseTo((16 * 96) / 72, 8);
+  });
+
+  it("кегль растёт пропорционально ширине узла", () => {
+    expect(exportFontPx(2 * columnPx, 84, 16)).toBeCloseTo(
+      2 * ((16 * 96) / 72),
+      8,
+    );
+  });
+
+  it("на печатной ширине колонки подписи не меньше 12 pt", () => {
+    const columnWidthPx = (EXPORT_WIDTH_MM.column / 25.4) * 96;
+    for (const nodeWidth of [400, 595, 900, 1300]) {
+      const fontPx = exportFontPx(nodeWidth, EXPORT_WIDTH_MM.column);
+      // печатный кегль = px * (печатная ширина / ширина узла), в pt
+      const printedPt = fontPx * (columnWidthPx / nodeWidth) * (72 / 96);
+      expect(printedPt).toBeCloseTo(EXPORT_FONT_PT, 6);
+      expect(printedPt).toBeGreaterThanOrEqual(12);
+    }
+  });
+
+  it("на всю страницу (170 мм) тот же кегль даёт меньший px при том же узле", () => {
+    expect(exportFontPx(900, EXPORT_WIDTH_MM.page)).toBeLessThan(
+      exportFontPx(900, EXPORT_WIDTH_MM.column),
+    );
+  });
+});
+
+describe("niceRange", () => {
+  it("округляет знаковый диапазон до круглых границ", () => {
+    // −31…49 раньше давало кольца −31, −11, 9, 29, 49
+    expect(niceRange(-31, 49)).toEqual([-40, 60]);
+  });
+  it("оставляет ноль на сетке для положительных данных", () => {
+    expect(niceRange(3, 37)).toEqual([0, 40]);
+  });
+  it("не падает на вырожденных данных", () => {
+    const [lo, hi] = niceRange(0, 0);
+    expect(hi).toBeGreaterThan(lo);
+  });
+  it("обе границы кратны одному шагу", () => {
+    for (const [min, max] of [
+      [-5, 45],
+      [-120, 33],
+      [-0.7, 2.9],
+    ] as const) {
+      const [lo, hi] = niceRange(min, max);
+      const step = niceStep(hi - lo);
+      expect(Math.abs(lo / step - Math.round(lo / step))).toBeLessThan(1e-9);
+      expect(Math.abs(hi / step - Math.round(hi / step))).toBeLessThan(1e-9);
+      expect(lo).toBeLessThanOrEqual(min);
+      expect(hi).toBeGreaterThanOrEqual(max);
+    }
+  });
+});
+
+describe("formatTick", () => {
+  it("убирает хвост плавающей точки", () => {
+    expect(formatTick(29.000000000000007)).toBe("29");
+    expect(formatTick(-31.000000000000004)).toBe("-31");
+    expect(formatTick(8.999999999999996)).toBe("9");
+  });
+  it("сохраняет настоящие дроби", () => {
+    expect(formatTick(0.5)).toBe("0.5");
+    expect(formatTick(-1.25)).toBe("-1.25");
+  });
+  it("оставляет не больше двух знаков после запятой", () => {
+    expect(formatTick(38.66666667)).toBe("38.67");
+    expect(formatTick(19.33333333)).toBe("19.33");
+    expect(formatTick(0.123456)).toBe("0.12");
+  });
+  it("не пишет «-0»", () => {
+    expect(formatTick(-0)).toBe("0");
+    expect(formatTick(-1e-15)).toBe("0");
+  });
+});
+
+describe("цвета сенсоров", () => {
+  it("hslToHex даёт известные значения", () => {
+    expect(hslToHex(0, 100, 50)).toBe("#ff0000");
+    expect(hslToHex(120, 100, 50)).toBe("#00ff00");
+    expect(hslToHex(240, 100, 50)).toBe("#0000ff");
+    expect(hslToHex(360 + 240, 100, 50)).toBe("#0000ff");
+    expect(hslToHex(0, 0, 100)).toBe("#ffffff");
+  });
+  it("цвета по умолчанию — корректный hex, различимые у соседних сенсоров", () => {
+    const colors = Array.from({ length: 8 }, (_, i) => defaultSensorColor(i));
+    for (const c of colors) expect(c).toMatch(/^#[0-9a-f]{6}$/);
+    expect(new Set(colors).size).toBe(8);
+  });
+  it("палитра: не больше 20 уникальных hex-цветов", () => {
+    expect(SENSOR_PALETTE.length).toBeLessThanOrEqual(20);
+    expect(new Set(SENSOR_PALETTE).size).toBe(SENSOR_PALETTE.length);
+    for (const c of SENSOR_PALETTE) expect(c).toMatch(/^#[0-9a-f]{6}$/);
+  });
+  it("выбор пользователя перекрывает цвет по умолчанию", () => {
+    expect(sensorColor({ 2: "#123456" }, 2)).toBe("#123456");
+    expect(sensorColor({}, 2)).toBe(defaultSensorColor(2));
+    expect(sensorColor({}, 2, "#abcdef")).toBe("#abcdef");
+  });
+});
+
+describe("radarGrid", () => {
+  it("58 больше не делится на 3 части: ось 0–60, шаг 20", () => {
+    const g = radarGrid(0, 58);
+    expect(g).toMatchObject({ step: 20, axisMin: 0, axisMax: 60, rings: 3 });
+  });
+  it("автоматический шаг всегда целый, а подписи кольца — кратны шагу", () => {
+    for (const [min, max] of [
+      [0, 37],
+      [0, 58],
+      [-31, 49],
+      [-120, 33],
+      [0, 3],
+    ] as const) {
+      const g = radarGrid(min, max);
+      expect(Number.isInteger(g.step)).toBe(true);
+      expect(g.axisMin).toBeLessThanOrEqual(min);
+      expect(g.axisMax).toBeGreaterThanOrEqual(max);
+      for (let k = 0; k <= g.rings; k++) {
+        const v = g.axisMin + k * g.step;
+        expect(Math.abs(v / g.step - Math.round(v / g.step))).toBeLessThan(
+          1e-9,
+        );
+      }
+    }
+  });
+  it("ручной шаг подтягивает границы: шаг 7 даёт 0–63", () => {
+    const g = radarGrid(0, 58, 7);
+    expect(g).toMatchObject({ step: 7, axisMin: 0, axisMax: 63, rings: 9 });
+  });
+  it("дробный шаг допустим только вручную", () => {
+    const g = radarGrid(0, 4, 0.5);
+    expect(g).toMatchObject({ step: 0.5, rings: 8, axisMax: 4 });
+    expect(Number.isInteger(g.autoStep)).toBe(true);
+  });
+  it("слишком мелкий шаг заменяется автоматическим (не больше 20 колец)", () => {
+    const g = radarGrid(0, 60, 0.25);
+    expect(g.rings).toBeLessThanOrEqual(20);
+    expect(g.step).toBeGreaterThan(0.25);
+  });
+  it("нулевой и отрицательный шаг игнорируются", () => {
+    expect(radarGrid(0, 40, 0).step).toBe(radarGrid(0, 40).step);
+    expect(radarGrid(0, 40, -5).step).toBe(radarGrid(0, 40).step);
+  });
+  it("минимум со знаком подтягивается вниз к кратному шагу", () => {
+    const g = radarGrid(-31, 49, 20);
+    expect(g.axisMin).toBe(-40);
+    expect(g.axisMax).toBe(60);
+  });
+  it("всегда есть хотя бы одно кольцо", () => {
+    expect(radarGrid(0, 1).rings).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("round2", () => {
+  it("оставляет не больше двух знаков", () => {
+    expect(round2(1.23456)).toBe(1.23);
+    expect(round2(2)).toBe(2);
+    expect(round2(0.1 + 0.2)).toBe(0.3);
+  });
+});
+
+describe("autoTimeRange", () => {
+  it("совпадает с niceRange по данным с нулём", () => {
+    expect(autoTimeRange([-31, 5, 49])).toEqual(niceRange(-31, 49));
+  });
+  it("положительные данные дают минимум 0", () => {
+    expect(autoTimeRange([3, 10, 37])[0]).toBe(0);
+  });
+  it("игнорирует NaN и пустой ряд", () => {
+    expect(autoTimeRange([Number.NaN, -5, 20])).toEqual(niceRange(-5, 20));
+    const [lo, hi] = autoTimeRange([]);
+    expect(hi).toBeGreaterThan(lo);
   });
 });

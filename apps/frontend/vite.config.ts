@@ -9,6 +9,6 @@ export default defineConfig({
   },
   clearScreen: false,
   test: {
-    environment: 'node',
+    environment: "node",
   },
 });

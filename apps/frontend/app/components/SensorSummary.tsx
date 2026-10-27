@@ -32,7 +32,7 @@ const SensorData = ({
   return (
     <div className="flex flex-col bg-white mx-4 gap-3 rounded-[15px] py-4">
       <div className="text-grey-700 font-bold text-xl py-1 px-6">
-        Сенсор {index + 1}
+        S{index + 1}
       </div>
       <div className="flex px-6 gap-4 justify-baseline">
         <p className="text-grey-700 text-base font-medium">Базовая частота</p>
