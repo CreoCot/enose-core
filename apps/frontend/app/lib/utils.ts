@@ -217,6 +217,57 @@ export function autoTimeRange(values: number[]): [number, number] {
   return niceRange(Math.min(...finite, 0), Math.max(0, ...finite));
 }
 
+// ---------------------------------------------------------------------------
+// Цвета сенсоров
+// ---------------------------------------------------------------------------
+
+/** hsl(h, s%, l%) → "#rrggbb" (нужен <input type="color">, он понимает только hex). */
+export function hslToHex(h: number, s: number, l: number): string {
+  const hue = ((h % 360) + 360) % 360;
+  const sat = s / 100;
+  const lig = l / 100;
+  const a = sat * Math.min(lig, 1 - lig);
+  const channel = (n: number) => {
+    const k = (n + hue / 30) % 12;
+    const v = lig - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(v * 255)
+      .toString(16)
+      .padStart(2, "0");
+  };
+  return `#${channel(0)}${channel(8)}${channel(4)}`;
+}
+
+/**
+ * Цвет сенсора по умолчанию — та же палитра, что была у общего графика
+ * (старт от accent-500), но привязанная к номеру сенсора: цвет S3 не меняется,
+ * когда соседний сенсор скрыли.
+ */
+export function defaultSensorColor(index: number): string {
+  return hslToHex(((index * 41) % 360) + 266, 60, 52);
+}
+
+/** Цвета, выбранные пользователем: индекс сенсора → "#rrggbb". */
+export interface SensorColors {
+  overrides: Record<number, string>;
+  setColor: (index: number, color: string) => void;
+  resetColors: () => void;
+}
+
+export const SensorColorsContext = createContext<SensorColors>({
+  overrides: {},
+  setColor: () => {},
+  resetColors: () => {},
+});
+
+/** Цвет сенсора с учётом выбора пользователя; `fallback` — цвет по умолчанию вне общей палитры. */
+export function sensorColor(
+  overrides: Record<number, string>,
+  index: number,
+  fallback?: string,
+): string {
+  return overrides[index] ?? fallback ?? defaultSensorColor(index);
+}
+
 /**
  * Число для подписи шкалы без хвоста плавающей точки: MUI считает значения
  * колец через scale.invert и показывает 29.000000000000007.

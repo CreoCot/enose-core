@@ -20,6 +20,7 @@ import {
 import { fetchDefaultMaskId, fetchMasks } from "~/lib/masksApi";
 import {
   ChartFontContext,
+  SensorColorsContext,
   DEFAULT_CHART_FONT_PX,
   EXPORT_WIDTH_MM,
   buildDeltaModel,
@@ -578,6 +579,36 @@ const file = () => {
   };
 
   const [downloadError, setDownloadError] = useState("");
+  // Цвета сенсоров, выбранные пользователем; хранятся в браузере по записи
+  const colorsKey = `enose:sensor-colors:${fileId}`;
+  const [colorOverrides, setColorOverrides] = useState<Record<number, string>>(
+    {},
+  );
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(colorsKey);
+      setColorOverrides(raw ? JSON.parse(raw) : {});
+    } catch {
+      setColorOverrides({});
+    }
+  }, [colorsKey]);
+  const saveColors = (next: Record<number, string>) => {
+    setColorOverrides(next);
+    try {
+      window.localStorage.setItem(colorsKey, JSON.stringify(next));
+    } catch {
+      // приватное окно или заблокированное хранилище — цвета живут до перезагрузки
+    }
+  };
+  const sensorColors = useMemo(
+    () => ({
+      overrides: colorOverrides,
+      setColor: (index: number, color: string) =>
+        saveColors({ ...colorOverrides, [index]: color }),
+      resetColors: () => saveColors({}),
+    }),
+    [colorOverrides, colorsKey],
+  );
   // Идёт сборка отчёта: за кадром рисуются графики для PDF (ReportCapture)
   const [reporting, setReporting] = useState(false);
   const handleReport = () => {
@@ -747,189 +778,191 @@ const file = () => {
     }, [plots, plotError, sensorSize, renderedPlotIds]),
   ];
   return (
-    <div className="w-full overflow-hidden bg-grey-50 pb-5">
-      <Head>{`Запись №${fileId}`}</Head>
-      {reporting && (
-        <ReportCapture
-          plots={plots}
-          timestamps={plotTimestamps}
-          sensorSize={sensorSize}
-          renderedPlotIds={renderedPlotIds}
-          onResult={onCaptured}
-          onError={onCaptureError}
-        />
-      )}
-      <Link
-        className="flex gap-1 items-center w-fit lg:text-lg text-grey-700 hover:text-grey-600 mx-7 mt-5 transition-colors duration-200"
-        to="/data"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 27 27"
-          strokeWidth={0.9}
-          stroke="currentColor"
-          className="size-6"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
+    <SensorColorsContext.Provider value={sensorColors}>
+      <div className="w-full overflow-hidden bg-grey-50 pb-5">
+        <Head>{`Запись №${fileId}`}</Head>
+        {reporting && (
+          <ReportCapture
+            plots={plots}
+            timestamps={plotTimestamps}
+            sensorSize={sensorSize}
+            renderedPlotIds={renderedPlotIds}
+            onResult={onCaptured}
+            onError={onCaptureError}
           />
-        </svg>
-        <span>Назад</span>
-      </Link>
-      <MaskPicker
-        entryId={fileId}
-        masks={maskList}
-        selectedId={maskId}
-        defaultId={savedMaskId}
-        onSelect={setMaskId}
-        onMasksChange={setMaskList}
-        onDefaultChange={setSavedMaskId}
-      />
-      <div className="flex flex-col pt-3 text-xl lg:text-2xl px-6">
-        <div className="flex flex-col lg:flex-row w-fit bg-grey-600 justify-between gap-1 p-2 lg:p-1 rounded-[15px] lg:rounded-full sm:mx-7 text-grey-100 mb-2">
-          <button
-            className={`${
-              open === 2 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
-            onClick={() => setOpen(2)}
+        )}
+        <Link
+          className="flex gap-1 items-center w-fit lg:text-lg text-grey-700 hover:text-grey-600 mx-7 mt-5 transition-colors duration-200"
+          to="/data"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 27 27"
+            strokeWidth={0.9}
+            stroke="currentColor"
+            className="size-6"
           >
-            <div className="flex items-center gap-1">
-              {open === 2 ? icons[1][2] : icons[0][2]}
-              Сравнение
-            </div>
-          </button>
-          <button
-            className={`${
-              open === 1 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
-            onClick={() => setOpen(1)}
-          >
-            <div className="flex items-center gap-1">
-              {open === 1 ? icons[1][1] : icons[0][1]}
-              Графики
-            </div>
-          </button>
-          <button
-            className={`${
-              open === 0 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
-            onClick={() => setOpen(0)}
-          >
-            <div className="flex items-center gap-1">
-              {open === 0 ? icons[1][0] : icons[0][0]}
-              Таблица
-            </div>
-          </button>
-          <div className="relative group">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
+            />
+          </svg>
+          <span>Назад</span>
+        </Link>
+        <MaskPicker
+          entryId={fileId}
+          masks={maskList}
+          selectedId={maskId}
+          defaultId={savedMaskId}
+          onSelect={setMaskId}
+          onMasksChange={setMaskList}
+          onDefaultChange={setSavedMaskId}
+        />
+        <div className="flex flex-col pt-3 text-xl lg:text-2xl px-6">
+          <div className="flex flex-col lg:flex-row w-fit bg-grey-600 justify-between gap-1 p-2 lg:p-1 rounded-[15px] lg:rounded-full sm:mx-7 text-grey-100 mb-2">
             <button
               className={`${
-                open === 3 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-              } hover:bg-grey-200 relative hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 disabled:cursor-not-allowed disabled:outline disabled:outline-red-600 w-full h-full`}
-              onClick={() => setOpen(3)}
-              disabled={renderedLength <= 2}
+                open === 2 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
+              onClick={() => setOpen(2)}
             >
               <div className="flex items-center gap-1">
-                {open === 3 ? icons[1][3] : icons[0][3]}
-                Максимумы
+                {open === 2 ? icons[1][2] : icons[0][2]}
+                Сравнение
               </div>
             </button>
-            {renderedLength <= 2 && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-100 text-red-800 border border-red-800 rounded-[10px] text-base whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                Нужно выбрать минимум 3 сенсора
-              </div>
-            )}
-          </div>
-          <div className="relative group">
             <button
               className={`${
-                open === 4 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-              } hover:bg-grey-200 relative hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 disabled:cursor-not-allowed disabled:outline disabled:outline-red-600 w-full h-full`}
-              onClick={() => setOpen(4)}
-              disabled={renderedLength <= 2}
+                open === 1 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
+              onClick={() => setOpen(1)}
             >
               <div className="flex items-center gap-1">
-                {open === 4 ? icons[1][4] : icons[0][4]}
-                Временная диаграмма
+                {open === 1 ? icons[1][1] : icons[0][1]}
+                Графики
               </div>
             </button>
-            {renderedLength <= 2 && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-100 text-red-800 border border-red-800 rounded-[10px] text-base whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                Нужно выбрать минимум 3 сенсора
+            <button
+              className={`${
+                open === 0 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
+              onClick={() => setOpen(0)}
+            >
+              <div className="flex items-center gap-1">
+                {open === 0 ? icons[1][0] : icons[0][0]}
+                Таблица
               </div>
-            )}
-          </div>
-          <button
-            className={`${
-              open === 5 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
-            } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
-            onClick={() => setOpen(5)}
-          >
-            <div className="flex items-center gap-1">
-              {open === 5 ? icons[1][5] : icons[0][5]}
-              Сводная информация
-            </div>
-          </button>
-          <div className="relative group">
-            {downloadError.length !== 0 && (
-              <motion.p
-                transition={{ duration: 0.15, ease: "easeIn" }}
-                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-base text-red-800 bg-red-100 border border-red-800 w-max rounded-[10px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
+            </button>
+            <div className="relative group">
+              <button
+                className={`${
+                  open === 3 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+                } hover:bg-grey-200 relative hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 disabled:cursor-not-allowed disabled:outline disabled:outline-red-600 w-full h-full`}
+                onClick={() => setOpen(3)}
+                disabled={renderedLength <= 2}
               >
-                {downloadError}
-                <button
-                  className="text-grey-600 pl-2 font-light cursor-pointer"
-                  onClick={() => setDownloadError("")}
-                >
-                  X
-                </button>
-              </motion.p>
-            )}
+                <div className="flex items-center gap-1">
+                  {open === 3 ? icons[1][3] : icons[0][3]}
+                  Максимумы
+                </div>
+              </button>
+              {renderedLength <= 2 && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-100 text-red-800 border border-red-800 rounded-[10px] text-base whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Нужно выбрать минимум 3 сенсора
+                </div>
+              )}
+            </div>
+            <div className="relative group">
+              <button
+                className={`${
+                  open === 4 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+                } hover:bg-grey-200 relative hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 disabled:cursor-not-allowed disabled:outline disabled:outline-red-600 w-full h-full`}
+                onClick={() => setOpen(4)}
+                disabled={renderedLength <= 2}
+              >
+                <div className="flex items-center gap-1">
+                  {open === 4 ? icons[1][4] : icons[0][4]}
+                  Временная диаграмма
+                </div>
+              </button>
+              {renderedLength <= 2 && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-100 text-red-800 border border-red-800 rounded-[10px] text-base whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Нужно выбрать минимум 3 сенсора
+                </div>
+              )}
+            </div>
             <button
-              id="download"
-              onClick={handleReport}
-              disabled={reporting}
-              className={`bg-grey-600 hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 w-full h-full ${
-                downloadError.length !== 0 ? "outline outline-red-600" : ""
-              }`}
+              className={`${
+                open === 5 ? "bg-grey-300 text-gray-700" : "bg-grey-600"
+              } hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4`}
+              onClick={() => setOpen(5)}
             >
-              <div className="flex justify-center gap-1">
-                {reporting ? "Готовим отчёт…" : "Отчет"}
-                {icons[0][icons[0].length - 1]}
+              <div className="flex items-center gap-1">
+                {open === 5 ? icons[1][5] : icons[0][5]}
+                Сводная информация
               </div>
             </button>
+            <div className="relative group">
+              {downloadError.length !== 0 && (
+                <motion.p
+                  transition={{ duration: 0.15, ease: "easeIn" }}
+                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-base text-red-800 bg-red-100 border border-red-800 w-max rounded-[10px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
+                >
+                  {downloadError}
+                  <button
+                    className="text-grey-600 pl-2 font-light cursor-pointer"
+                    onClick={() => setDownloadError("")}
+                  >
+                    X
+                  </button>
+                </motion.p>
+              )}
+              <button
+                id="download"
+                onClick={handleReport}
+                disabled={reporting}
+                className={`bg-grey-600 hover:bg-grey-200 hover:text-gray-800 transition-colors duration-150 rounded-full p-1 px-4 w-full h-full ${
+                  downloadError.length !== 0 ? "outline outline-red-600" : ""
+                }`}
+              >
+                <div className="flex justify-center gap-1">
+                  {reporting ? "Готовим отчёт…" : "Отчет"}
+                  {icons[0][icons[0].length - 1]}
+                </div>
+              </button>
+            </div>
           </div>
-        </div>
-        <div>
-          <div className="sm:mx-7 flex flex-wrap gap-4">
-            <button
-              className="lg:text-xl m-1 font-medium flex gap-2 text-grey-700 hover:text-grey-600 transition-colors duration-200 cursor-pointer"
-              onClick={() => exportChart("png")}
-            >
-              <span>Скачать PNG, 300 dpi</span>
-              {smallDownloadIcon}
-            </button>
-            <button
-              className="lg:text-xl m-1 font-medium flex gap-2 text-grey-700 hover:text-grey-600 transition-colors duration-200 cursor-pointer"
-              onClick={() => exportChart("svg")}
-            >
-              <span>Скачать SVG</span>
-              {smallDownloadIcon}
-            </button>
-          </div>
-          <div className="flex">
-            <div className="flex flex-col"></div>
-            <div className="article-view w-full">
-              <ChartFontContext.Provider value={chartFont}>
-                <AnimatePresence mode="wait">{items[open]}</AnimatePresence>
-              </ChartFontContext.Provider>
+          <div>
+            <div className="sm:mx-7 flex flex-wrap gap-4">
+              <button
+                className="lg:text-xl m-1 font-medium flex gap-2 text-grey-700 hover:text-grey-600 transition-colors duration-200 cursor-pointer"
+                onClick={() => exportChart("png")}
+              >
+                <span>Скачать PNG, 300 dpi</span>
+                {smallDownloadIcon}
+              </button>
+              <button
+                className="lg:text-xl m-1 font-medium flex gap-2 text-grey-700 hover:text-grey-600 transition-colors duration-200 cursor-pointer"
+                onClick={() => exportChart("svg")}
+              >
+                <span>Скачать SVG</span>
+                {smallDownloadIcon}
+              </button>
+            </div>
+            <div className="flex">
+              <div className="flex flex-col"></div>
+              <div className="article-view w-full">
+                <ChartFontContext.Provider value={chartFont}>
+                  <AnimatePresence mode="wait">{items[open]}</AnimatePresence>
+                </ChartFontContext.Provider>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </SensorColorsContext.Provider>
   );
 };
 

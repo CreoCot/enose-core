@@ -7,7 +7,10 @@ import {
   exportFontPx,
   formatTick,
   niceRange,
+  defaultSensorColor,
   fullXRange,
+  hslToHex,
+  sensorColor,
   niceCeil,
   niceStep,
   normalizeRange,
@@ -261,5 +264,25 @@ describe("formatTick", () => {
   it("не пишет «-0»", () => {
     expect(formatTick(-0)).toBe("0");
     expect(formatTick(-1e-15)).toBe("0");
+  });
+});
+
+describe("цвета сенсоров", () => {
+  it("hslToHex даёт известные значения", () => {
+    expect(hslToHex(0, 100, 50)).toBe("#ff0000");
+    expect(hslToHex(120, 100, 50)).toBe("#00ff00");
+    expect(hslToHex(240, 100, 50)).toBe("#0000ff");
+    expect(hslToHex(360 + 240, 100, 50)).toBe("#0000ff");
+    expect(hslToHex(0, 0, 100)).toBe("#ffffff");
+  });
+  it("цвета по умолчанию — корректный hex, различимые у соседних сенсоров", () => {
+    const colors = Array.from({ length: 8 }, (_, i) => defaultSensorColor(i));
+    for (const c of colors) expect(c).toMatch(/^#[0-9a-f]{6}$/);
+    expect(new Set(colors).size).toBe(8);
+  });
+  it("выбор пользователя перекрывает цвет по умолчанию", () => {
+    expect(sensorColor({ 2: "#123456" }, 2)).toBe("#123456");
+    expect(sensorColor({}, 2)).toBe(defaultSensorColor(2));
+    expect(sensorColor({}, 2, "#abcdef")).toBe("#abcdef");
   });
 });
