@@ -299,6 +299,43 @@ export function sensorColor(
   return overrides[index] ?? fallback ?? defaultSensorColor(index);
 }
 
+export const MAX_RADAR_RINGS = 20;
+
+/** Округление до двух знаков — дробная часть подписей не длиннее. */
+export const round2 = (v: number) => Number(v.toFixed(2));
+
+export interface RadarGrid {
+  /** Шаг, с которым реально построена сетка */
+  step: number;
+  /** Шаг, который подобран автоматически (всегда целый) */
+  autoStep: number;
+  axisMin: number;
+  axisMax: number;
+  rings: number;
+}
+
+/**
+ * Сетка радара от шага: границы оси подтягиваются к кратным шагу значениям,
+ * и каждое кольцо получает круглую подпись (а не 58 / 3 = 19.3333).
+ * stepOverride — шаг, заданный вручную; слишком мелкий (больше MAX_RADAR_RINGS
+ * колец) заменяется автоматическим.
+ */
+export function radarGrid(
+  plotMin: number,
+  plotMax: number,
+  stepOverride: number | null = null,
+): RadarGrid {
+  const span = plotMax - plotMin;
+  const autoStep = niceStep(span);
+  let step =
+    stepOverride !== null && stepOverride > 0 ? stepOverride : autoStep;
+  if (span / step > MAX_RADAR_RINGS) step = niceStep(span, MAX_RADAR_RINGS);
+  const axisMin = round2(Math.floor(plotMin / step + 1e-9) * step);
+  const rings = Math.max(1, Math.ceil((plotMax - axisMin) / step - 1e-9));
+  const axisMax = round2(axisMin + rings * step);
+  return { step, autoStep, axisMin, axisMax, rings };
+}
+
 /**
  * Число для подписи шкалы без хвоста плавающей точки: MUI считает значения
  * колец через scale.invert и показывает 29.000000000000007.

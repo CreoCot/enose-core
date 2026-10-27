@@ -14,6 +14,8 @@ import {
   formatTick,
   niceCeil,
   autoTimeRange,
+  radarGrid,
+  round2,
   niceStep,
   zoomRadarMax,
 } from "../lib/utils";
@@ -90,8 +92,6 @@ const RingScale = ({
   );
 };
 
-const MAX_RINGS = 20;
-const round2 = (v: number) => Number(v.toFixed(2));
 const zoomButton =
   "flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-full bg-primary-200 text-primary-600 text-xl font-semibold leading-none border-2 border-primary-400 hover:bg-primary-300 cursor-pointer transition-colors duration-300";
 
@@ -198,13 +198,11 @@ const MaxRadar = ({
 
   // Сетка строится от шага: границы оси подтягиваются к кратным ему значениям,
   // и каждое кольцо получает круглую подпись, а не 58 / 3 = 19.3333.
-  const span = plotMax - plotMin;
-  const autoStep = niceStep(span);
-  let step = stepOverride ?? autoStep;
-  if (span / step > MAX_RINGS) step = niceStep(span, MAX_RINGS);
-  const axisMin = round2(Math.floor(plotMin / step + 1e-9) * step);
-  const rings = Math.max(1, Math.ceil((plotMax - axisMin) / step - 1e-9));
-  const axisMax = round2(axisMin + rings * step);
+  const { step, axisMin, axisMax, rings } = radarGrid(
+    plotMin,
+    plotMax,
+    stepOverride,
+  );
   useEffect(() => {
     const activeCount = Object.values(renderedPlotIds).filter(Boolean).length;
     if (activeCount <= 2) {

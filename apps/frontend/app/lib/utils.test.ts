@@ -7,6 +7,9 @@ import {
   exportFontPx,
   formatTick,
   niceRange,
+  radarGrid,
+  round2,
+  autoTimeRange,
   defaultSensorColor,
   fullXRange,
   hslToHex,
@@ -290,5 +293,80 @@ describe("цвета сенсоров", () => {
     expect(sensorColor({ 2: "#123456" }, 2)).toBe("#123456");
     expect(sensorColor({}, 2)).toBe(defaultSensorColor(2));
     expect(sensorColor({}, 2, "#abcdef")).toBe("#abcdef");
+  });
+});
+
+describe("radarGrid", () => {
+  it("58 больше не делится на 3 части: ось 0–60, шаг 20", () => {
+    const g = radarGrid(0, 58);
+    expect(g).toMatchObject({ step: 20, axisMin: 0, axisMax: 60, rings: 3 });
+  });
+  it("автоматический шаг всегда целый, а подписи кольца — кратны шагу", () => {
+    for (const [min, max] of [
+      [0, 37],
+      [0, 58],
+      [-31, 49],
+      [-120, 33],
+      [0, 3],
+    ] as const) {
+      const g = radarGrid(min, max);
+      expect(Number.isInteger(g.step)).toBe(true);
+      expect(g.axisMin).toBeLessThanOrEqual(min);
+      expect(g.axisMax).toBeGreaterThanOrEqual(max);
+      for (let k = 0; k <= g.rings; k++) {
+        const v = g.axisMin + k * g.step;
+        expect(Math.abs(v / g.step - Math.round(v / g.step))).toBeLessThan(
+          1e-9,
+        );
+      }
+    }
+  });
+  it("ручной шаг подтягивает границы: шаг 7 даёт 0–63", () => {
+    const g = radarGrid(0, 58, 7);
+    expect(g).toMatchObject({ step: 7, axisMin: 0, axisMax: 63, rings: 9 });
+  });
+  it("дробный шаг допустим только вручную", () => {
+    const g = radarGrid(0, 4, 0.5);
+    expect(g).toMatchObject({ step: 0.5, rings: 8, axisMax: 4 });
+    expect(Number.isInteger(g.autoStep)).toBe(true);
+  });
+  it("слишком мелкий шаг заменяется автоматическим (не больше 20 колец)", () => {
+    const g = radarGrid(0, 60, 0.25);
+    expect(g.rings).toBeLessThanOrEqual(20);
+    expect(g.step).toBeGreaterThan(0.25);
+  });
+  it("нулевой и отрицательный шаг игнорируются", () => {
+    expect(radarGrid(0, 40, 0).step).toBe(radarGrid(0, 40).step);
+    expect(radarGrid(0, 40, -5).step).toBe(radarGrid(0, 40).step);
+  });
+  it("минимум со знаком подтягивается вниз к кратному шагу", () => {
+    const g = radarGrid(-31, 49, 20);
+    expect(g.axisMin).toBe(-40);
+    expect(g.axisMax).toBe(60);
+  });
+  it("всегда есть хотя бы одно кольцо", () => {
+    expect(radarGrid(0, 1).rings).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("round2", () => {
+  it("оставляет не больше двух знаков", () => {
+    expect(round2(1.23456)).toBe(1.23);
+    expect(round2(2)).toBe(2);
+    expect(round2(0.1 + 0.2)).toBe(0.3);
+  });
+});
+
+describe("autoTimeRange", () => {
+  it("совпадает с niceRange по данным с нулём", () => {
+    expect(autoTimeRange([-31, 5, 49])).toEqual(niceRange(-31, 49));
+  });
+  it("положительные данные дают минимум 0", () => {
+    expect(autoTimeRange([3, 10, 37])[0]).toBe(0);
+  });
+  it("игнорирует NaN и пустой ряд", () => {
+    expect(autoTimeRange([Number.NaN, -5, 20])).toEqual(niceRange(-5, 20));
+    const [lo, hi] = autoTimeRange([]);
+    expect(hi).toBeGreaterThan(lo);
   });
 });

@@ -191,4 +191,4 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run parser tests
-        run: pytest -q
+        run: python -m pytest -q

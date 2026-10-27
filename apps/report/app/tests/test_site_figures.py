@@ -1,8 +1,8 @@
 import base64
-import subprocess
 from io import BytesIO
 
 import matplotlib
+from pypdf import PdfReader
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
@@ -28,15 +28,10 @@ def _with_images(report, **figures):
     return report.model_copy(update={"images": ReportImages(**encoded)})
 
 
-def _pdf_text(pdf: bytes, tmp_path) -> str:
-    path = tmp_path / "r.pdf"
-    path.write_bytes(pdf)
-    return subprocess.run(
-        ["pdftotext", "-layout", str(path), "-"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout
+def _pdf_text(pdf: bytes, tmp_path=None) -> str:
+    # pypdf, а не pdftotext: в CI системных утилит нет
+    reader = PdfReader(BytesIO(pdf))
+    return "\n".join(page.extract_text() for page in reader.pages)
 
 
 def test_images_are_decoded_from_base64_json():
@@ -111,7 +106,7 @@ def test_axis_minimum_override_changes_time_area():
     assert shifted != default
 
 
-def test_pdf_with_site_figures_has_russian_text(tmp_path):
+def test_pdf_with_site_figures_has_russian_text():
     report = _with_images(
         create_masked_report(),
         compare=_png(10, 4),
@@ -121,7 +116,7 @@ def test_pdf_with_site_figures_has_russian_text(tmp_path):
     )
 
     pdf = PDFGenerator().generate(report)
-    text = _pdf_text(pdf, tmp_path)
+    text = _pdf_text(pdf)
 
     assert pdf[:4] == b"%PDF"
     assert "Рисунок 1" in text and "Рисунок 4" in text
@@ -133,8 +128,8 @@ def test_pdf_with_site_figures_has_russian_text(tmp_path):
     assert "Calculated features" in text
 
 
-def test_pdf_without_images_keeps_the_old_layout(tmp_path):
-    text = _pdf_text(PDFGenerator().generate(create_report()), tmp_path)
+def test_pdf_without_images_keeps_the_old_layout():
+    text = _pdf_text(PDFGenerator().generate(create_report()))
 
     assert "Frequency shift from each sensor baseline" in text
     assert "Методика" not in text
@@ -147,3 +142,83 @@ def test_russian_declension_in_captions():
     # фикстура: маска из 4 точек, 8 сенсоров → 32 оси
     assert "по 4 точкам маски" in caption
     assert "32 оси" in caption
+
+
+def test_captions_without_a_mask_say_all_samples():
+    report = _with_images(create_report(), compare=_png(2, 2), max_radar=_png(3, 3))
+
+    captions = [f.caption for f in figure_captions(report)]
+
+    assert "по всем отсчётам" in captions[1]
+    assert "маски" not in captions[1]
+
+
+def test_methodology_without_a_mask_says_no_mask_used():
+    report = _with_images(create_report(), compare=_png(2, 2))
+
+    assert "Маска времени не использовалась" in " ".join(methodology(report))
+
+
+def test_methodology_lists_the_sensors_of_the_report():
+    report = _with_images(create_masked_report(), compare=_png(2, 2))
+
+    text = " ".join(methodology(report))
+
+    for sensor in report.sensors:
+        assert sensor.name in text
+
+
+def test_methodology_mentions_the_sign_convention_of_the_feature_table():
+    report = _with_images(create_report(), compare=_png(2, 2))
+
+    assert "F(t) − F₀" in " ".join(methodology(report))
+
+
+def test_numbers_use_the_ui_format():
+    from app.report_text import _num
+
+    assert _num(186.678) == "186.68"
+    assert _num(-40.0) == "-40"
+    assert _num(0.0) == "0"
+    assert _num(-0.001) == "0"
+    assert _num(2.5) == "2.5"
+
+
+def test_russian_plural_forms():
+    from app.report_text import _axes_word, _points_dative, _points_word
+
+    assert [_points_word(n) for n in (1, 2, 5, 11, 21)] == [
+        "1 точка",
+        "2 точки",
+        "5 точек",
+        "11 точек",
+        "21 точка",
+    ]
+    assert [_axes_word(n) for n in (1, 3, 8, 12, 32)] == [
+        "1 ось",
+        "3 оси",
+        "8 осей",
+        "12 осей",
+        "32 оси",
+    ]
+    assert [_points_dative(n) for n in (1, 4, 11, 21, 14)] == [
+        "1 точке",
+        "4 точкам",
+        "11 точкам",
+        "21 точке",
+        "14 точкам",
+    ]
+
+
+def test_images_any_is_false_when_empty():
+    assert not ReportImages().any()
+    assert ReportImages(compare=base64.b64encode(_png(1, 1))).any()
+
+
+def test_a_report_with_empty_images_object_keeps_the_old_layout():
+    report = create_report().model_copy(update={"images": ReportImages()})
+
+    text = _pdf_text(PDFGenerator().generate(report))
+
+    assert "Frequency shift from each sensor baseline" in text
+    assert "Методика" not in text

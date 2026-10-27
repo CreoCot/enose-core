@@ -3,6 +3,7 @@ import {
   applyMask,
   axisMinFor,
   fingerprintRadii,
+  maskSampleIndex,
   maxDiagramValues,
   normalizePoints,
   parseMaskInput,
@@ -183,5 +184,62 @@ describe("площадь кинетического отпечатка", () => {
   it("эталон для сверки с Python (apps/report/app/areas.py)", () => {
     // Этот литерал продублирован в test_areas.py — менять только вместе
     expect(radarArea([1.5, 2.25, 0.75, 3.0, 2.0])).toBe(7.757054711032346);
+  });
+});
+
+describe("maskSampleIndex", () => {
+  const oneSecond = [0, 1, 2, 3, 4, 5];
+  // шаг 2 с: 2, 4, …, 20
+  const twoSeconds = Array.from({ length: 10 }, (_, k) => 2 * (k + 1));
+
+  it("шаг ≈ 1 с: индекс = floor(t), как в MAG-soft", () => {
+    expect(maskSampleIndex(oneSecond, 3)).toBe(3);
+    expect(maskSampleIndex(oneSecond, 3.9)).toBe(3);
+    expect(maskSampleIndex(oneSecond, 5)).toBe(5);
+  });
+  it("шаг 0.9 с (запись 301 с на 332 отсчёта) тоже считается секундным", () => {
+    const times = Array.from({ length: 20 }, (_, k) => k * 0.9);
+    expect(maskSampleIndex(times, 10)).toBe(10);
+  });
+  it("за пределами данных — -1", () => {
+    expect(maskSampleIndex(oneSecond, 6)).toBe(-1);
+    expect(maskSampleIndex(oneSecond, -1)).toBe(-1);
+    expect(maskSampleIndex([], 0)).toBe(-1);
+  });
+  it("шаг 2 с: t — секунды, берётся ближайший отсчёт", () => {
+    expect(maskSampleIndex(twoSeconds, 10)).toBe(4);
+    expect(maskSampleIndex(twoSeconds, 11)).toBe(4);
+    expect(maskSampleIndex(twoSeconds, 20)).toBe(9);
+  });
+  it("шаг 2 с: допускается половина шага за последним отсчётом", () => {
+    expect(maskSampleIndex(twoSeconds, 21)).toBe(9);
+    expect(maskSampleIndex(twoSeconds, 21.5)).toBe(-1);
+  });
+  it("один отсчёт не ломает расчёт шага", () => {
+    expect(maskSampleIndex([0], 0)).toBe(0);
+  });
+});
+
+describe("applyMask: порядок и пустая маска", () => {
+  it("пустая маска даёт пустые ряды, число сенсоров сохраняется", () => {
+    const m = applyMask(
+      [
+        [1, 2],
+        [3, 4],
+      ],
+      [],
+    );
+    expect(m.times).toEqual([]);
+    expect(m.deltas).toEqual([[], []]);
+  });
+  it("время отсчётов обрезается по самому короткому ряду", () => {
+    const m = applyMask(
+      [
+        [1, 2, 3],
+        [4, 5],
+      ],
+      [0, 1, 2],
+    );
+    expect(m.times).toEqual([0, 1]);
   });
 });
